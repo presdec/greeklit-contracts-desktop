@@ -1,6 +1,8 @@
 import type * as ElectronModule from 'electron';
 import type {
   FileDialogRequest,
+  GenerateProjectRequest,
+  GenerateProjectResult,
   InspectProjectRequest,
   InspectProjectResult,
   ProjectConfig,
@@ -13,6 +15,8 @@ const electron = require('electron') as typeof ElectronModule;
 const { contextBridge, ipcRenderer } = electron;
 
 contextBridge.exposeInMainWorld('desktopApp', {
+  generateProject: (request: GenerateProjectRequest) =>
+    ipcRenderer.invoke('desktop-app:generate-project', request) as Promise<GenerateProjectResult>,
   inspectProject: (request: InspectProjectRequest) =>
     ipcRenderer.invoke('desktop-app:inspect-project', request) as Promise<InspectProjectResult>,
   openProject: () =>

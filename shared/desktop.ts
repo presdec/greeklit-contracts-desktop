@@ -22,6 +22,39 @@ export type ProjectOpenResult = {
   project: ProjectConfig;
 };
 
+export type GenerationOptionsInput = {
+  generateDocx: boolean;
+  generatePdf: boolean;
+};
+
+export type EmailTemplateInput = {
+  body: string;
+  cc: string;
+  subject: string;
+  to: string;
+};
+
+export type GenerateProjectRequest = {
+  emailTemplate: EmailTemplateInput;
+  generationOptions: GenerationOptionsInput;
+  project: ProjectConfig;
+  tokenMappings: Record<string, string>;
+  variableColumns: Record<string, string>;
+};
+
+export type GenerateProjectResult = {
+  combinedEmailPath: string;
+  contractsDir: string;
+  generatedCount: number;
+  outputDir: string;
+  pdfDir: string;
+  reportPath: string;
+  skippedCount: number;
+  stderr: string;
+  stdout: string;
+  warnings: string[];
+};
+
 export type InspectProjectRequest = {
   contractTemplatePath?: string;
   dataStartRow: number;

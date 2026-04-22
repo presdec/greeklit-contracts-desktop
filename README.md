@@ -1,4 +1,4 @@
-# Desktop App Workspace
+# Greeklit Contracts Desktop
 
 This folder is the starting point for turning the existing Python contract generator into a cleaner desktop product built with Vite and Electron.
 

@@ -1,0 +1,98 @@
+:root {
+  color: #18302d;
+  background:
+    radial-gradient(circle at top left, rgba(207, 234, 224, 0.85), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(240, 209, 174, 0.35), transparent 30%),
+    linear-gradient(180deg, #f7f1e4 0%, #eee3cf 100%);
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+}
+
+.app-shell {
+  min-height: 100vh;
+  padding: 28px;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.sidebar-card,
+.content-card {
+  border: 1px solid rgba(24, 48, 45, 0.08);
+  background: rgba(255, 251, 245, 0.88);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 24px 60px rgba(81, 65, 40, 0.08);
+}
+
+.sidebar-card {
+  position: sticky;
+  top: 28px;
+}
+
+.step-card {
+  border: 1px solid rgba(24, 48, 45, 0.08);
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.step-card--active {
+  border-color: rgba(18, 184, 134, 0.25);
+  background: rgba(235, 252, 247, 0.92);
+}
+
+.insight-card,
+.panel-card,
+.mini-stat {
+  border: 1px solid rgba(24, 48, 45, 0.08);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.preview-card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(249, 244, 235, 0.96)),
+    rgba(255, 255, 255, 0.8);
+}
+
+.preview-body {
+  border: 1px solid rgba(24, 48, 45, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.78);
+  padding: 18px;
+}
+
+.field-chip {
+  border: 1px solid rgba(18, 184, 134, 0.22);
+  background: rgba(235, 252, 247, 0.92);
+  color: #0f7664;
+}
+
+.field-chip:hover {
+  transform: translateY(-1px);
+}
+
+.mantine-Table-table td,
+.mantine-Table-table th {
+  vertical-align: top;
+}
+
+@media (max-width: 960px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar-card {
+    position: static;
+  }
+}

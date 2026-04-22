@@ -13,6 +13,7 @@ import { useContractTemplateSettings } from './hooks/useContractTemplateSettings
 import { useProjectSetup } from './hooks/useProjectSetup';
 import { useWorkbookPreview } from './hooks/useWorkbookPreview';
 import type { WizardStepId } from './types/template';
+import type { GenerateProjectResult } from '../shared/desktop';
 
 const stepCopy = {
   1: {
@@ -60,6 +61,9 @@ export function App() {
   const projectSetup = useProjectSetup(desktopApp);
   const templateBuilder = useEmailTemplateBuilder();
   const [activeStep, setActiveStep] = useState<WizardStepId>(1);
+  const [generationError, setGenerationError] = useState<string | null>(null);
+  const [generationResult, setGenerationResult] = useState<GenerateProjectResult | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
   const workbookPreview = useWorkbookPreview(
     desktopApp,
     projectSetup.project,
@@ -80,6 +84,42 @@ export function App() {
     const filePath = await projectSetup.openProject();
     return filePath ? `Loaded project from ${filePath}.` : null;
   }, [projectSetup]);
+
+  const handleGenerateProject = useCallback(async () => {
+    setIsGenerating(true);
+    setGenerationError(null);
+
+    try {
+      const variableColumns = workbookPreview.rows.reduce<Record<string, string>>((accumulator, row) => {
+        if (row.selectedVariable) {
+          accumulator[row.selectedVariable] = row.columnLetter;
+        }
+        return accumulator;
+      }, {});
+
+      const result = await desktopApp.generateProject({
+        emailTemplate: templateBuilder.emailTemplate,
+        generationOptions: contractSettings.generationOptions,
+        project: projectSetup.project,
+        tokenMappings: contractSettings.tokenMappings,
+        variableColumns,
+      });
+
+      setGenerationResult(result);
+    } catch (error) {
+      setGenerationResult(null);
+      setGenerationError(error instanceof Error ? error.message : 'Generation failed.');
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [
+    contractSettings.generationOptions,
+    contractSettings.tokenMappings,
+    desktopApp,
+    projectSetup.project,
+    templateBuilder.emailTemplate,
+    workbookPreview.rows,
+  ]);
 
   const pickerRequests = useMemo(() => ({
     workbookPath: {
@@ -160,6 +200,18 @@ export function App() {
             {workbookPreview.loadError ? (
               <Alert color="red" radius="lg" title="Could not load workbook preview" variant="light">
                 {workbookPreview.loadError}
+              </Alert>
+            ) : null}
+
+            {generationError ? (
+              <Alert color="red" radius="lg" title="Generation failed" variant="light">
+                {generationError}
+              </Alert>
+            ) : null}
+
+            {generationResult ? (
+              <Alert color="teal" radius="lg" title="Generation complete" variant="light">
+                Generated {generationResult.generatedCount} rows, skipped {generationResult.skippedCount}. Report at {generationResult.reportPath}
               </Alert>
             ) : null}
 
@@ -276,7 +328,9 @@ export function App() {
                         : 'Continue To Review'}
                   </Button>
                 ) : (
-                  <Button size="md">Ready For Generation</Button>
+                  <Button loading={isGenerating} onClick={() => void handleGenerateProject()} size="md">
+                    {isGenerating ? 'Generating...' : 'Generate Now'}
+                  </Button>
                 )}
               </Group>
             </Group>

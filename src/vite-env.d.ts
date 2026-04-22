@@ -2,6 +2,8 @@
 
 import type {
   FileDialogRequest,
+  GenerateProjectRequest,
+  GenerateProjectResult,
   InspectProjectRequest,
   InspectProjectResult,
   ProjectConfig,
@@ -11,6 +13,7 @@ import type {
 declare global {
   interface Window {
     desktopApp: {
+      generateProject: (request: GenerateProjectRequest) => Promise<GenerateProjectResult>;
       inspectProject: (request: InspectProjectRequest) => Promise<InspectProjectResult>;
       openProject: () => Promise<ProjectOpenResult | null>;
       pickPath: (request: FileDialogRequest) => Promise<string | null>;

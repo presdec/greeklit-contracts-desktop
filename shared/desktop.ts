@@ -60,6 +60,21 @@ export type GenerateProjectRequest = {
   variableColumns: Record<string, string>;
 };
 
+export type ProjectPreflightCheck = {
+  detail: string;
+  id: string;
+  label: string;
+  status: 'pass' | 'fail' | 'warn';
+};
+
+export type ProjectPreflightResult = {
+  canGenerate: boolean;
+  checks: ProjectPreflightCheck[];
+  errors: string[];
+  pdfBackend: 'libreoffice' | 'none' | 'word';
+  warnings: string[];
+};
+
 export type OutputTreeEntry = {
   absolutePath: string;
   kind: 'directory' | 'file';

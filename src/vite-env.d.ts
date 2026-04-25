@@ -7,6 +7,7 @@ import type {
   InspectProjectRequest,
   InspectProjectResult,
   OpenPathRequest,
+  ProjectPreflightResult,
   ProjectOpenResult,
   SavedProjectDocument,
   SaveStarterTemplateRequest,
@@ -18,6 +19,7 @@ declare global {
   interface Window {
     desktopApp: {
       generateProject: (request: GenerateProjectRequest) => Promise<GenerateProjectResult>;
+      validateProject: (request: GenerateProjectRequest) => Promise<ProjectPreflightResult>;
       getTemplateStatus: (request: TemplateStatusRequest) => Promise<TemplateStatusResult>;
       inspectProject: (request: InspectProjectRequest) => Promise<InspectProjectResult>;
       openPath: (request: OpenPathRequest) => Promise<null | string>;

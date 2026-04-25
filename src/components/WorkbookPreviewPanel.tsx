@@ -1,5 +1,6 @@
 import { Alert, Badge, Group, Paper, ScrollArea, Select, Stack, Table, Text, Title } from '@mantine/core';
 import type { WorkbookPreviewRow } from '../types/template';
+import { useI18n } from '../i18n';
 
 type Props = {
   availableVariables: string[];
@@ -16,21 +17,23 @@ export function WorkbookPreviewPanel({
   onAssignmentChange,
   rows,
 }: Props) {
+  const { copy } = useI18n();
+
   return (
     <Paper className="panel-card" p="lg" radius="lg">
       <Stack gap="lg">
         <Group justify="space-between">
           <div>
-            <Title order={3}>Workbook Mapping Preview</Title>
+            <Title order={3}>{copy.workbookPreview.title}</Title>
             <Text c="dimmed" size="sm">
-              Review workbook columns, sample values, and field assignments used by Word and email templates.
+              {copy.workbookPreview.subtitle}
             </Text>
           </div>
-          <Badge color="cyan" variant="light">{rows.length} columns</Badge>
+          <Badge color="cyan" variant="light">{copy.workbookPreview.badgeColumns(rows.length)}</Badge>
         </Group>
 
         {loadError ? (
-          <Alert color="red" radius="lg" title="Preview unavailable" variant="light">
+          <Alert color="red" radius="lg" title={copy.workbookPreview.previewUnavailable} variant="light">
             {loadError}
           </Alert>
         ) : null}
@@ -39,11 +42,11 @@ export function WorkbookPreviewPanel({
           <Table highlightOnHover striped withColumnBorders>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Column</Table.Th>
-                <Table.Th>Header</Table.Th>
-                <Table.Th>First row value</Table.Th>
-                <Table.Th>Selected variable</Table.Th>
-                <Table.Th>Used by</Table.Th>
+                <Table.Th>{copy.workbookPreview.column}</Table.Th>
+                <Table.Th>{copy.workbookPreview.header}</Table.Th>
+                <Table.Th>{copy.workbookPreview.firstRowValue}</Table.Th>
+                <Table.Th>{copy.workbookPreview.selectedVariable}</Table.Th>
+                <Table.Th>{copy.workbookPreview.usedBy}</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -56,14 +59,20 @@ export function WorkbookPreviewPanel({
                     <Select
                       data={availableVariables}
                       onChange={(value) => onAssignmentChange(row.columnLetter, value)}
-                      placeholder="Choose variable"
+                        placeholder={copy.workbookPreview.chooseVariable}
                       searchable
                       value={row.selectedVariable || null}
                     />
                   </Table.Td>
                   <Table.Td>
                     <Badge color={row.usedBy === 'both' ? 'teal' : row.usedBy === 'email' ? 'blue' : row.usedBy === 'contract' ? 'grape' : 'gray'} variant="light">
-                      {row.usedBy}
+                      {row.usedBy === 'both'
+                        ? copy.workbookPreview.usedByBoth
+                        : row.usedBy === 'email'
+                          ? copy.workbookPreview.usedByEmail
+                          : row.usedBy === 'contract'
+                            ? copy.workbookPreview.usedByContract
+                            : copy.workbookPreview.usedByNone}
                     </Badge>
                   </Table.Td>
                 </Table.Tr>
@@ -74,7 +83,7 @@ export function WorkbookPreviewPanel({
 
         {isLoading ? (
           <Text c="dimmed" size="sm">
-            Refreshing workbook mapping preview...
+            {copy.workbookPreview.refreshing}
           </Text>
         ) : null}
       </Stack>

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Alert, Badge, Button, Group, Modal, Paper, Select, Stack, Table, Text, Title } from '@mantine/core';
 import type { TemplateStatusResult } from '../../shared/desktop';
 import type { WorkbookPreviewRow } from '../types/template';
+import { useI18n } from '../i18n';
 
 type Props = {
   availableVariables: string[];
@@ -34,6 +35,7 @@ export function ContractMappingPanel({
   tokens,
   variableSources,
 }: Props) {
+  const { copy } = useI18n();
   const [previewToken, setPreviewToken] = useState<string | null>(null);
 
   const previewContent = useMemo(() => {
@@ -61,23 +63,25 @@ export function ContractMappingPanel({
 
   const templateStatusText = useMemo(() => {
     if (!contractTemplatePath) {
-      return 'Choose a Word template in Project Setup before mapping fields.';
+      return copy.contractMapping.statusNoTemplate;
     }
 
     if (!templateStatus?.exists) {
-      return 'The selected Word template could not be found on disk.';
+      return copy.contractMapping.statusTemplateMissing;
     }
 
     if (templateStatus.isLocked) {
-      return 'The template still looks open in Word. Save your changes, close Word, then reload fields.';
+      return copy.contractMapping.statusTemplateLocked;
     }
 
     if (templateStatus.lastModifiedMs) {
-      return `Last saved change detected at ${new Date(templateStatus.lastModifiedMs).toLocaleTimeString()}. Reload fields after saving if you added or renamed placeholders.`;
+      return copy.contractMapping.statusTemplateEditedAt(
+        new Date(templateStatus.lastModifiedMs).toLocaleTimeString(),
+      );
     }
 
-    return 'Open the Word template, save your edits, then reload fields to pull in new placeholders.';
-  }, [contractTemplatePath, templateStatus]);
+    return copy.contractMapping.statusTemplateHint;
+  }, [contractTemplatePath, copy.contractMapping, templateStatus]);
 
   return (
     <Stack gap="xl">
@@ -86,7 +90,7 @@ export function ContractMappingPanel({
         onClose={() => setPreviewToken(null)}
         opened={Boolean(previewToken)}
         size="lg"
-        title="Template paragraph preview"
+        title={copy.contractMapping.paragraphPreviewTitle}
       >
         <Stack gap="md">
           {previewContent ? (
@@ -94,25 +98,25 @@ export function ContractMappingPanel({
               <Text c="dimmed" size="sm">
                 Token <code>{`{{${previewContent.token}}}`}</code>
                 {previewContent.sampleValue
-                  ? ` with sample value "${previewContent.sampleValue}"`
-                  : ' (no mapped sample value yet)'}
+                  ? copy.contractMapping.tokenWithSample(previewContent.sampleValue)
+                  : copy.contractMapping.tokenWithoutSample}
               </Text>
               <Paper p="md" radius="md" withBorder>
                 <Stack gap="xs">
-                  <Text fw={600} size="sm">Original paragraph</Text>
+                  <Text fw={600} size="sm">{copy.contractMapping.originalParagraph}</Text>
                   <Text size="sm">{previewContent.paragraph}</Text>
                 </Stack>
               </Paper>
               <Paper p="md" radius="md" withBorder>
                 <Stack gap="xs">
-                  <Text fw={600} size="sm">Rendered with sample value</Text>
+                  <Text fw={600} size="sm">{copy.contractMapping.renderedParagraph}</Text>
                   <Text size="sm">{previewContent.renderedParagraph}</Text>
                 </Stack>
               </Paper>
             </>
           ) : (
-            <Alert color="yellow" title="No paragraph context found" variant="light">
-              This token was found in the Word file, but the app could not extract a paragraph around it.
+            <Alert color="yellow" title={copy.contractMapping.noContextTitle} variant="light">
+              {copy.contractMapping.noContextBody}
             </Alert>
           )}
         </Stack>
@@ -122,14 +126,14 @@ export function ContractMappingPanel({
         <Stack gap="lg">
           <Group justify="space-between">
             <div>
-              <Title order={3}>Word Field Mapping</Title>
+              <Title order={3}>{copy.contractMapping.title}</Title>
               <Text c="dimmed" size="sm">
-                Connect each Word placeholder to an Excel column so document generation stays accurate.
+                {copy.contractMapping.subtitle}
               </Text>
             </div>
             <Group gap="sm">
               <Badge color="grape" variant="light">
-                {mappedContractFields} / {tokens.length} mapped
+                {copy.contractMapping.badgeMapped(mappedContractFields, tokens.length)}
               </Badge>
               <Button
                 disabled={!contractTemplatePath}
@@ -138,7 +142,7 @@ export function ContractMappingPanel({
                 size="xs"
                 variant="default"
               >
-                Open template
+                {copy.contractMapping.openTemplate}
               </Button>
               <Button
                 disabled={!contractTemplatePath}
@@ -147,38 +151,33 @@ export function ContractMappingPanel({
                 size="xs"
                 variant="light"
               >
-                Reload fields
+                {copy.contractMapping.reloadFields}
               </Button>
             </Group>
           </Group>
 
-          <Alert color={templateStatus?.isLocked ? 'yellow' : 'blue'} radius="lg" title="Template editing flow" variant="light">
+          <Alert color={templateStatus?.isLocked ? 'yellow' : 'blue'} radius="lg" title={copy.contractMapping.templateFlowTitle} variant="light">
             {templateStatusText}
           </Alert>
 
           {!tokens.length ? (
-            <Alert color="yellow" radius="lg" title="No Word placeholders found" variant="light">
-              The app can only map fields that already exist in the template. Open the Word file,
-              decide where values should be inserted, and add placeholders in double braces such as
-              <code>{'{{AUTHOR}}'}</code>, <code>{'{{TITLE}}'}</code>, or <code>{'{{APPLICATION_CODE}}'}</code>.
-              After saving the template, reload fields here. If you picked the wrong file, you can replace it in Project Setup.
+            <Alert color="yellow" radius="lg" title={copy.contractMapping.noPlaceholdersTitle} variant="light">
+              {copy.contractMapping.noPlaceholdersBody}
             </Alert>
           ) : null}
 
-          <Alert color="teal" radius="lg" title="Need more placeholders?" variant="light">
-            Add markers like <code>{'{{AUTHOR}}'}</code>, <code>{'{{TITLE}}'}</code>, or <code>{'{{APPLICATION_CODE}}'}</code>
-            directly in the Word file wherever values should be injected. Save the template, close Word if needed,
-            then use Reload fields.
+          <Alert color="teal" radius="lg" title={copy.contractMapping.needMorePlaceholdersTitle} variant="light">
+            {copy.contractMapping.needMorePlaceholdersBody}
           </Alert>
 
           <Table highlightOnHover striped withColumnBorders>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Word field</Table.Th>
-                <Table.Th>Workbook variable</Table.Th>
-                <Table.Th>Source column</Table.Th>
-                <Table.Th>Sample value</Table.Th>
-                <Table.Th>Context</Table.Th>
+                <Table.Th>{copy.contractMapping.wordField}</Table.Th>
+                <Table.Th>{copy.contractMapping.workbookVariable}</Table.Th>
+                <Table.Th>{copy.contractMapping.sourceColumn}</Table.Th>
+                <Table.Th>{copy.contractMapping.sampleValue}</Table.Th>
+                <Table.Th>{copy.contractMapping.context}</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -193,7 +192,7 @@ export function ContractMappingPanel({
                       <Select
                         data={availableVariables}
                         onChange={(value) => setTokenMapping(token, value)}
-                        placeholder="Choose variable"
+                        placeholder={copy.contractMapping.chooseVariable}
                         searchable
                         value={variable || null}
                       />
@@ -207,7 +206,7 @@ export function ContractMappingPanel({
                         size="xs"
                         variant="light"
                       >
-                        Show paragraph
+                        {copy.contractMapping.showParagraph}
                       </Button>
                     </Table.Td>
                   </Table.Tr>

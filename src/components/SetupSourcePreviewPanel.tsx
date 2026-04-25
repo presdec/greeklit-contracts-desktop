@@ -1,5 +1,6 @@
 import { Alert, Badge, Group, Paper, ScrollArea, SimpleGrid, Stack, Table, Text, Title } from '@mantine/core';
 import type { WorkbookPreviewSampleRow } from '../../shared/desktop';
+import { useI18n } from '../i18n';
 
 type Props = {
   contractVariables: string[];
@@ -14,6 +15,7 @@ export function SetupSourcePreviewPanel({
   loadError,
   sampleRows,
 }: Props) {
+  const { copy } = useI18n();
   const headers = Object.keys(sampleRows[0]?.values ?? {});
 
   return (
@@ -21,18 +23,18 @@ export function SetupSourcePreviewPanel({
       <Stack gap="lg">
         <Group justify="space-between">
           <div>
-            <Title order={3}>Load Check</Title>
+            <Title order={3}>{copy.setupPreview.loadCheck}</Title>
             <Text c="dimmed" size="sm">
-              Confirm detected Word fields and sample Excel values before moving to mapping.
+              {copy.setupPreview.subtitle}
             </Text>
           </div>
           <Badge color="cyan" variant="light">
-            Setup preview
+            {copy.setupPreview.badge}
           </Badge>
         </Group>
 
         {loadError ? (
-          <Alert color="red" radius="lg" title="Preview unavailable" variant="light">
+          <Alert color="red" radius="lg" title={copy.setupPreview.previewUnavailable} variant="light">
             {loadError}
           </Alert>
         ) : null}
@@ -41,7 +43,7 @@ export function SetupSourcePreviewPanel({
           <Paper className="mini-stat" p="md" radius="lg">
             <Stack gap="sm">
               <Text c="dimmed" size="sm">
-                Fields found in Word template
+                {copy.setupPreview.fieldsFoundInWord}
               </Text>
               <Group gap="xs">
                 {contractVariables.slice(0, 10).map((token) => (
@@ -51,11 +53,7 @@ export function SetupSourcePreviewPanel({
                 ))}
                 {!contractVariables.length ? (
                   <Text size="sm">
-                    No template placeholders were found. Add markers like{' '}
-                    <code>{'{{AUTHOR}}'}</code> or <code>{'{{TITLE}}'}</code> inside the
-                    DOCX anywhere you want Excel values to be injected. Then save the file and
-                    either browse for the contract template again in Project Setup or re-open the
-                    same file to refresh this list.
+                    {copy.setupPreview.noTemplateFields}
                   </Text>
                 ) : null}
               </Group>
@@ -65,10 +63,10 @@ export function SetupSourcePreviewPanel({
           <Paper className="mini-stat" p="md" radius="lg">
             <Stack gap="xs">
               <Text c="dimmed" size="sm">
-                Workbook quick check
+                {copy.setupPreview.quickCheck}
               </Text>
               <Text size="sm">
-                Showing the first {sampleRows.length} data rows so you can verify sheet and row settings before generating at scale.
+                {copy.setupPreview.quickCheckDesc(sampleRows.length)}
               </Text>
             </Stack>
           </Paper>
@@ -78,7 +76,7 @@ export function SetupSourcePreviewPanel({
           <Table highlightOnHover striped withColumnBorders>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Row</Table.Th>
+                <Table.Th>{copy.setupPreview.row}</Table.Th>
                 {headers.map((header) => (
                   <Table.Th key={header}>{header}</Table.Th>
                 ))}
@@ -99,7 +97,7 @@ export function SetupSourcePreviewPanel({
 
         {isLoading ? (
           <Text c="dimmed" size="sm">
-            Refreshing source preview...
+            {copy.setupPreview.refreshing}
           </Text>
         ) : null}
       </Stack>

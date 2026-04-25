@@ -1,17 +1,22 @@
-import { Badge, Button, Divider, Group, Paper, SimpleGrid, Stack, Text, TextInput, Textarea, Title } from '@mantine/core';
+import { useEffect } from 'react';
+import { Badge, Button, Divider, Group, Paper, SimpleGrid, Stack, Text, TextInput, Title } from '@mantine/core';
+import { RichTextEditor } from '@mantine/tiptap';
+import { useEditor } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
 import type { EditorField, EmailTemplateState } from '../types/template';
+import { useI18n } from '../i18n';
+import { normalizeEmailBody } from '../lib/template';
 
 type Props = {
   activeEditor: EditorField;
   availableVariables: string[];
   editorRefs: {
-    body: React.RefObject<HTMLTextAreaElement | null>;
     cc: React.RefObject<HTMLInputElement | null>;
     subject: React.RefObject<HTMLInputElement | null>;
     to: React.RefObject<HTMLInputElement | null>;
   };
   emailTemplate: EmailTemplateState;
-  insertFieldToken: (variable: string) => void;
+  insertFieldToken: (variable: string) => string;
   setActiveEditor: (field: EditorField) => void;
   updateEmailField: (field: EditorField, value: string) => void;
 };
@@ -25,24 +30,58 @@ export function EmailTemplateEditor({
   setActiveEditor,
   updateEmailField,
 }: Props) {
+  const { copy } = useI18n();
+  const editor = useEditor({
+    content: normalizeEmailBody(emailTemplate.body),
+    extensions: [StarterKit],
+    immediatelyRender: false,
+    onFocus: () => setActiveEditor('body'),
+    onUpdate: ({ editor: currentEditor }) => {
+      updateEmailField('body', currentEditor.getHTML());
+    },
+  });
+
+  useEffect(() => {
+    if (!editor) {
+      return;
+    }
+
+    const normalizedBody = normalizeEmailBody(emailTemplate.body);
+    if (editor.getHTML() !== normalizedBody) {
+      editor.commands.setContent(normalizedBody, { emitUpdate: false });
+    }
+  }, [editor, emailTemplate.body]);
+
   return (
     <Paper className="panel-card" p="lg" radius="lg">
       <Stack gap="lg">
         <Group justify="space-between">
           <div>
-            <Title order={3}>Email Template Builder</Title>
+            <Title order={3}>{copy.emailBuilder.title}</Title>
             <Text c="dimmed" size="sm">
-              Click any field token to insert it where your cursor is active.
+              {copy.emailBuilder.subtitle}
             </Text>
           </div>
           <Badge color="orange" variant="light">
-            Active target: {activeEditor}
+            {copy.emailBuilder.activeTarget(activeEditor)}
           </Badge>
         </Group>
 
         <Group gap="sm">
           {availableVariables.map((variable) => (
-            <Button key={variable} className="field-chip" onClick={() => insertFieldToken(variable)} radius="xl" size="xs" variant="light">
+            <Button
+              key={variable}
+              className="field-chip"
+              onClick={() => {
+                const token = insertFieldToken(variable);
+                if (activeEditor === 'body' && editor) {
+                  editor.chain().focus().insertContent(token).run();
+                }
+              }}
+              radius="xl"
+              size="xs"
+              variant="light"
+            >
               {variable}
             </Button>
           ))}
@@ -51,12 +90,36 @@ export function EmailTemplateEditor({
         <Divider />
 
         <Stack gap="md">
-          <TextInput description="Click here, then insert workbook fields from above." label="Subject" onChange={(event) => updateEmailField('subject', event.currentTarget.value)} onFocus={() => setActiveEditor('subject')} ref={editorRefs.subject} value={emailTemplate.subject} />
+          <TextInput description={copy.emailBuilder.subjectDesc} label={copy.emailBuilder.subject} onChange={(event) => updateEmailField('subject', event.currentTarget.value)} onFocus={() => setActiveEditor('subject')} ref={editorRefs.subject} value={emailTemplate.subject} />
           <SimpleGrid cols={{ base: 1, md: 2 }}>
-            <TextInput description="Primary recipient field." label="To" onChange={(event) => updateEmailField('to', event.currentTarget.value)} onFocus={() => setActiveEditor('to')} ref={editorRefs.to} value={emailTemplate.to} />
-            <TextInput description="Optional copied recipients." label="Cc" onChange={(event) => updateEmailField('cc', event.currentTarget.value)} onFocus={() => setActiveEditor('cc')} ref={editorRefs.cc} value={emailTemplate.cc} />
+            <TextInput description={copy.emailBuilder.toDesc} label={copy.emailBuilder.to} onChange={(event) => updateEmailField('to', event.currentTarget.value)} onFocus={() => setActiveEditor('to')} ref={editorRefs.to} value={emailTemplate.to} />
+            <TextInput description={copy.emailBuilder.ccDesc} label={copy.emailBuilder.cc} onChange={(event) => updateEmailField('cc', event.currentTarget.value)} onFocus={() => setActiveEditor('cc')} ref={editorRefs.cc} value={emailTemplate.cc} />
           </SimpleGrid>
-          <Textarea autosize description="Draft the email body here and insert workbook variables wherever they belong." label="Body" minRows={12} onChange={(event) => updateEmailField('body', event.currentTarget.value)} onFocus={() => setActiveEditor('body')} ref={editorRefs.body} value={emailTemplate.body} />
+          <Stack gap="xs">
+            <Text fw={500} size="sm">{copy.emailBuilder.body}</Text>
+            <Text c="dimmed" size="sm">{copy.emailBuilder.bodyDesc}</Text>
+            <RichTextEditor className="email-rich-editor" editor={editor}>
+              <RichTextEditor.Toolbar sticky stickyOffset={0}>
+                <RichTextEditor.ControlsGroup>
+                  <RichTextEditor.Bold />
+                  <RichTextEditor.Italic />
+                  <RichTextEditor.ClearFormatting />
+                </RichTextEditor.ControlsGroup>
+
+                <RichTextEditor.ControlsGroup>
+                  <RichTextEditor.BulletList />
+                  <RichTextEditor.OrderedList />
+                </RichTextEditor.ControlsGroup>
+
+                <RichTextEditor.ControlsGroup>
+                  <RichTextEditor.Undo />
+                  <RichTextEditor.Redo />
+                </RichTextEditor.ControlsGroup>
+              </RichTextEditor.Toolbar>
+
+              <RichTextEditor.Content />
+            </RichTextEditor>
+          </Stack>
         </Stack>
       </Stack>
     </Paper>

@@ -72,6 +72,27 @@ body {
   padding: 18px;
 }
 
+.preview-body--html p,
+.preview-body--html ul,
+.preview-body--html ol {
+  margin: 0 0 12px;
+}
+
+.preview-body--html ul,
+.preview-body--html ol {
+  padding-left: 22px;
+}
+
+.preview-body--html p:last-child,
+.preview-body--html ul:last-child,
+.preview-body--html ol:last-child {
+  margin-bottom: 0;
+}
+
+.email-rich-editor .tiptap {
+  min-height: 220px;
+}
+
 .field-chip {
   border: 1px solid rgba(18, 184, 134, 0.22);
   background: rgba(235, 252, 247, 0.92);

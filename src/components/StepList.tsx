@@ -1,6 +1,6 @@
 import { Badge, Group, Paper, Stack, Text, ThemeIcon } from '@mantine/core';
-import { wizardSteps } from '../data/defaults';
 import type { WizardStepId } from '../types/template';
+import { useI18n } from '../i18n';
 
 type Props = {
   activeStep: WizardStepId;
@@ -8,8 +8,11 @@ type Props = {
 };
 
 export function StepList({ activeStep, visibleSteps }: Props) {
-  const visibleSet = new Set(visibleSteps);
-  const displayedSteps = wizardSteps.filter((step) => visibleSet.has(step.id as WizardStepId));
+  const { copy } = useI18n();
+  const displayedSteps = visibleSteps.map((id) => ({
+    ...copy.steps[id],
+    id,
+  }));
 
   return (
     <Stack gap="md">
@@ -41,12 +44,12 @@ export function StepList({ activeStep, visibleSteps }: Props) {
                   <Text fw={700}>{step.title}</Text>
                   {isComplete ? (
                     <Badge color="lime" variant="light">
-                      Ready
+                      {copy.stepList.ready}
                     </Badge>
                   ) : null}
                   {isCurrent ? (
                     <Badge color="teal" variant="light">
-                      Current
+                      {copy.stepList.current}
                     </Badge>
                   ) : null}
                 </Group>

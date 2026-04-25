@@ -1,4 +1,5 @@
 import json
+import html
 import re
 import sys
 from datetime import date, datetime
@@ -34,7 +35,8 @@ def normalize_cell_value(value):
 def render_template(template_text, values):
     def replacer(match):
         token = match.group(1)
-        return values.get(token, match.group(0))
+        replacement = values.get(token)
+        return html.escape(replacement) if replacement is not None else match.group(0)
 
     return PLACEHOLDER_RE.sub(replacer, template_text)
 
@@ -46,13 +48,37 @@ def build_row_values(worksheet, row_number, mapping):
     return values
 
 
-def write_email_drafts(path, drafts):
-    blocks = []
-    for row_number, rendered_text in drafts:
-        blocks.append(f"===== ROW {row_number} =====")
-        blocks.append(rendered_text.rstrip())
-        blocks.append("")
-    path.write_text("\n".join(blocks).rstrip() + "\n", encoding="utf-8")
+def write_email_drafts_html(path, drafts):
+    sections = []
+
+    for heading, rendered_html in drafts:
+        sections.append(
+            "\n".join(
+                [
+                    '<section style="margin-bottom: 28px;">',
+                    f"<p><strong>{html.escape(heading)}</strong></p>",
+                    rendered_html,
+                    "</section>",
+                ]
+            )
+        )
+
+    document_html = "\n".join(
+        [
+            "<!DOCTYPE html>",
+            '<html lang="en">',
+            "<head>",
+            '<meta charset="utf-8" />',
+            "<title>Email Drafts</title>",
+            "</head>",
+            '<body style="font-family: Calibri, Arial, sans-serif; font-size: 11pt; line-height: 1.45;">',
+            "\n".join(sections) if sections else "<p>No email drafts were generated.</p>",
+            "</body>",
+            "</html>",
+        ]
+    )
+
+    path.write_text(document_html, encoding="utf-8")
 
 
 def write_report(path, payload, placeholders, generated_rows, skipped_rows):
@@ -112,13 +138,19 @@ def main():
             continue
 
         rendered = render_template(template_text, row_values)
-        drafts.append((row_number, rendered))
+        application_code = row_values.get("APPLICATION_CODE", "")
+        heading = (
+            f"===== {application_code} - ROW {row_number} ====="
+            if application_code
+            else f"===== ROW {row_number} ====="
+        )
+        drafts.append((heading, rendered))
         generated_rows.append(row_number)
 
-    combined_email_path = output_dir / "email_drafts.txt"
+    combined_email_path = output_dir / "email_drafts.html"
     report_path = output_dir / "generation_report.txt"
 
-    write_email_drafts(combined_email_path, drafts)
+    write_email_drafts_html(combined_email_path, drafts)
     write_report(report_path, payload, placeholders, generated_rows, skipped_rows)
 
     print(f"Generated {len(generated_rows)} emails.")

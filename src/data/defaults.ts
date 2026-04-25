@@ -40,19 +40,7 @@ export const initialEmailTemplate: EmailTemplateState = {
     'Document Batch | {{APPLICATION_CODE}} | {{TITLE}} | {{AUTHOR}}',
   to: '{{EMAIL_TO}}',
   cc: '{{EMAIL_CC}}',
-  body: `Dear {{PUBLISHER}},
-
-Please find your generated document attached.
-
-Please review the details and reply if you need any corrections.
-
-For faster support, keep this subject line in your reply.
-
-Reference amount: {{FIRST_INSTALLMENT}} EUR.
-
-Best regards,
-
-Operations Team`,
+  body: `<p>Dear {{PUBLISHER}},</p><p>Please find your generated document attached.</p><p>Please review the details and reply if you need any corrections.</p><p>For faster support, keep this subject line in your reply.</p><p>Reference amount: {{FIRST_INSTALLMENT}} EUR.</p><p>Best regards,</p><p>Operations Team</p>`,
 };
 
 export const canonicalVariables = [

@@ -1,4 +1,5 @@
 import { ActionIcon, Button, Group, Stack, Text, TextInput, Tooltip } from '@mantine/core';
+import { useI18n } from '../i18n';
 
 type FileFieldProps = {
   description: string;
@@ -42,6 +43,8 @@ export function FileField({
   exampleTooltip,
   value,
 }: FileFieldProps) {
+  const { copy } = useI18n();
+
   return (
     <Stack gap={6}>
       <Group justify="space-between">
@@ -49,11 +52,11 @@ export function FileField({
         <Group gap="xs">
           {onDownloadExample ? (
             <Tooltip
-              label={exampleTooltip ?? 'Download example template'}
+              label={exampleTooltip ?? copy.fileField.downloadExample}
               withArrow
             >
               <ActionIcon
-                aria-label={exampleTooltip ?? 'Download example template'}
+                aria-label={exampleTooltip ?? copy.fileField.downloadExample}
                 onClick={onDownloadExample}
                 size="sm"
                 variant="light"
@@ -68,7 +71,7 @@ export function FileField({
             size="xs"
             variant="light"
           >
-            Browse
+            {copy.fileField.browse}
           </Button>
         </Group>
       </Group>

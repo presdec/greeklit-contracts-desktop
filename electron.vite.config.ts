@@ -11,6 +11,12 @@ export default defineConfig({
     build: {
       lib: {
         entry: resolve(__dirname, 'electron/main.ts'),
+        fileName: () => 'main.cjs',
+      },
+      rollupOptions: {
+        output: {
+          format: 'cjs',
+        },
       },
       outDir: 'dist-electron/main',
     },

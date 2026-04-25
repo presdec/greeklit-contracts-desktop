@@ -1,6 +1,7 @@
 import { atom } from 'jotai/vanilla';
 import type { SavedProjectDocument } from '../../shared/desktop';
 import { defaultGenerationOptions, initialEmailTemplate, initialProject } from '../data/defaults';
+import { normalizeEmailBody } from '../lib/template';
 import type { EmailTemplateState, GenerationOptions, WizardStepId } from '../types/template';
 
 function sanitizeRecord(record: Record<string, string>) {
@@ -41,6 +42,7 @@ export const hydrateWorkspaceAtom = atom(
     set(emailTemplateAtom, {
       ...initialEmailTemplate,
       ...projectDocument.emailTemplate,
+      body: normalizeEmailBody(projectDocument.emailTemplate.body ?? initialEmailTemplate.body),
     });
     set(generationOptionsAtom, {
       ...defaultGenerationOptions,

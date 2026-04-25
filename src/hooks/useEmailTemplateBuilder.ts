@@ -8,10 +8,8 @@ export function useEmailTemplateBuilder() {
   const subjectRef = useRef<HTMLInputElement>(null);
   const toRef = useRef<HTMLInputElement>(null);
   const ccRef = useRef<HTMLInputElement>(null);
-  const bodyRef = useRef<HTMLTextAreaElement>(null);
   const fieldRefs = useMemo(
     () => ({
-      body: bodyRef,
       cc: ccRef,
       subject: subjectRef,
       to: toRef,
@@ -34,6 +32,10 @@ export function useEmailTemplateBuilder() {
 
   const insertFieldToken = useCallback((variable: string) => {
     const token = `{{${variable}}}`;
+    if (activeEditor === 'body') {
+      return token;
+    }
+
     const targetRef = fieldRefs[activeEditor].current;
 
     setEmailTemplate((current) => {

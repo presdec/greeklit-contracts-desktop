@@ -6,6 +6,7 @@ import type {
   InspectProjectRequest,
   InspectProjectResult,
   OpenPathRequest,
+  ProjectPreflightResult,
   ProjectOpenResult,
   SavedProjectDocument,
   SaveStarterTemplateRequest,
@@ -21,6 +22,8 @@ const { contextBridge, ipcRenderer } = electron;
 contextBridge.exposeInMainWorld('desktopApp', {
   generateProject: (request: GenerateProjectRequest) =>
     ipcRenderer.invoke('desktop-app:generate-project', request) as Promise<GenerateProjectResult>,
+  validateProject: (request: GenerateProjectRequest) =>
+    ipcRenderer.invoke('desktop-app:validate-project', request) as Promise<ProjectPreflightResult>,
   getTemplateStatus: (request: TemplateStatusRequest) =>
     ipcRenderer.invoke('desktop-app:get-template-status', request) as Promise<TemplateStatusResult>,
   inspectProject: (request: InspectProjectRequest) =>

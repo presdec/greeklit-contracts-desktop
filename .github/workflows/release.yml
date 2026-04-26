@@ -18,11 +18,11 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            command: pnpm dist:win -- --publish always
+            command: pnpm dist:win
             artifact_pattern: release/*.exe
             artifact_name: windows-release
           - os: ubuntu-latest
-            command: pnpm dist:linux -- --publish always
+            command: pnpm dist:linux
             artifact_pattern: |
               release/*.AppImage
               release/*.deb
@@ -55,6 +55,11 @@ jobs:
 
       - name: Install runtime build dependencies
         run: python -m pip install -r scripts/requirements-runtime-build.txt
+
+      - name: Sync package version from tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          node -e "const fs=require('fs'); const p='package.json'; const j=JSON.parse(fs.readFileSync(p,'utf8')); const t=process.env.GITHUB_REF_NAME||''; if (!t.startsWith('v')) { throw new Error('Expected tag starting with v'); } j.version=t.slice(1); fs.writeFileSync(p, JSON.stringify(j, null, 2) + '\n'); console.log('Set package version to', j.version);"
 
       - name: Install Linux packaging dependencies
         if: runner.os == 'Linux'

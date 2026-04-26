@@ -2,6 +2,21 @@
 
 This document is for contributors and maintainers working from source.
 
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Desktop shell | Electron |
+| Build tooling | electron-vite |
+| UI | React + TypeScript |
+| Component library | Mantine v8 |
+| State management | Jotai |
+| i18n | Custom (EN / EL) |
+| Document generation | Python (PyInstaller-bundled runtime) |
+| Excel reading | openpyxl |
+| Testing | Playwright (e2e), pytest |
+| Packaging | electron-builder |
+
 ## Prerequisites
 
 | Tool | Version |

@@ -5,9 +5,35 @@
 [![Release](https://img.shields.io/github/v/release/presdec/docgen-studio-desktop?display_name=tag)](https://github.com/presdec/docgen-studio-desktop/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Doc Gen Studio is a desktop app for high-volume document generation from Excel data and Word templates.
+**Turn an Excel spreadsheet and a Word template into hundreds of personalised documents — in one run, on your own machine.**
 
-It is built for teams that need to produce accurate, personalized documents quickly, without moving sensitive data to cloud services and without maintaining brittle manual workflows.
+Doc Gen Studio is a free, open-source desktop app for teams that need to produce contracts, letters, or notices at scale. No cloud subscription. No mail-merge fragility. No Python scripts to babysit. Just load your data, map your fields, and generate.
+
+---
+
+## Why Doc Gen Studio?
+
+- **Your data stays local.** Excel files, Word templates, and generated outputs never leave your machine. No accounts, no uploads, no SaaS billing.
+- **Batch in minutes, not hours.** Generate Word docs, PDFs, and email drafts from a single workbook run. One click replaces hours of copy-paste.
+- **Safe to hand to anyone.** A guided four-step workflow means non-technical team members can run generation without touching scripts or configuration files.
+- **Catch mistakes before you generate.** Live mapping preview, first-row filename preview, and unmapped-token warnings catch errors before a full run.
+- **Flexible email output.** Export email drafts as one combined DOCX, individual DOCX files, or ready-to-send `.eml` files — whichever fits your workflow.
+- **Respects your OS.** Follows your system light/dark theme. Full application menu with keyboard shortcuts.
+
+## Who Is It For?
+
+- Legal, grants, and contracts teams preparing high-volume personalised document sets
+- Operations teams replacing fragile mail-merge workflows with a repeatable process
+- Small organisations that can't justify a cloud document-automation subscription
+
+## What Can You Do Today?
+
+- Load an Excel workbook, a Word `.docx` template, and an optional email template
+- Let the app suggest column → placeholder mappings, then adjust them inline
+- Build output filenames from workbook fields with a live first-row preview
+- Generate DOCX, PDF, and email drafts for every row in one run
+- Open, inspect, and share results directly from the app
+- Save your project setup and reload it next time
 
 ---
 
@@ -17,11 +43,11 @@ It is built for teams that need to produce accurate, personalized documents quic
 
 | Version | Package | Download |
 |---------|---------|----------|
-| **v0.2.10** *(latest)* | Windows installer | [DocGen-Studio-Setup-0.2.10.exe](https://github.com/presdec/docgen-studio-desktop/releases/download/v0.2.10/DocGen-Studio-Setup-0.2.10.exe) |
-| **v0.2.10** *(latest)* | Linux AppImage | [docgen-studio-0.2.10-x86_64.AppImage](https://github.com/presdec/docgen-studio-desktop/releases/download/v0.2.10/docgen-studio-0.2.10-x86_64.AppImage) |
-| **v0.2.10** *(latest)* | Linux deb | [docgen-studio-0.2.10-amd64.deb](https://github.com/presdec/docgen-studio-desktop/releases/download/v0.2.10/docgen-studio-0.2.10-amd64.deb) |
-| **v0.2.10** *(latest)* | Linux rpm | [docgen-studio-0.2.10-x86_64.rpm](https://github.com/presdec/docgen-studio-desktop/releases/download/v0.2.10/docgen-studio-0.2.10-x86_64.rpm) |
-| **v0.2.10** *(latest)* | Linux pacman | [docgen-studio-0.2.10-x64.pacman](https://github.com/presdec/docgen-studio-desktop/releases/download/v0.2.10/docgen-studio-0.2.10-x64.pacman) |
+| **v0.2.11** *(latest)* | Windows installer | [DocGen-Studio-Setup-0.2.11.exe](https://github.com/presdec/docgen-studio-desktop/releases/download/v0.2.11/DocGen-Studio-Setup-0.2.11.exe) |
+| **v0.2.11** *(latest)* | Linux AppImage | [docgen-studio-0.2.11-x86_64.AppImage](https://github.com/presdec/docgen-studio-desktop/releases/download/v0.2.11/docgen-studio-0.2.11-x86_64.AppImage) |
+| **v0.2.11** *(latest)* | Linux deb | [docgen-studio-0.2.11-amd64.deb](https://github.com/presdec/docgen-studio-desktop/releases/download/v0.2.11/docgen-studio-0.2.11-amd64.deb) |
+| **v0.2.11** *(latest)* | Linux rpm | [docgen-studio-0.2.11-x86_64.rpm](https://github.com/presdec/docgen-studio-desktop/releases/download/v0.2.11/docgen-studio-0.2.11-x86_64.rpm) |
+| **v0.2.11** *(latest)* | Linux pacman | [docgen-studio-0.2.11-x64.pacman](https://github.com/presdec/docgen-studio-desktop/releases/download/v0.2.11/docgen-studio-0.2.11-x64.pacman) |
 
 All releases: [github.com/presdec/docgen-studio-desktop/releases](https://github.com/presdec/docgen-studio-desktop/releases)
 
@@ -29,15 +55,15 @@ All releases: [github.com/presdec/docgen-studio-desktop/releases](https://github
 
 **Windows (`.exe`)**
 
-1. Download `DocGen-Studio-Setup-0.2.10.exe`.
+1. Download `DocGen-Studio-Setup-0.2.11.exe`.
 2. Double-click the installer.
 3. Follow the setup wizard and launch Doc Gen Studio from the Start menu.
 
 **Linux AppImage**
 
 ```bash
-chmod +x ./docgen-studio-0.2.10-x86_64.AppImage
-./docgen-studio-0.2.10-x86_64.AppImage
+chmod +x ./docgen-studio-0.2.11-x86_64.AppImage
+./docgen-studio-0.2.11-x86_64.AppImage
 ```
 
 On Ubuntu or Debian, AppImage may require `libfuse2`:
@@ -49,83 +75,33 @@ sudo apt install libfuse2
 **Ubuntu / Debian (`.deb`)**
 
 ```bash
-sudo apt install ./docgen-studio-0.2.10-amd64.deb
+sudo apt install ./docgen-studio-0.2.11-amd64.deb
 ```
 
-If `apt` prints a warning about downloading unsandboxed as root for a local file, that is usually an `apt` local-file warning rather than a Doc Gen Studio packaging failure.
+If `apt` prints a warning about downloading unsandboxed as root for a local file, that is an `apt` local-file warning, not a Doc Gen Studio packaging issue.
 
 **Fedora / RHEL (`.rpm`)**
 
 ```bash
-sudo dnf install ./docgen-studio-0.2.10-x86_64.rpm
+sudo dnf install ./docgen-studio-0.2.11-x86_64.rpm
 ```
 
 **Arch Linux (`.pacman`)**
 
 ```bash
-sudo pacman -U ./docgen-studio-0.2.10-x64.pacman
+sudo pacman -U ./docgen-studio-0.2.11-x64.pacman
 ```
 
 ### Release History
 
 | Tag | Summary |
 |-----|---------|
+| [v0.2.11](https://github.com/presdec/docgen-studio-desktop/releases/tag/v0.2.11) | App menu, system theme, Linux AppImage fix, Ubuntu font fix, Python test suite, docs refresh |
 | [v0.2.10](https://github.com/presdec/docgen-studio-desktop/releases/tag/v0.2.10) | Email output modes, filename preview and warnings, mapping UX improvements |
-| [v0.2.9](https://github.com/presdec/docgen-studio-desktop/releases/tag/v0.2.9) | Render stability fixes, worksheet dropdown, first-sheet fallback, header/data row UX |
-| [v0.2.8](https://github.com/presdec/docgen-studio-desktop/releases/tag/v0.2.8) | Filename token picker, Step 2 column assignment, navigation guard, worksheet preview fixes |
+| [v0.2.9](https://github.com/presdec/docgen-studio-desktop/releases/tag/v0.2.9) | Worksheet dropdown, first-sheet fallback, header/data row auto-bump, render stability fixes |
+| [v0.2.8](https://github.com/presdec/docgen-studio-desktop/releases/tag/v0.2.8) | Filename token picker, Step 2 column assignment, navigation guard |
 
 ---
-
-## Why This App Exists
-
-Most document generation setups break down in one of two ways:
-
-- They are too manual: copy/paste into templates, one document at a time.
-- They are too technical: scripts and tooling that only one person on the team can safely run.
-
-Doc Gen Studio closes that gap. It gives non-technical users a clear UI, while preserving the proven Python runtime that powers robust generation.
-
-## Core USPs
-
-- **Private by default** — Excel files, Word templates, email drafts, and generated outputs stay on the local machine. No cloud dependency and no SaaS lock-in.
-- **Built for real-world bulk work** — Generate Word files, PDFs, and email drafts from one workbook-driven workflow instead of maintaining separate tools or manual mail merge steps.
-- **Safer mapping before generation** — Preview source rows, map placeholders explicitly, build output filenames from workbook fields, and catch missing mappings before a full run.
-- **Flexible delivery outputs** — Produce one combined email DOCX, separate email DOCX files, or separate EML files depending on how the team actually sends messages.
-- **Desktop UX over script maintenance** — The Python runtime stays behind the scenes while non-technical users work through a guided interface.
-- **Operationally practical** — Open templates, reload fields, save reusable setups, and inspect output trees directly from the app.
-
-## Who It Is For
-
-- Legal and contracts teams preparing high-volume document sets.
-- Operations teams sending personalized notices, forms, or packs.
-- Small teams replacing fragile mail-merge workflows with a repeatable process.
-
-## What You Can Do Today
-
-- Select an Excel workbook, DOCX template, and email template.
-- Map Word placeholders to workbook columns with suggested auto-mapping.
-- Click Excel column chips to build DOCX/PDF filename patterns and preview the first-row result.
-- Correct column → variable assignments inline in the mapping step.
-- Generate DOCX, PDF, and email drafts in bulk.
-- Choose whether email drafts are exported as one DOCX, separate DOCX files, or separate EML files.
-- Review generated outputs and open files directly from the app.
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Desktop shell | Electron |
-| Build tooling | electron-vite |
-| UI | React 18 + TypeScript |
-| Component library | Mantine v8 |
-| State management | Jotai |
-| i18n | Custom (EN / EL) |
-| Document generation | Python (PyInstaller-bundled runtime) |
-| Excel reading | openpyxl |
-| Testing | Playwright (e2e) |
-| Packaging | electron-builder |
 
 ## Development, Source Builds, and Releasing
 

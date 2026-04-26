@@ -35,6 +35,8 @@ type Translation = {
     projectFileLabel: string;
     back: string;
     continueTo: string;
+    wordTemplateRequiredTitle: string;
+    wordTemplateRequiredBody: string;
   };
   generationProgress: {
     docxFiles: string;
@@ -132,6 +134,7 @@ type Translation = {
     outputFilenamePatternDesc: string;
     outputFilenamePatternLabel: string;
     outputFilenamePatternPlaceholder: string;
+    filenameTokensHint: string;
   };
   emailBuilder: {
     activeTarget: (target: string) => string;
@@ -301,6 +304,9 @@ const translations: Record<Language, Translation> = {
       projectFileLabel: 'Project file',
       back: 'Back',
       continueTo: 'Continue To',
+      wordTemplateRequiredTitle: 'Word template required',
+      wordTemplateRequiredBody:
+        'Select a Word template before continuing to Field & Filename Mapping when DOCX or PDF output is enabled.',
     },
     generationProgress: {
       docxFiles: 'DOCX files',
@@ -407,6 +413,7 @@ const translations: Record<Language, Translation> = {
         'Controls DOCX/PDF file names. Use placeholders like {{APPLICATION_CODE}} and plain text (for example: Contract - {{TITLE}}).',
       outputFilenamePatternLabel: 'DOCX/PDF Filename Pattern',
       outputFilenamePatternPlaceholder: '{{APPLICATION_CODE}} - {{TITLE}} - {{LANGUAGE}}',
+      filenameTokensHint: 'Click a column to insert it into the pattern:',
     },
     emailBuilder: {
       activeTarget: (target) => `Active target: ${target}`,
@@ -580,6 +587,9 @@ const translations: Record<Language, Translation> = {
       projectFileLabel: 'Αρχείο έργου',
       back: 'Πίσω',
       continueTo: 'Συνέχεια σε',
+      wordTemplateRequiredTitle: 'Απαιτείται πρότυπο Word',
+      wordTemplateRequiredBody:
+        'Επιλέξτε πρότυπο Word πριν συνεχίσετε στη Χαρτογράφηση Πεδίων & Ονόματος Αρχείου όταν είναι ενεργό DOCX ή PDF.',
     },
     generationProgress: {
       docxFiles: 'Αρχεία DOCX',
@@ -686,6 +696,7 @@ const translations: Record<Language, Translation> = {
         'Ελέγχει το όνομα αρχείου DOCX/PDF. Χρησιμοποίησε placeholders όπως {{APPLICATION_CODE}} και απλό κείμενο (π.χ. Σύμβαση - {{TITLE}}).',
       outputFilenamePatternLabel: 'Μοτίβο Ονόματος Αρχείου DOCX/PDF',
       outputFilenamePatternPlaceholder: '{{APPLICATION_CODE}} - {{TITLE}} - {{LANGUAGE}}',
+      filenameTokensHint: 'Κάντε κλικ σε στήλη για εισαγωγή στο μοτίβο:',
     },
     emailBuilder: {
       activeTarget: (target) => `Ενεργό πεδίο: ${target}`,

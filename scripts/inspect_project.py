@@ -191,6 +191,14 @@ def extract_contract_tokens(path_value):
     }
 
 
+def parse_positive_int(value, fallback):
+    try:
+        parsed = int(value)
+        return parsed if parsed > 0 else fallback
+    except (TypeError, ValueError):
+        return fallback
+
+
 def inspect_workbook(payload):
     workbook = load_workbook(payload["workbook_path"], data_only=True, read_only=True)
     worksheet_name = (payload.get("worksheet_name") or "").strip()
@@ -198,8 +206,8 @@ def inspect_workbook(payload):
         worksheet = workbook[worksheet_name]
     else:
         worksheet = workbook[workbook.sheetnames[0]]
-    header_row = int(payload["header_row"])
-    data_start_row = int(payload["data_start_row"])
+    header_row = parse_positive_int(payload.get("header_row"), 1)
+    data_start_row = parse_positive_int(payload.get("data_start_row"), max(2, header_row + 1))
 
     columns = []
     for cell in worksheet[header_row]:

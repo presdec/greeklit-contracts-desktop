@@ -13,6 +13,7 @@ export function useWorkbookPreview(
   project: ProjectConfig,
   emailVariables: string[],
   filenameVariables: string[],
+  onResolvedWorksheetName?: (worksheetName: string) => void,
 ) {
   const [contractTokenContexts, setContractTokenContexts] = useState<Record<string, string>>({});
   const [contractVariables, setContractVariables] = useState<string[]>([]);
@@ -58,11 +59,19 @@ export function useWorkbookPreview(
     const requestId = previewRequestId.current + 1;
     previewRequestId.current = requestId;
 
-    if (!project.workbookPath || !project.worksheetName) {
+    if (!project.workbookPath) {
       clearPreview();
       setIsLoading(false);
       return;
     }
+
+    const headerRow = Number.isFinite(project.headerRow) && project.headerRow > 0
+      ? Math.floor(project.headerRow)
+      : 1;
+    const dataStartRow = Number.isFinite(project.dataStartRow) && project.dataStartRow > 0
+      ? Math.floor(project.dataStartRow)
+      : Math.max(2, headerRow + 1);
+    const worksheetName = (project.worksheetName ?? '').trim();
 
     setIsLoading(true);
     setLoadError(null);
@@ -70,10 +79,10 @@ export function useWorkbookPreview(
     try {
       const result = await desktopApp.inspectProject({
         contractTemplatePath: project.contractTemplatePath,
-        dataStartRow: project.dataStartRow,
-        headerRow: project.headerRow,
+        dataStartRow,
+        headerRow,
         workbookPath: project.workbookPath,
-        worksheetName: project.worksheetName,
+        worksheetName,
       });
 
       if (previewRequestId.current !== requestId) {
@@ -85,6 +94,9 @@ export function useWorkbookPreview(
       setContractVariables(result.contractTokens);
       setSampleRows(result.sampleRows);
       setTotalRows(result.totalRows);
+      if (!worksheetName && result.worksheetName) {
+        onResolvedWorksheetName?.(result.worksheetName);
+      }
       await loadTemplateStatus();
     } catch (error) {
       if (previewRequestId.current === requestId) {
@@ -104,6 +116,7 @@ export function useWorkbookPreview(
     project.headerRow,
     project.workbookPath,
     project.worksheetName,
+    onResolvedWorksheetName,
   ]);
 
   useEffect(() => {

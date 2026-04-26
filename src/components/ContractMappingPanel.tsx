@@ -1,5 +1,5 @@
-import { memo, useMemo, useState } from 'react';
-import { Alert, Badge, Button, Group, Modal, Paper, Select, Stack, Table, Text, TextInput, Title } from '@mantine/core';
+import { memo, useMemo, useRef, useState } from 'react';
+import { Alert, Badge, Button, Divider, Group, Modal, Paper, Select, Stack, Table, Text, TextInput, Title } from '@mantine/core';
 import type { TemplateStatusResult } from '../../shared/desktop';
 import type { WorkbookPreviewRow } from '../types/template';
 import { useI18n } from '../i18n';
@@ -20,6 +20,7 @@ type Props = {
   tokenMappings: Record<string, string>;
   tokens: string[];
   variableSources: Record<string, WorkbookPreviewRow>;
+  workbookRows: WorkbookPreviewRow[];
 };
 
 function ContractMappingPanelComponent({
@@ -38,9 +39,39 @@ function ContractMappingPanelComponent({
   tokenMappings,
   tokens,
   variableSources,
+  workbookRows,
 }: Props) {
   const { copy } = useI18n();
   const [previewToken, setPreviewToken] = useState<string | null>(null);
+  const filenameInputRef = useRef<HTMLInputElement>(null);
+  const filenameSelectionStart = useRef<number>(outputFilenamePattern.length);
+
+  const filenameTokens = useMemo(
+    () =>
+      workbookRows
+        .map((row) => ({
+          header: row.header,
+          variable: row.selectedVariable || row.suggestedVariable || '',
+        }))
+        .filter((t) => t.variable),
+    [workbookRows],
+  );
+
+  function insertFilenameToken(variable: string) {
+    const token = `{{${variable}}}`;
+    const pos = filenameSelectionStart.current;
+    const next = outputFilenamePattern.slice(0, pos) + token + outputFilenamePattern.slice(pos);
+    setOutputFilenamePattern(next);
+    const newPos = pos + token.length;
+    filenameSelectionStart.current = newPos;
+    requestAnimationFrame(() => {
+      const input = filenameInputRef.current;
+      if (input) {
+        input.focus();
+        input.setSelectionRange(newPos, newPos);
+      }
+    });
+  }
 
   const previewContent = useMemo(() => {
     if (!previewToken) {
@@ -164,13 +195,45 @@ function ContractMappingPanelComponent({
             {templateStatusText}
           </Alert>
 
-          <TextInput
-            description={copy.contractMapping.outputFilenamePatternDesc}
-            label={copy.contractMapping.outputFilenamePatternLabel}
-            onChange={(event) => setOutputFilenamePattern(event.currentTarget.value)}
-            placeholder={copy.contractMapping.outputFilenamePatternPlaceholder}
-            value={outputFilenamePattern}
-          />
+          <Stack gap="xs">
+            <Text fw={500} size="sm">{copy.contractMapping.outputFilenamePatternLabel}</Text>
+            <Text c="dimmed" size="sm">{copy.contractMapping.outputFilenamePatternDesc}</Text>
+            {filenameTokens.length > 0 ? (
+              <>
+                <Text c="dimmed" size="xs">{copy.contractMapping.filenameTokensHint}</Text>
+                <Group gap="xs">
+                  {filenameTokens.map(({ header, variable }) => (
+                    <Button
+                      key={variable}
+                      className="field-chip"
+                      onClick={() => insertFilenameToken(variable)}
+                      radius="xl"
+                      size="xs"
+                      variant="light"
+                    >
+                      {header}
+                    </Button>
+                  ))}
+                </Group>
+                <Divider />
+              </>
+            ) : null}
+            <TextInput
+              onChange={(event) => {
+                filenameSelectionStart.current = event.currentTarget.selectionStart ?? event.currentTarget.value.length;
+                setOutputFilenamePattern(event.currentTarget.value);
+              }}
+              onClick={(event) => {
+                filenameSelectionStart.current = event.currentTarget.selectionStart ?? event.currentTarget.value.length;
+              }}
+              onKeyUp={(event) => {
+                filenameSelectionStart.current = (event.currentTarget as HTMLInputElement).selectionStart ?? event.currentTarget.value.length;
+              }}
+              placeholder={copy.contractMapping.outputFilenamePatternPlaceholder}
+              ref={filenameInputRef}
+              value={outputFilenamePattern}
+            />
+          </Stack>
 
           {!tokens.length ? (
             <Alert color="yellow" radius="lg" title={copy.contractMapping.noPlaceholdersTitle} variant="light">

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Alert, Badge, Box, Button, Card, Divider, Group, Progress, SegmentedControl, SimpleGrid, Stack, Text, Title } from '@mantine/core';
 import { ContractMappingPanel } from './components/ContractMappingPanel';
 import { EmailTemplateEditor } from './components/EmailTemplateEditor';
@@ -27,13 +28,36 @@ export function App() {
   }
 
   const controller = useWorkspaceController(desktopApp);
+  const [navigationWarning, setNavigationWarning] = useState<string | null>(null);
   const currentStep = copy.steps[controller.activeStep];
+  const wantsDocumentOutput =
+    controller.contractSettings.generationOptions.generateDocx
+    || controller.contractSettings.generationOptions.generatePdf;
   const selectedOutputs = [
     controller.contractSettings.generationOptions.generateDocx ? copy.outputLabels.word : null,
     controller.contractSettings.generationOptions.generatePdf ? copy.outputLabels.pdf : null,
     controller.contractSettings.generationOptions.generateEmailDrafts ? copy.outputLabels.email : null,
   ].filter(Boolean) as string[];
   const selectedOutputLabel = selectedOutputs.length > 0 ? selectedOutputs.join(' + ') : copy.outputLabels.none;
+
+  useEffect(() => {
+    if (!navigationWarning) {
+      return;
+    }
+
+    const hasWordTemplate = Boolean(controller.projectSetup.project.contractTemplatePath.trim());
+    const mustHaveWordTemplateForStep2 = controller.activeStep === 1 && controller.nextStep === 2 && wantsDocumentOutput;
+
+    if (!mustHaveWordTemplateForStep2 || hasWordTemplate) {
+      setNavigationWarning(null);
+    }
+  }, [
+    controller.activeStep,
+    controller.nextStep,
+    controller.projectSetup.project.contractTemplatePath,
+    navigationWarning,
+    wantsDocumentOutput,
+  ]);
 
   return (
     <main className="app-shell">
@@ -117,6 +141,12 @@ export function App() {
               </Alert>
             ) : null}
 
+            {navigationWarning ? (
+              <Alert color="yellow" radius="lg" title={copy.app.wordTemplateRequiredTitle} variant="light">
+                {navigationWarning}
+              </Alert>
+            ) : null}
+
             {controller.generationResult ? (
               <Alert color="teal" radius="lg" title={copy.app.generationCompleteTitle} variant="light">
                 {copy.app.generationCompleteSummary(
@@ -179,29 +209,39 @@ export function App() {
             ) : null}
 
             {controller.activeStep === 2 ? (
-              <ContractMappingPanel
-                availableVariables={controller.workbookPreview.availableVariables}
-                contractTemplatePath={controller.projectSetup.project.contractTemplatePath}
-                isOpeningTemplate={controller.isOpeningTemplate}
-                isReloadingTemplate={
-                  controller.isReloadingTemplate || controller.workbookPreview.isLoading
-                }
-                mappedContractFields={controller.contractSettings.mappedContractFields}
-                onOpenTemplate={() => void controller.handleOpenContractTemplate()}
-                onReloadTemplate={() => void controller.handleReloadTemplateFields()}
-                outputFilenamePattern={controller.projectSetup.project.outputFilenamePattern}
-                setTokenMapping={controller.contractSettings.setTokenMapping}
-                setOutputFilenamePattern={(value) =>
-                  controller.projectSetup.setProject((current) => ({
-                    ...current,
-                    outputFilenamePattern: value,
-                  }))}
-                templateStatus={controller.workbookPreview.templateStatus}
-                tokenContexts={controller.workbookPreview.contractTokenContexts}
-                tokenMappings={controller.contractSettings.tokenMappings}
-                tokens={controller.workbookPreview.contractVariables}
-                variableSources={controller.contractSettings.variableSources}
-              />
+              <Stack gap="xl">
+                <ContractMappingPanel
+                  availableVariables={controller.workbookPreview.availableVariables}
+                  contractTemplatePath={controller.projectSetup.project.contractTemplatePath}
+                  isOpeningTemplate={controller.isOpeningTemplate}
+                  isReloadingTemplate={
+                    controller.isReloadingTemplate || controller.workbookPreview.isLoading
+                  }
+                  mappedContractFields={controller.contractSettings.mappedContractFields}
+                  onOpenTemplate={() => void controller.handleOpenContractTemplate()}
+                  onReloadTemplate={() => void controller.handleReloadTemplateFields()}
+                  outputFilenamePattern={controller.projectSetup.project.outputFilenamePattern}
+                  setTokenMapping={controller.contractSettings.setTokenMapping}
+                  setOutputFilenamePattern={(value) =>
+                    controller.projectSetup.setProject((current) => ({
+                      ...current,
+                      outputFilenamePattern: value,
+                    }))}
+                  templateStatus={controller.workbookPreview.templateStatus}
+                  tokenContexts={controller.workbookPreview.contractTokenContexts}
+                  tokenMappings={controller.contractSettings.tokenMappings}
+                  tokens={controller.workbookPreview.contractVariables}
+                  variableSources={controller.contractSettings.variableSources}
+                  workbookRows={controller.workbookPreview.rows}
+                />
+                <WorkbookPreviewPanel
+                  availableVariables={controller.workbookPreview.availableVariables}
+                  isLoading={controller.workbookPreview.isLoading}
+                  loadError={controller.workbookPreview.loadError}
+                  onAssignmentChange={controller.workbookPreview.setFieldAssignment}
+                  rows={controller.workbookPreview.rows}
+                />
+              </Stack>
             ) : null}
 
             {controller.activeStep === 3 ? (
@@ -291,9 +331,21 @@ export function App() {
                   <Button
                     disabled={controller.activeStep === 3 && !controller.canContinueFromStep3}
                     onClick={() => {
-                      if (controller.nextStep) {
-                        controller.setActiveStep(controller.nextStep);
+                      if (!controller.nextStep) {
+                        return;
                       }
+
+                      const hasWordTemplate = Boolean(controller.projectSetup.project.contractTemplatePath.trim());
+                      const mustHaveWordTemplateForStep2 =
+                        controller.activeStep === 1 && controller.nextStep === 2 && wantsDocumentOutput;
+
+                      if (mustHaveWordTemplateForStep2 && !hasWordTemplate) {
+                        setNavigationWarning(copy.app.wordTemplateRequiredBody);
+                        return;
+                      }
+
+                      setNavigationWarning(null);
+                      controller.setActiveStep(controller.nextStep);
                     }}
                     size="md"
                   >

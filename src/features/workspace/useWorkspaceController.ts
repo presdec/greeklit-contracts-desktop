@@ -79,6 +79,18 @@ export function useWorkspaceController(desktopApp: Window['desktopApp']) {
     projectSetup.project,
     templateBuilder.emailVariables,
     filenameVariables,
+    (worksheetName) => {
+      projectSetup.setProject((current) => {
+        if (current.worksheetName.trim() || !worksheetName) {
+          return current;
+        }
+
+        return {
+          ...current,
+          worksheetName,
+        };
+      });
+    },
   );
   const contractSettings = useContractTemplateSettings(
     workbookPreview.contractVariables,

@@ -1,8 +1,8 @@
 # Doc Gen Studio
 
-[![Build](https://github.com/presdec/greeklit-contracts-desktop/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/presdec/greeklit-contracts-desktop/actions/workflows/build.yml)
-[![Test](https://github.com/presdec/greeklit-contracts-desktop/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/presdec/greeklit-contracts-desktop/actions/workflows/test.yml)
-[![Release](https://img.shields.io/github/v/release/presdec/greeklit-contracts-desktop?display_name=tag)](https://github.com/presdec/greeklit-contracts-desktop/releases)
+[![Build](https://github.com/presdec/docgen-studio-desktop/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/presdec/docgen-studio-desktop/actions/workflows/build.yml)
+[![Test](https://github.com/presdec/docgen-studio-desktop/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/presdec/docgen-studio-desktop/actions/workflows/test.yml)
+[![Release](https://img.shields.io/github/v/release/presdec/docgen-studio-desktop?display_name=tag)](https://github.com/presdec/docgen-studio-desktop/releases)
 
 Doc Gen Studio is a desktop app for high-volume document generation from Excel data and Word templates.
 

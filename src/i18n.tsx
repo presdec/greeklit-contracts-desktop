@@ -37,10 +37,19 @@ type Translation = {
     continueTo: string;
   };
   generationProgress: {
+    docxFiles: string;
+    emailDrafts: string;
     elapsed: (seconds: number) => string;
+    generatedRecords: string;
     inProgress: string;
+    outputTargets: string;
+    pdfFiles: string;
     running: string;
+    rowsFound: string;
     selectedOutput: string;
+    skippedRows: string;
+    stage: string;
+    workingOn: (current: number, total: number) => string;
     wordMappings: (mapped: number, total: number) => string;
   };
   outputLabels: {
@@ -159,10 +168,19 @@ type Translation = {
   review: {
     badge: string;
     emailBodyLength: string;
+    fixIssue: string;
+    goodToGenerateBody: string;
+    goodToGenerateTitle: string;
+    issuesFound: (count: number) => string;
     mappedColumns: string;
     mappedWordFields: string;
+    needsAttentionBody: string;
+    needsAttentionTitle: string;
+    outputPlan: string;
+    pdfBackend: string;
     preflightLoadingBody: string;
     preflightLoadingTitle: string;
+    rowsFound: string;
     selectedOutput: string;
     setupCheck: string;
     subtitle: string;
@@ -185,17 +203,26 @@ type Translation = {
   };
   success: {
     createdFiles: string;
+    docxFiles: string;
+    emailDrafts: string;
     finishingBody: string;
     finishingTitle: string;
+    generatedRecords: string;
     generationComplete: string;
     noFilesYet: string;
     open: string;
     openDrafts: string;
     openOutputFolder: string;
     openReport: string;
+    outputMetrics: string;
+    pdfFiles: string;
+    resultTree: string;
+    rowsFound: string;
     startAgain: string;
     subtitle: string;
+    skippedRows: string;
     summary: (generated: number, skipped: number) => string;
+    warningsTitle: string;
   };
   fileField: {
     browse: string;
@@ -266,10 +293,19 @@ const translations: Record<Language, Translation> = {
       continueTo: 'Continue To',
     },
     generationProgress: {
+      docxFiles: 'DOCX files',
+      emailDrafts: 'Email drafts',
       elapsed: (seconds) => `${seconds}s elapsed`,
+      generatedRecords: 'Generated records',
       inProgress: 'Generation in progress',
+      outputTargets: 'Output targets',
+      pdfFiles: 'PDF files',
       running: 'Running...',
+      rowsFound: 'Rows found',
       selectedOutput: 'Selected output',
+      skippedRows: 'Skipped rows',
+      stage: 'Stage',
+      workingOn: (current, total) => `Working on ${current}/${total}`,
       wordMappings: (mapped, total) => `Word mappings: ${mapped}/${total}`,
     },
     outputLabels: {
@@ -396,11 +432,21 @@ const translations: Record<Language, Translation> = {
     review: {
       badge: 'Review',
       emailBodyLength: 'Email body length',
+      fixIssue: 'Fix',
+      goodToGenerateBody:
+        'Files, mappings, output folder, and selected generation options passed preflight.',
+      goodToGenerateTitle: 'Good to generate',
+      issuesFound: (count) => `${count} issue${count === 1 ? '' : 's'} need attention`,
       mappedColumns: 'Mapped workbook columns',
       mappedWordFields: 'Mapped Word fields',
+      needsAttentionBody: 'Resolve failed checks before running this batch.',
+      needsAttentionTitle: 'Needs attention',
+      outputPlan: 'Output plan',
+      pdfBackend: 'PDF backend',
       preflightLoadingBody:
         'Checking files, mappings, workbook access, output folder access, and PDF capability.',
       preflightLoadingTitle: 'Running preflight checks',
+      rowsFound: 'Rows found',
       selectedOutput: 'Selected output',
       setupCheck: 'Setup Check',
       subtitle: 'Final review of template coverage, mapped fields, and output settings before generation.',
@@ -425,18 +471,27 @@ const translations: Record<Language, Translation> = {
     },
     success: {
       createdFiles: 'Created files',
+      docxFiles: 'DOCX files',
+      emailDrafts: 'Email drafts',
       finishingBody:
         'The generator writes email_drafts.docx and generation_report.txt near the end. If they are not listed yet, wait a few seconds and refresh by opening the output folder.',
       finishingTitle: 'Finishing up output files',
+      generatedRecords: 'Generated records',
       generationComplete: 'Generation Complete',
       noFilesYet: 'No output files were found yet.',
       open: 'Open',
       openDrafts: 'Open Email Drafts',
       openOutputFolder: 'Open Output Folder',
       openReport: 'Open Report',
+      outputMetrics: 'Output metrics',
+      pdfFiles: 'PDF files',
+      resultTree: 'Result tree',
+      rowsFound: 'Rows found',
       startAgain: 'Start Again',
       subtitle: 'Review created outputs and open files directly from this list.',
+      skippedRows: 'Skipped rows',
       summary: (generated, skipped) => `${generated} generated / ${skipped} skipped`,
+      warningsTitle: 'Warnings',
     },
     fileField: {
       browse: 'Browse',
@@ -505,10 +560,19 @@ const translations: Record<Language, Translation> = {
       continueTo: 'Συνέχεια σε',
     },
     generationProgress: {
+      docxFiles: 'Αρχεία DOCX',
+      emailDrafts: 'Προσχέδια email',
       elapsed: (seconds) => `${seconds}δ πέρασαν`,
+      generatedRecords: 'Εγγραφές που δημιουργήθηκαν',
       inProgress: 'Η δημιουργία είναι σε εξέλιξη',
+      outputTargets: 'Στόχοι εξόδου',
+      pdfFiles: 'Αρχεία PDF',
       running: 'Εκτέλεση...',
+      rowsFound: 'Γραμμές που βρέθηκαν',
       selectedOutput: 'Επιλεγμένη έξοδος',
+      skippedRows: 'Γραμμές που παραλείφθηκαν',
+      stage: 'Στάδιο',
+      workingOn: (current, total) => `Επεξεργασία ${current}/${total}`,
       wordMappings: (mapped, total) => `Αντιστοιχίσεις Word: ${mapped}/${total}`,
     },
     outputLabels: {
@@ -635,11 +699,21 @@ const translations: Record<Language, Translation> = {
     review: {
       badge: 'Έλεγχος',
       emailBodyLength: 'Μήκος κειμένου email',
+      fixIssue: 'Διόρθωση',
+      goodToGenerateBody:
+        'Τα αρχεία, οι αντιστοιχίσεις, ο φάκελος εξόδου και οι επιλογές δημιουργίας πέρασαν τον προέλεγχο.',
+      goodToGenerateTitle: 'Έτοιμο για δημιουργία',
+      issuesFound: (count) => `${count} θέματα χρειάζονται έλεγχο`,
       mappedColumns: 'Αντιστοιχισμένες στήλες workbook',
       mappedWordFields: 'Αντιστοιχισμένα πεδία Word',
+      needsAttentionBody: 'Διορθώστε τους αποτυχημένους ελέγχους πριν εκτελέσετε τη δημιουργία.',
+      needsAttentionTitle: 'Χρειάζεται έλεγχο',
+      outputPlan: 'Πλάνο εξόδου',
+      pdfBackend: 'Backend PDF',
       preflightLoadingBody:
         'Έλεγχος αρχείων, αντιστοιχίσεων, πρόσβασης workbook, φακέλου εξόδου και δυνατότητας PDF.',
       preflightLoadingTitle: 'Εκτέλεση προελέγχων',
+      rowsFound: 'Γραμμές που βρέθηκαν',
       selectedOutput: 'Επιλεγμένη έξοδος',
       setupCheck: 'Έλεγχος Ρύθμισης',
       subtitle: 'Τελικός έλεγχος κάλυψης προτύπων, αντιστοιχίσεων και ρυθμίσεων εξόδου πριν τη δημιουργία.',
@@ -664,18 +738,27 @@ const translations: Record<Language, Translation> = {
     },
     success: {
       createdFiles: 'Δημιουργημένα αρχεία',
+      docxFiles: 'Αρχεία DOCX',
+      emailDrafts: 'Προσχέδια email',
       finishingBody:
         'Ο generator γράφει τα email_drafts.docx και generation_report.txt προς το τέλος. Αν δεν εμφανίζονται ακόμη, περιμένετε λίγα δευτερόλεπτα και ανανεώστε ανοίγοντας τον φάκελο εξόδου.',
       finishingTitle: 'Ολοκλήρωση αρχείων εξόδου',
+      generatedRecords: 'Εγγραφές που δημιουργήθηκαν',
       generationComplete: 'Η δημιουργία ολοκληρώθηκε',
       noFilesYet: 'Δεν βρέθηκαν ακόμη αρχεία εξόδου.',
       open: 'Άνοιγμα',
       openDrafts: 'Άνοιγμα Προσχεδίων Email',
       openOutputFolder: 'Άνοιγμα Φακέλου Εξόδου',
       openReport: 'Άνοιγμα Αναφοράς',
+      outputMetrics: 'Μετρήσεις εξόδου',
+      pdfFiles: 'Αρχεία PDF',
+      resultTree: 'Δέντρο αποτελεσμάτων',
+      rowsFound: 'Γραμμές που βρέθηκαν',
       startAgain: 'Νέα Εκκίνηση',
       subtitle: 'Ελέγξτε τα παραγόμενα αρχεία και ανοίξτε τα απευθείας από αυτή τη λίστα.',
+      skippedRows: 'Γραμμές που παραλείφθηκαν',
       summary: (generated, skipped) => `${generated} δημιουργήθηκαν / ${skipped} παραλείφθηκαν`,
+      warningsTitle: 'Προειδοποιήσεις',
     },
     fileField: {
       browse: 'Περιήγηση',

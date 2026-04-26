@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react';
 import { Badge, Divider, Group, Paper, Stack, Text, Title } from '@mantine/core';
 import { renderTemplate, renderTemplateHtml } from '../lib/template';
 import type { EmailTemplateState } from '../types/template';
@@ -8,8 +9,17 @@ type Props = {
   sampleValues: Record<string, string>;
 };
 
-export function TemplatePreviewPanel({ emailTemplate, sampleValues }: Props) {
+function TemplatePreviewPanelComponent({ emailTemplate, sampleValues }: Props) {
   const { copy } = useI18n();
+  const renderedTemplate = useMemo(
+    () => ({
+      body: renderTemplateHtml(emailTemplate.body, sampleValues),
+      cc: renderTemplate(emailTemplate.cc, sampleValues),
+      subject: renderTemplate(emailTemplate.subject, sampleValues),
+      to: renderTemplate(emailTemplate.to, sampleValues),
+    }),
+    [emailTemplate, sampleValues],
+  );
 
   return (
     <Paper className="panel-card preview-card" p="lg" radius="lg">
@@ -24,16 +34,18 @@ export function TemplatePreviewPanel({ emailTemplate, sampleValues }: Props) {
           <Badge color="teal" variant="light">{copy.templatePreview.badge}</Badge>
         </Group>
         <Stack gap="sm">
-          <div><Text c="dimmed" size="sm">{copy.templatePreview.subject}</Text><Text fw={600}>{renderTemplate(emailTemplate.subject, sampleValues)}</Text></div>
-          <div><Text c="dimmed" size="sm">{copy.templatePreview.to}</Text><Text>{renderTemplate(emailTemplate.to, sampleValues)}</Text></div>
-          <div><Text c="dimmed" size="sm">{copy.templatePreview.cc}</Text><Text>{renderTemplate(emailTemplate.cc, sampleValues)}</Text></div>
+          <div><Text c="dimmed" size="sm">{copy.templatePreview.subject}</Text><Text fw={600}>{renderedTemplate.subject}</Text></div>
+          <div><Text c="dimmed" size="sm">{copy.templatePreview.to}</Text><Text>{renderedTemplate.to}</Text></div>
+          <div><Text c="dimmed" size="sm">{copy.templatePreview.cc}</Text><Text>{renderedTemplate.cc}</Text></div>
           <Divider />
           <div
             className="preview-body preview-body--html"
-            dangerouslySetInnerHTML={{ __html: renderTemplateHtml(emailTemplate.body, sampleValues) }}
+            dangerouslySetInnerHTML={{ __html: renderedTemplate.body }}
           />
         </Stack>
       </Stack>
     </Paper>
   );
 }
+
+export const TemplatePreviewPanel = memo(TemplatePreviewPanelComponent);

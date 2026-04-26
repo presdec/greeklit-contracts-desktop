@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react';
 import { Alert, Badge, Group, Paper, ScrollArea, SimpleGrid, Stack, Table, Text, Title } from '@mantine/core';
 import type { WorkbookPreviewSampleRow } from '../../shared/desktop';
 import { useI18n } from '../i18n';
@@ -9,14 +10,14 @@ type Props = {
   sampleRows: WorkbookPreviewSampleRow[];
 };
 
-export function SetupSourcePreviewPanel({
+function SetupSourcePreviewPanelComponent({
   contractVariables,
   isLoading,
   loadError,
   sampleRows,
 }: Props) {
   const { copy } = useI18n();
-  const headers = Object.keys(sampleRows[0]?.values ?? {});
+  const headers = useMemo(() => Object.keys(sampleRows[0]?.values ?? {}), [sampleRows]);
 
   return (
     <Paper className="panel-card" p="lg" radius="lg">
@@ -87,7 +88,7 @@ export function SetupSourcePreviewPanel({
                 <Table.Tr key={row.rowNumber}>
                   <Table.Td>{row.rowNumber}</Table.Td>
                   {headers.map((header) => (
-                    <Table.Td key={`${row.rowNumber}-${header}`}>{row.values[header] || '—'}</Table.Td>
+                    <Table.Td key={`${row.rowNumber}-${header}`}>{row.values[header] || '-'}</Table.Td>
                   ))}
                 </Table.Tr>
               ))}
@@ -104,3 +105,5 @@ export function SetupSourcePreviewPanel({
     </Paper>
   );
 }
+
+export const SetupSourcePreviewPanel = memo(SetupSourcePreviewPanelComponent);

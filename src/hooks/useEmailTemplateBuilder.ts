@@ -67,12 +67,18 @@ export function useEmailTemplateBuilder() {
     return token;
   }, [activeEditor, fieldRefs]);
 
-  const emailVariables = useMemo(
+  const emailVariableSignature = useMemo(
     () =>
       extractTokens(
         `${emailTemplate.subject}\n${emailTemplate.to}\n${emailTemplate.cc}\n${emailTemplate.body}`,
-      ).map((token) => token.replace(/[{}]/g, '')),
-    [emailTemplate],
+      )
+        .map((token) => token.replace(/[{}]/g, ''))
+        .join('\u0000'),
+    [emailTemplate.body, emailTemplate.cc, emailTemplate.subject, emailTemplate.to],
+  );
+  const emailVariables = useMemo(
+    () => (emailVariableSignature ? emailVariableSignature.split('\u0000') : []),
+    [emailVariableSignature],
   );
 
   return {

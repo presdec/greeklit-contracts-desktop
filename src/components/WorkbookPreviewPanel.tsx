@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Alert, Badge, Group, Paper, ScrollArea, Select, Stack, Table, Text, Title } from '@mantine/core';
 import type { WorkbookPreviewRow } from '../types/template';
 import { useI18n } from '../i18n';
@@ -10,7 +11,7 @@ type Props = {
   rows: WorkbookPreviewRow[];
 };
 
-export function WorkbookPreviewPanel({
+function WorkbookPreviewPanelComponent({
   availableVariables,
   isLoading,
   loadError,
@@ -54,12 +55,12 @@ export function WorkbookPreviewPanel({
                 <Table.Tr key={row.columnLetter}>
                   <Table.Td>{row.columnLetter}</Table.Td>
                   <Table.Td>{row.header}</Table.Td>
-                  <Table.Td>{row.sampleValue || '—'}</Table.Td>
+                  <Table.Td>{row.sampleValue || '-'}</Table.Td>
                   <Table.Td>
                     <Select
                       data={availableVariables}
                       onChange={(value) => onAssignmentChange(row.columnLetter, value)}
-                        placeholder={copy.workbookPreview.chooseVariable}
+                      placeholder={copy.workbookPreview.chooseVariable}
                       searchable
                       value={row.selectedVariable || null}
                     />
@@ -90,3 +91,5 @@ export function WorkbookPreviewPanel({
     </Paper>
   );
 }
+
+export const WorkbookPreviewPanel = memo(WorkbookPreviewPanelComponent);

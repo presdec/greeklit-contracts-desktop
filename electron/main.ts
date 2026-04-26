@@ -4,6 +4,7 @@ import { dirname } from 'node:path';
 import type * as ElectronModule from 'electron';
 import type {
   FileDialogRequest,
+  GenerateProjectProgress,
   GenerateProjectRequest,
   InspectProjectRequest,
   OpenPathRequest,
@@ -126,7 +127,13 @@ function registerIpcHandlers() {
 
   ipcMain.handle(
     'desktop-app:generate-project',
-    async (_event, request: GenerateProjectRequest) => generateProject(app.getPath('home'), request),
+    async (event, request: GenerateProjectRequest) => generateProject(
+      app.getPath('home'),
+      request,
+      (progress: GenerateProjectProgress) => {
+        event.sender.send('desktop-app:generation-progress', progress);
+      },
+    ),
   );
 
   ipcMain.handle('desktop-app:open-path', async (_event, request: OpenPathRequest) => {

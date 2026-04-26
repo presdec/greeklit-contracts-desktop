@@ -1,10 +1,11 @@
 import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { isAbsolute, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { promisify } from 'node:util';
 import type {
+  GenerateProjectProgress,
   GenerateProjectRequest,
   GenerateProjectResult,
   InspectProjectRequest,
@@ -23,6 +24,7 @@ import {
 } from '../lib/runtimePaths';
 
 const execFileAsync = promisify(execFile);
+const PROGRESS_PREFIX = '__GREEKLIT_PROGRESS__';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const HTMLToDOCX = require('html-to-docx') as (
   html: string,
@@ -144,6 +146,150 @@ function parsePathLine(stdout: string, prefix: string) {
   }
 
   return line.slice(prefix.length).trim();
+}
+
+function normalizeRelativePath(value: string) {
+  return value.replaceAll('\\', '/');
+}
+
+function countFilesInSubdir(
+  entries: Array<{ kind: 'directory' | 'file'; relativePath: string }>,
+  subdir: string,
+  extension: string,
+) {
+  const normalizedSubdir = subdir.replaceAll('\\', '/').replace(/\/$/, '');
+  const normalizedExtension = extension.toLowerCase();
+
+  return entries.filter((entry) => {
+    if (entry.kind !== 'file') {
+      return false;
+    }
+
+    const relativePath = normalizeRelativePath(entry.relativePath);
+    return relativePath.startsWith(`${normalizedSubdir}/`)
+      && relativePath.toLowerCase().endsWith(normalizedExtension);
+  }).length;
+}
+
+function normalizeProgressPayload(value: unknown): GenerateProjectProgress | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const payload = value as Partial<GenerateProjectProgress>;
+  if (typeof payload.stage !== 'string' || typeof payload.message !== 'string') {
+    return null;
+  }
+
+  const current = typeof payload.current === 'number' && Number.isFinite(payload.current)
+    ? payload.current
+    : 0;
+  const total = typeof payload.total === 'number' && Number.isFinite(payload.total)
+    ? payload.total
+    : 0;
+  const percent = typeof payload.percent === 'number' && Number.isFinite(payload.percent)
+    ? Math.max(0, Math.min(100, payload.percent))
+    : undefined;
+  const numberMetric = (key: keyof GenerateProjectProgress) => {
+    const metric = payload[key];
+    return typeof metric === 'number' && Number.isFinite(metric)
+      ? Math.max(0, metric)
+      : undefined;
+  };
+
+  return {
+    current,
+    docxCount: numberMetric('docxCount'),
+    emailDraftCount: numberMetric('emailDraftCount'),
+    expectedDocxCount: numberMetric('expectedDocxCount'),
+    expectedEmailDraftCount: numberMetric('expectedEmailDraftCount'),
+    expectedPdfCount: numberMetric('expectedPdfCount'),
+    generatedCount: numberMetric('generatedCount'),
+    message: payload.message,
+    pdfCount: numberMetric('pdfCount'),
+    percent,
+    rowsFound: numberMetric('rowsFound'),
+    stage: payload.stage,
+    skippedCount: numberMetric('skippedCount'),
+    total,
+  };
+}
+
+function parseProgressLine(line: string) {
+  if (!line.startsWith(PROGRESS_PREFIX)) {
+    return null;
+  }
+
+  try {
+    return normalizeProgressPayload(JSON.parse(line.slice(PROGRESS_PREFIX.length)));
+  } catch {
+    return null;
+  }
+}
+
+function runGenerationCommand(
+  command: GenerationContext['command'],
+  onProgress?: (progress: GenerateProjectProgress) => void,
+) {
+  return new Promise<{ stderr: string; stdout: string }>((resolvePromise, reject) => {
+    const child = spawn(command.command, command.args, {
+      cwd: getWorkspaceRoot(),
+      windowsHide: true,
+    });
+    let stdout = '';
+    let stderr = '';
+    let pendingStdout = '';
+    let settled = false;
+
+    const settleReject = (error: Error) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      reject(error);
+    };
+
+    const handleStdoutLine = (line: string) => {
+      const progress = parseProgressLine(line.trim());
+      if (progress) {
+        onProgress?.(progress);
+        return;
+      }
+      stdout += `${line}\n`;
+    };
+
+    child.stdout?.on('data', (chunk: Buffer) => {
+      pendingStdout += chunk.toString('utf8');
+      const lines = pendingStdout.split(/\r?\n/);
+      pendingStdout = lines.pop() ?? '';
+      for (const line of lines) {
+        handleStdoutLine(line);
+      }
+    });
+
+    child.stderr?.on('data', (chunk: Buffer) => {
+      stderr += chunk.toString('utf8');
+    });
+
+    child.on('error', (error) => {
+      settleReject(error);
+    });
+
+    child.on('close', (code) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      if (pendingStdout) {
+        handleStdoutLine(pendingStdout);
+      }
+      if (code && code !== 0) {
+        reject(new Error(stderr.trim() || stdout.trim() || `Generation process exited with code ${code}.`));
+        return;
+      }
+      resolvePromise({ stderr, stdout });
+    });
+  });
 }
 
 function extractTemplateTokens(value: string) {
@@ -557,6 +703,7 @@ export async function runProjectPreflight(
 export async function generateProject(
   homePath: string,
   request: GenerateProjectRequest,
+  onProgress?: (progress: GenerateProjectProgress) => void,
 ): Promise<GenerateProjectResult> {
   const preflight = await runProjectPreflight(homePath, request);
   if (!preflight.canGenerate) {
@@ -564,11 +711,27 @@ export async function generateProject(
   }
 
   const context = await buildGenerationContext(homePath, request);
+  let latestProgress: GenerateProjectProgress | null = null;
+  let latestRowsFound = 0;
+  const trackProgress = (progress: GenerateProjectProgress) => {
+    const nextProgress = {
+      ...(latestProgress ?? {}),
+      ...progress,
+    };
+    latestProgress = nextProgress;
+    latestRowsFound = nextProgress.rowsFound ?? latestRowsFound;
+    onProgress?.(nextProgress);
+  };
 
   try {
-    const { stderr, stdout } = await execFileAsync(context.command.command, context.command.args, {
-      cwd: getWorkspaceRoot(),
-      windowsHide: true,
+    const { stderr, stdout } = await runGenerationCommand(context.command, trackProgress);
+
+    trackProgress({
+      current: 0,
+      message: 'Finalizing output summary.',
+      percent: 100,
+      stage: 'finalize',
+      total: 0,
     });
 
     const combinedEmailPath = request.generationOptions.generateEmailDrafts
@@ -585,16 +748,25 @@ export async function generateProject(
       }
     }
 
+    const createdEntries = await collectOutputTree(context.outputDir ?? '');
+    const generatedCount = parseCount(stdout, 'Generated');
+    const docxCount = countFilesInSubdir(createdEntries, 'contracts', '.docx');
+    const pdfCount = countFilesInSubdir(createdEntries, 'contracts_pdf', '.pdf');
+
     return {
       combinedEmailPath,
       contractsDir:
         parsePathLine(stdout, 'Contract DOCX directory:') || join(context.outputDir ?? '', 'contracts'),
-      createdEntries: await collectOutputTree(context.outputDir ?? ''),
-      generatedCount: parseCount(stdout, 'Generated'),
+      createdEntries,
+      docxCount,
+      emailDraftCount: request.generationOptions.generateEmailDrafts ? generatedCount : 0,
+      generatedCount,
       outputDir: context.outputDir ?? '',
+      pdfCount,
       pdfDir:
         parsePathLine(stdout, 'Contract PDF directory:') || join(context.outputDir ?? '', 'contracts_pdf'),
       reportPath: parsePathLine(stdout, 'Report:') || join(context.outputDir ?? '', 'generation_report.txt'),
+      rowsFound: latestRowsFound,
       skippedCount: parseCount(stdout, 'Skipped'),
       stderr,
       stdout,

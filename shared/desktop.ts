@@ -60,6 +60,23 @@ export type GenerateProjectRequest = {
   variableColumns: Record<string, string>;
 };
 
+export type GenerateProjectProgress = {
+  docxCount?: number;
+  emailDraftCount?: number;
+  expectedDocxCount?: number;
+  expectedEmailDraftCount?: number;
+  expectedPdfCount?: number;
+  generatedCount?: number;
+  current: number;
+  message: string;
+  pdfCount?: number;
+  percent?: number;
+  rowsFound?: number;
+  stage: string;
+  skippedCount?: number;
+  total: number;
+};
+
 export type ProjectPreflightCheck = {
   detail: string;
   id: string;
@@ -85,10 +102,14 @@ export type GenerateProjectResult = {
   combinedEmailPath: string | null;
   contractsDir: string;
   createdEntries: OutputTreeEntry[];
+  docxCount: number;
+  emailDraftCount: number;
   generatedCount: number;
   outputDir: string;
+  pdfCount: number;
   pdfDir: string;
   reportPath: string;
+  rowsFound: number;
   skippedCount: number;
   stderr: string;
   stdout: string;
@@ -137,5 +158,6 @@ export type InspectProjectResult = {
   dataStartRow: number;
   headerRow: number;
   sampleRows: WorkbookPreviewSampleRow[];
+  totalRows: number;
   worksheetName: string;
 };

@@ -1,6 +1,7 @@
 import type * as ElectronModule from 'electron';
 import type {
   FileDialogRequest,
+  GenerateProjectProgress,
   GenerateProjectRequest,
   GenerateProjectResult,
   InspectProjectRequest,
@@ -22,6 +23,15 @@ const { contextBridge, ipcRenderer } = electron;
 contextBridge.exposeInMainWorld('desktopApp', {
   generateProject: (request: GenerateProjectRequest) =>
     ipcRenderer.invoke('desktop-app:generate-project', request) as Promise<GenerateProjectResult>,
+  onGenerationProgress: (listener: (progress: GenerateProjectProgress) => void) => {
+    const handler = (_event: ElectronModule.IpcRendererEvent, progress: GenerateProjectProgress) => {
+      listener(progress);
+    };
+    ipcRenderer.on('desktop-app:generation-progress', handler);
+    return () => {
+      ipcRenderer.removeListener('desktop-app:generation-progress', handler);
+    };
+  },
   validateProject: (request: GenerateProjectRequest) =>
     ipcRenderer.invoke('desktop-app:validate-project', request) as Promise<ProjectPreflightResult>,
   getTemplateStatus: (request: TemplateStatusRequest) =>

@@ -9,7 +9,11 @@ import { useProjectSetup } from '../../hooks/useProjectSetup';
 import { useWorkbookPreview } from '../../hooks/useWorkbookPreview';
 import { useI18n } from '../../i18n';
 import type { WizardStepId } from '../../types/template';
-import type { GenerateProjectResult, StarterTemplateKind } from '../../../shared/desktop';
+import type {
+  GenerateProjectProgress,
+  GenerateProjectResult,
+  StarterTemplateKind,
+} from '../../../shared/desktop';
 
 export const stepCopy = {
   1: {
@@ -50,6 +54,7 @@ export function useWorkspaceController(desktopApp: Window['desktopApp']) {
   const [generationElapsedSeconds, setGenerationElapsedSeconds] = useState(0);
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [generationInfo, setGenerationInfo] = useState<string | null>(null);
+  const [generationProgress, setGenerationProgress] = useState<GenerateProjectProgress | null>(null);
   const [generationStage, setGenerationStage] = useState<string | null>(null);
   const [generationResult, setGenerationResult] = useState<GenerateProjectResult | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -81,6 +86,13 @@ export function useWorkspaceController(desktopApp: Window['desktopApp']) {
       clearInterval(interval);
     };
   }, [isGenerating]);
+
+  useEffect(() => {
+    return desktopApp.onGenerationProgress((progress) => {
+      setGenerationProgress(progress);
+      setGenerationStage(progress.message);
+    });
+  }, [desktopApp]);
 
   const pickerRequests = useMemo(
     () => ({
@@ -160,6 +172,7 @@ export function useWorkspaceController(desktopApp: Window['desktopApp']) {
       setGenerationInfo(
         language === 'el' ? `Το έργο φορτώθηκε από ${filePath}.` : `Loaded project from ${filePath}.`,
       );
+      setGenerationProgress(null);
       setGenerationResult(null);
       setGenerationStage(null);
       setTemplateActionError(null);
@@ -188,6 +201,7 @@ export function useWorkspaceController(desktopApp: Window['desktopApp']) {
     setGenerationElapsedSeconds(0);
     setGenerationError(null);
     setGenerationInfo(null);
+    setGenerationProgress(null);
     setGenerationResult(null);
     setGenerationStage(language === 'el' ? 'Προετοιμασία δεδομένων δημιουργίας...' : 'Preparing generation payload...');
 
@@ -274,6 +288,7 @@ export function useWorkspaceController(desktopApp: Window['desktopApp']) {
     setGenerationElapsedSeconds(0);
     setGenerationError(null);
     setGenerationInfo(null);
+    setGenerationProgress(null);
     setGenerationResult(null);
     setGenerationStage(null);
     setIsGenerating(false);
@@ -344,7 +359,11 @@ export function useWorkspaceController(desktopApp: Window['desktopApp']) {
     generationElapsedSeconds,
     generationError,
     generationInfo,
-    generationProgressValue: Math.min(92, 18 + generationElapsedSeconds * 6),
+    generationProgress,
+    generationProgressDetail: generationProgress && generationProgress.total > 0
+      ? `${generationProgress.current}/${generationProgress.total}`
+      : null,
+    generationProgressValue: generationProgress?.percent ?? Math.min(92, 18 + generationElapsedSeconds * 6),
     generationResult,
     generationStage,
     handleGenerateProject,

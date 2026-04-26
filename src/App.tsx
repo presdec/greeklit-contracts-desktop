@@ -1,6 +1,7 @@
-import { Alert, Badge, Box, Button, Card, Divider, Group, Paper, Progress, SegmentedControl, SimpleGrid, Stack, Text, Title } from '@mantine/core';
+import { Alert, Badge, Box, Button, Card, Divider, Group, Progress, SegmentedControl, SimpleGrid, Stack, Text, Title } from '@mantine/core';
 import { ContractMappingPanel } from './components/ContractMappingPanel';
 import { EmailTemplateEditor } from './components/EmailTemplateEditor';
+import { GenerationProgressPanel } from './components/GenerationProgressPanel';
 import { GenerationSuccessPanel } from './components/GenerationSuccessPanel';
 import { ProjectSetupPanel } from './components/ProjectSetupPanel';
 import { ReviewSummaryPanel } from './components/ReviewSummaryPanel';
@@ -144,37 +145,15 @@ export function App() {
             ) : null}
 
             {controller.isGenerating ? (
-              <Paper className="panel-card" p="lg" radius="lg">
-                <Stack gap="md">
-                  <Group justify="space-between">
-                    <Title order={4}>{copy.generationProgress.inProgress}</Title>
-                    <Badge color="orange" variant="light">
-                      {copy.generationProgress.elapsed(controller.generationElapsedSeconds)}
-                    </Badge>
-                  </Group>
-                  <Text c="dimmed" size="sm">
-                    {controller.generationStage ?? copy.generationProgress.running}
-                  </Text>
-                  <Progress
-                    animated
-                    color="orange"
-                    radius="xl"
-                    size="lg"
-                    value={controller.generationProgressValue}
-                  />
-                  <Group gap="xl">
-                    <Text c="dimmed" size="sm">
-                      {copy.generationProgress.wordMappings(
-                        controller.contractSettings.mappedContractFields,
-                        controller.workbookPreview.contractVariables.length,
-                      )}
-                    </Text>
-                    <Text c="dimmed" size="sm">
-                      {copy.generationProgress.selectedOutput}: {selectedOutputLabel}
-                    </Text>
-                  </Group>
-                </Stack>
-              </Paper>
+              <GenerationProgressPanel
+                elapsedSeconds={controller.generationElapsedSeconds}
+                fallbackRowsFound={controller.workbookPreview.totalRows}
+                generationOptions={controller.contractSettings.generationOptions}
+                progress={controller.generationProgress}
+                progressValue={controller.generationProgressValue}
+                selectedOutputLabel={selectedOutputLabel}
+                stage={controller.generationStage}
+              />
             ) : null}
 
             {controller.activeStep === 1 ? (
@@ -253,21 +232,17 @@ export function App() {
                   result={controller.generationResult}
                 />
               ) : (
-                <SimpleGrid cols={{ base: 1, xl: 2 }} spacing="xl" verticalSpacing="xl">
-                  <TemplatePreviewPanel
-                    emailTemplate={controller.templateBuilder.emailTemplate}
-                    sampleValues={controller.workbookPreview.sampleValues}
-                  />
-                  <ReviewSummaryPanel
-                    generationOptions={controller.contractSettings.generationOptions}
-                    mappedContractFields={controller.contractSettings.mappedContractFields}
-                    emailTemplate={controller.templateBuilder.emailTemplate}
-                    preflight={controller.preflight.result}
-                    preflightLoading={controller.preflight.isLoading}
-                    rows={controller.workbookPreview.rows}
-                    totalContractFields={controller.workbookPreview.contractVariables.length}
-                  />
-                </SimpleGrid>
+                <ReviewSummaryPanel
+                  generationOptions={controller.contractSettings.generationOptions}
+                  mappedContractFields={controller.contractSettings.mappedContractFields}
+                  emailTemplate={controller.templateBuilder.emailTemplate}
+                  onGoToStep={controller.setActiveStep}
+                  preflight={controller.preflight.result}
+                  preflightLoading={controller.preflight.isLoading}
+                  rows={controller.workbookPreview.rows}
+                  totalContractFields={controller.workbookPreview.contractVariables.length}
+                  totalRows={controller.workbookPreview.totalRows}
+                />
               )
             ) : null}
 

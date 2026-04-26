@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { Alert, Badge, Button, Group, Modal, Paper, Select, Stack, Table, Text, Title } from '@mantine/core';
 import type { TemplateStatusResult } from '../../shared/desktop';
 import type { WorkbookPreviewRow } from '../types/template';
@@ -20,7 +20,7 @@ type Props = {
   variableSources: Record<string, WorkbookPreviewRow>;
 };
 
-export function ContractMappingPanel({
+function ContractMappingPanelComponent({
   availableVariables,
   contractTemplatePath,
   isOpeningTemplate = false,
@@ -219,3 +219,5 @@ export function ContractMappingPanel({
     </Stack>
   );
 }
+
+export const ContractMappingPanel = memo(ContractMappingPanelComponent);

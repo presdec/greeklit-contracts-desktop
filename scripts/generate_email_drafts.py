@@ -9,6 +9,27 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 PLACEHOLDER_RE = re.compile(r"\{\{([A-Z0-9_]+)\}\}")
+PROGRESS_PREFIX = "__GREEKLIT_PROGRESS__"
+
+
+def emit_progress(stage, message, current=0, total=0, percent=None, **metrics):
+    payload = {
+        "current": current,
+        "message": message,
+        "stage": stage,
+        "total": total,
+    }
+    if percent is not None:
+        payload["percent"] = max(0, min(100, int(percent)))
+    for key, value in metrics.items():
+        payload[key] = value
+    print(f"{PROGRESS_PREFIX}{json.dumps(payload, ensure_ascii=True)}", flush=True)
+
+
+def stage_percent(start, end, current, total):
+    if total <= 0:
+        return start
+    return start + round(((end - start) * current) / total)
 
 
 def normalize_cell_value(value):
@@ -107,6 +128,7 @@ def write_report(path, payload, placeholders, generated_rows, skipped_rows):
 
 def main():
     payload = json.loads(sys.argv[1])
+    emit_progress("prepare", "Loading workbook and email template.", percent=5)
 
     workbook = load_workbook(payload["workbook_path"], data_only=True)
     worksheet_name = payload["worksheet_name"]
@@ -126,8 +148,27 @@ def main():
     generated_rows = []
     skipped_rows = []
     drafts = []
+    total_rows = max(0, worksheet.max_row - data_start_row + 1)
+    emit_progress(
+        "prepare",
+        f"{total_rows} workbook rows found.",
+        total=total_rows,
+        percent=10,
+        rowsFound=total_rows,
+    )
 
-    for row_number in range(data_start_row, worksheet.max_row + 1):
+    for row_index, row_number in enumerate(range(data_start_row, worksheet.max_row + 1), start=1):
+        emit_progress(
+            "email",
+            f"Preparing email draft for row {row_number}.",
+            current=row_index,
+            total=total_rows,
+            percent=stage_percent(15, 85, row_index, total_rows),
+            emailDraftCount=len(generated_rows),
+            generatedCount=len(generated_rows),
+            rowsFound=total_rows,
+            skippedCount=len(skipped_rows),
+        )
         row_values = build_row_values(worksheet, row_number, mapping)
         missing = sorted(
             placeholder for placeholder in placeholders if not row_values.get(placeholder, "")
@@ -135,6 +176,17 @@ def main():
 
         if missing:
             skipped_rows.append((row_number, missing))
+            emit_progress(
+                "email",
+                f"Skipped workbook row {row_number}.",
+                current=row_index,
+                total=total_rows,
+                percent=stage_percent(15, 85, row_index, total_rows),
+                emailDraftCount=len(generated_rows),
+                generatedCount=len(generated_rows),
+                rowsFound=total_rows,
+                skippedCount=len(skipped_rows),
+            )
             continue
 
         rendered = render_template(template_text, row_values)
@@ -146,10 +198,31 @@ def main():
         )
         drafts.append((heading, rendered))
         generated_rows.append(row_number)
+        emit_progress(
+            "email",
+            f"Prepared email draft for row {row_number}.",
+            current=row_index,
+            total=total_rows,
+            percent=stage_percent(15, 85, row_index, total_rows),
+            emailDraftCount=len(generated_rows),
+            generatedCount=len(generated_rows),
+            rowsFound=total_rows,
+            skippedCount=len(skipped_rows),
+        )
 
     combined_email_path = output_dir / "email_drafts.html"
     report_path = output_dir / "generation_report.txt"
 
+    emit_progress(
+        "report",
+        "Writing email draft files and report.",
+        percent=92,
+        emailDraftCount=len(generated_rows),
+        expectedEmailDraftCount=len(generated_rows),
+        generatedCount=len(generated_rows),
+        rowsFound=total_rows,
+        skippedCount=len(skipped_rows),
+    )
     write_email_drafts_html(combined_email_path, drafts)
     write_report(report_path, payload, placeholders, generated_rows, skipped_rows)
 
@@ -157,6 +230,16 @@ def main():
     print(f"Skipped {len(skipped_rows)} rows.")
     print(f"Combined email drafts file: {combined_email_path}")
     print(f"Report: {report_path}")
+    emit_progress(
+        "complete",
+        "Email draft generation complete.",
+        percent=100,
+        emailDraftCount=len(generated_rows),
+        expectedEmailDraftCount=len(generated_rows),
+        generatedCount=len(generated_rows),
+        rowsFound=total_rows,
+        skippedCount=len(skipped_rows),
+    )
 
 
 if __name__ == "__main__":

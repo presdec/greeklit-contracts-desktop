@@ -7,6 +7,8 @@ import type { EditorField, EmailTemplateState } from '../types/template';
 import { useI18n } from '../i18n';
 import { normalizeEmailBody } from '../lib/template';
 
+const editorExtensions = [StarterKit];
+
 type Props = {
   activeEditor: EditorField;
   availableVariables: string[];
@@ -33,7 +35,7 @@ export function EmailTemplateEditor({
   const { copy } = useI18n();
   const editor = useEditor({
     content: normalizeEmailBody(emailTemplate.body),
-    extensions: [StarterKit],
+    extensions: editorExtensions,
     immediatelyRender: false,
     onFocus: () => setActiveEditor('body'),
     onUpdate: ({ editor: currentEditor }) => {

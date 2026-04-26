@@ -1,5 +1,5 @@
 import { useAtom } from 'jotai/react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { WorkbookPreviewSampleRow } from '../../shared/desktop';
 import type { TemplateStatusResult } from '../../shared/desktop';
 import { canonicalVariables } from '../data/defaults';
@@ -23,7 +23,9 @@ export function useWorkbookPreview(
   >([]);
   const [sampleRows, setSampleRows] = useState<WorkbookPreviewSampleRow[]>([]);
   const [templateStatus, setTemplateStatus] = useState<TemplateStatusResult | null>(null);
+  const [totalRows, setTotalRows] = useState(0);
   const [refreshTick, setRefreshTick] = useState(0);
+  const previewRequestId = useRef(0);
 
   const refreshPreview = useCallback(() => {
     setRefreshTick((current) => current + 1);
@@ -42,7 +44,11 @@ export function useWorkbookPreview(
   }, [desktopApp, project.contractTemplatePath]);
 
   const loadPreview = useCallback(async () => {
+    const requestId = previewRequestId.current + 1;
+    previewRequestId.current = requestId;
+
     if (!project.workbookPath || !project.worksheetName) {
+      setIsLoading(false);
       return;
     }
 
@@ -58,15 +64,24 @@ export function useWorkbookPreview(
         worksheetName: project.worksheetName,
       });
 
+      if (previewRequestId.current !== requestId) {
+        return;
+      }
+
       setRawColumns(result.columns);
       setContractTokenContexts(result.contractTokenContexts ?? {});
       setContractVariables(result.contractTokens);
       setSampleRows(result.sampleRows);
+      setTotalRows(result.totalRows);
       await loadTemplateStatus();
     } catch (error) {
-      setLoadError(error instanceof Error ? error.message : 'Could not inspect workbook.');
+      if (previewRequestId.current === requestId) {
+        setLoadError(error instanceof Error ? error.message : 'Could not inspect workbook.');
+      }
     } finally {
-      setIsLoading(false);
+      if (previewRequestId.current === requestId) {
+        setIsLoading(false);
+      }
     }
   }, [
     desktopApp,
@@ -79,23 +94,11 @@ export function useWorkbookPreview(
   ]);
 
   useEffect(() => {
-    let isActive = true;
-
     async function run() {
-      try {
-        await loadPreview();
-      } catch {
-        if (!isActive) {
-          return;
-        }
-      }
+      await loadPreview();
     }
 
     void run();
-
-    return () => {
-      isActive = false;
-    };
   }, [loadPreview, refreshTick]);
 
   useEffect(() => {
@@ -215,5 +218,6 @@ export function useWorkbookPreview(
     sampleValues,
     setFieldAssignment,
     templateStatus,
+    totalRows,
   };
 }

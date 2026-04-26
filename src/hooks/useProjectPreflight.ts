@@ -55,10 +55,13 @@ export function useProjectPreflight(
       }
     }
 
-    void run();
+    const timeout = window.setTimeout(() => {
+      void run();
+    }, 250);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(timeout);
     };
   }, [desktopApp, enabled, language, request]);
 

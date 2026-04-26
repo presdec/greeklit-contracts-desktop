@@ -2,6 +2,7 @@
 
 import type {
   FileDialogRequest,
+  GenerateProjectProgress,
   GenerateProjectRequest,
   GenerateProjectResult,
   InspectProjectRequest,
@@ -19,6 +20,9 @@ declare global {
   interface Window {
     desktopApp: {
       generateProject: (request: GenerateProjectRequest) => Promise<GenerateProjectResult>;
+      onGenerationProgress: (
+        listener: (progress: GenerateProjectProgress) => void,
+      ) => () => void;
       validateProject: (request: GenerateProjectRequest) => Promise<ProjectPreflightResult>;
       getTemplateStatus: (request: TemplateStatusRequest) => Promise<TemplateStatusResult>;
       inspectProject: (request: InspectProjectRequest) => Promise<InspectProjectResult>;

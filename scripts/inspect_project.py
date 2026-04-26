@@ -138,11 +138,11 @@ def get_column_letter(index):
 
 def extract_contract_tokens(path_value):
     if not path_value:
-        return []
+        return {"contexts": {}, "tokens": []}
 
     path = Path(path_value)
     if not path.exists() or path.suffix.lower() != ".docx":
-        return []
+        return {"contexts": {}, "tokens": []}
 
     tokens = set()
     token_contexts = {}
@@ -193,28 +193,32 @@ def extract_contract_tokens(path_value):
 
 def inspect_workbook(payload):
     workbook = load_workbook(payload["workbook_path"], data_only=True, read_only=True)
-    worksheet = workbook[payload["worksheet_name"]]
+    worksheet_name = (payload.get("worksheet_name") or "").strip()
+    if worksheet_name and worksheet_name in workbook.sheetnames:
+        worksheet = workbook[worksheet_name]
+    else:
+        worksheet = workbook[workbook.sheetnames[0]]
     header_row = int(payload["header_row"])
     data_start_row = int(payload["data_start_row"])
 
     columns = []
     for cell in worksheet[header_row]:
-      if cell.value is None:
-          continue
-      header = normalize_cell_value(cell.value)
-      if not header:
-          continue
-      sample_value = normalize_cell_value(
-          worksheet[f"{get_column_letter(cell.column)}{data_start_row}"].value
-      )
-      columns.append(
-          {
-              "columnLetter": get_column_letter(cell.column),
-              "header": header,
-              "sampleValue": sample_value,
-              "suggestedVariable": normalize_header_to_variable(header),
-          }
-      )
+        if cell.value is None:
+            continue
+        header = normalize_cell_value(cell.value)
+        if not header:
+            continue
+        sample_value = normalize_cell_value(
+            worksheet[f"{get_column_letter(cell.column)}{data_start_row}"].value
+        )
+        columns.append(
+            {
+                "columnLetter": get_column_letter(cell.column),
+                "header": header,
+                "sampleValue": sample_value,
+                "suggestedVariable": normalize_header_to_variable(header),
+            }
+        )
 
     sample_rows = []
     for row_number in range(data_start_row, data_start_row + 3):
@@ -241,7 +245,7 @@ def inspect_workbook(payload):
         "headerRow": header_row,
         "sampleRows": sample_rows,
         "totalRows": max(0, worksheet.max_row - data_start_row + 1),
-        "worksheetName": payload["worksheet_name"],
+        "worksheetName": worksheet.title,
     }
 
 
@@ -252,6 +256,6 @@ if __name__ == "__main__":
         "data_start_row": raw_payload["dataStartRow"],
         "header_row": raw_payload["headerRow"],
         "workbook_path": raw_payload["workbookPath"],
-        "worksheet_name": raw_payload["worksheetName"],
+        "worksheet_name": raw_payload.get("worksheetName"),
     }
     print(json.dumps(inspect_workbook(payload)))

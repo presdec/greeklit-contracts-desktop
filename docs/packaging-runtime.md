@@ -108,10 +108,10 @@ The scripts run `pnpm runtime:assert:linux-x64` before packaging. If `runtime/li
 Artifacts are named from the configured Linux artifact template and will be similar to:
 
 ```text
-release/greeklit-contracts-desktop-0.1.0-x86_64.AppImage
-release/greeklit-contracts-desktop_0.1.0_amd64.deb
-release/greeklit-contracts-desktop-0.1.0.x86_64.rpm
-release/greeklit-contracts-desktop-0.1.0-x64.pacman
+release/docgen-studio-0.1.0-x86_64.AppImage
+release/docgen-studio_0.1.0_amd64.deb
+release/docgen-studio-0.1.0.x86_64.rpm
+release/docgen-studio-0.1.0-x64.pacman
 ```
 
 Exact architecture text can vary by target because Debian, RPM, AppImage, and pacman use different naming conventions.

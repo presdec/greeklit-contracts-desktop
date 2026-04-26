@@ -80,6 +80,9 @@ type Translation = {
     outputFolderDesc: string;
     outputFolderLabel: string;
     outputFolderPlaceholder: string;
+    outputFilenamePatternDesc: string;
+    outputFilenamePatternLabel: string;
+    outputFilenamePatternPlaceholder: string;
     pdfFiles: string;
     title: string;
     subtitle: string;
@@ -126,6 +129,9 @@ type Translation = {
     statusTemplateLocked: string;
     statusTemplateEditedAt: (time: string) => string;
     statusTemplateHint: string;
+    outputFilenamePatternDesc: string;
+    outputFilenamePatternLabel: string;
+    outputFilenamePatternPlaceholder: string;
   };
   emailBuilder: {
     activeTarget: (target: string) => string;
@@ -167,10 +173,12 @@ type Translation = {
   };
   review: {
     badge: string;
+    checksPassSummary: (passed: number, total: number) => string;
     emailBodyLength: string;
     fixIssue: string;
     goodToGenerateBody: string;
     goodToGenerateTitle: string;
+    hideDetails: string;
     issuesFound: (count: number) => string;
     mappedColumns: string;
     mappedWordFields: string;
@@ -183,6 +191,7 @@ type Translation = {
     rowsFound: string;
     selectedOutput: string;
     setupCheck: string;
+    showDetails: string;
     subtitle: string;
     statusFail: string;
     statusPass: string;
@@ -200,6 +209,7 @@ type Translation = {
     refreshing: string;
     row: string;
     subtitle: string;
+    wordTemplateNotSelected: string;
   };
   success: {
     createdFiles: string;
@@ -253,9 +263,9 @@ const translations: Record<Language, Translation> = {
         nextHint: 'Next step adapts to the output types you selected.',
       },
       2: {
-        title: 'Field Mapping',
+        title: 'Field & Filename Mapping',
         description:
-          'Connect each placeholder in your Word template to the matching Excel column. This is what makes every generated file unique and accurate.',
+          'Connect each placeholder in your Word template to the matching Excel column, and define the DOCX/PDF output filename pattern.',
         nextHint: 'Next: build or review the email template with live field tokens.',
       },
       3: {
@@ -338,6 +348,10 @@ const translations: Record<Language, Translation> = {
         'Choose where generated DOCX, PDF, drafts, and reports should be written.',
       outputFolderLabel: 'Output Folder',
       outputFolderPlaceholder: 'Select output folder',
+      outputFilenamePatternDesc:
+        'Controls DOCX/PDF file names. Use placeholders like {{APPLICATION_ID}} or plain text to avoid extra required mappings.',
+      outputFilenamePatternLabel: 'Output Filename Pattern',
+      outputFilenamePatternPlaceholder: '{{APPLICATION_CODE}} - {{TITLE}}',
       pdfFiles: 'PDF files',
       title: 'Project Setup',
       subtitle:
@@ -372,9 +386,9 @@ const translations: Record<Language, Translation> = {
       showParagraph: 'Show paragraph',
       sourceColumn: 'Source column',
       sampleValue: 'Sample value',
-      subtitle: 'Connect each Word placeholder to an Excel column so document generation stays accurate.',
+      subtitle: 'Connect each Word placeholder to an Excel column, and configure DOCX/PDF output naming.',
       templateFlowTitle: 'Template editing flow',
-      title: 'Word Field Mapping',
+      title: 'Field & Filename Mapping',
       tokenWithSample: (sample) => ` with sample value "${sample}"`,
       tokenWithoutSample: ' (no mapped sample value yet)',
       workbookVariable: 'Workbook variable',
@@ -389,6 +403,10 @@ const translations: Record<Language, Translation> = {
         'The template still looks open in Word. Save your changes, close Word, then reload fields.',
       statusTemplateEditedAt: (time) => `Last saved change detected at ${time}. Reload fields after saving if you added or renamed placeholders.`,
       statusTemplateHint: 'Open the Word template, save your edits, then reload fields to pull in new placeholders.',
+      outputFilenamePatternDesc:
+        'Controls DOCX/PDF file names. Use placeholders like {{APPLICATION_CODE}} and plain text (for example: Contract - {{TITLE}}).',
+      outputFilenamePatternLabel: 'DOCX/PDF Filename Pattern',
+      outputFilenamePatternPlaceholder: '{{APPLICATION_CODE}} - {{TITLE}} - {{LANGUAGE}}',
     },
     emailBuilder: {
       activeTarget: (target) => `Active target: ${target}`,
@@ -423,19 +441,21 @@ const translations: Record<Language, Translation> = {
         'Review workbook columns, sample values, and field assignments used by Word and email templates.',
       title: 'Workbook Mapping Preview',
       usedBy: 'Used by',
-      usedByBoth: 'Word + Email',
-      usedByContract: 'Word',
+      usedByBoth: '[WORD Field] + Email',
+      usedByContract: '[WORD Field]',
       usedByEmail: 'Email',
       usedByNone: 'None',
       chooseVariable: 'Choose variable',
     },
     review: {
       badge: 'Review',
+      checksPassSummary: (passed, total) => `${passed}/${total} Checks Pass`,
       emailBodyLength: 'Email body length',
       fixIssue: 'Fix',
       goodToGenerateBody:
         'Files, mappings, output folder, and selected generation options passed preflight.',
       goodToGenerateTitle: 'Good to generate',
+      hideDetails: 'Hide details',
       issuesFound: (count) => `${count} issue${count === 1 ? '' : 's'} need attention`,
       mappedColumns: 'Mapped workbook columns',
       mappedWordFields: 'Mapped Word fields',
@@ -449,6 +469,7 @@ const translations: Record<Language, Translation> = {
       rowsFound: 'Rows found',
       selectedOutput: 'Selected output',
       setupCheck: 'Setup Check',
+      showDetails: 'Show details',
       subtitle: 'Final review of template coverage, mapped fields, and output settings before generation.',
       statusFail: 'FAIL',
       statusPass: 'PASS',
@@ -468,6 +489,7 @@ const translations: Record<Language, Translation> = {
       refreshing: 'Refreshing source preview...',
       row: 'Row',
       subtitle: 'Confirm detected Word fields and sample Excel values before moving to mapping.',
+      wordTemplateNotSelected: 'Select a Word template to preview placeholders. Excel load checks are already active.',
     },
     success: {
       createdFiles: 'Created files',
@@ -520,9 +542,9 @@ const translations: Record<Language, Translation> = {
         nextHint: 'Το επόμενο βήμα προσαρμόζεται στους τύπους εξόδου που επιλέξατε.',
       },
       2: {
-        title: 'Αντιστοίχιση Πεδίων',
+        title: 'Αντιστοίχιση Πεδίων & Ονόματος Αρχείου',
         description:
-          'Συνδέστε κάθε placeholder του προτύπου Word με την αντίστοιχη στήλη Excel. Αυτό κάνει κάθε παραγόμενο αρχείο μοναδικό και ακριβές.',
+          'Συνδέστε κάθε placeholder του προτύπου Word με την αντίστοιχη στήλη Excel και ορίστε το μοτίβο ονόματος αρχείου για DOCX/PDF.',
         nextHint: 'Επόμενο: δημιουργήστε ή ελέγξτε το πρότυπο email με ζωντανά πεδία.',
       },
       3: {
@@ -605,6 +627,10 @@ const translations: Record<Language, Translation> = {
         'Επιλέξτε πού θα γράφονται τα παραγόμενα DOCX, PDF, προσχέδια και αναφορές.',
       outputFolderLabel: 'Φάκελος Εξόδου',
       outputFolderPlaceholder: 'Επιλέξτε φάκελο εξόδου',
+      outputFilenamePatternDesc:
+        'Ορίζει το όνομα αρχείου για DOCX/PDF. Χρησιμοποιήστε placeholders όπως {{APPLICATION_ID}} ή απλό κείμενο για λιγότερες υποχρεωτικές αντιστοιχίσεις.',
+      outputFilenamePatternLabel: 'Μοτίβο Ονόματος Αρχείου Εξόδου',
+      outputFilenamePatternPlaceholder: '{{APPLICATION_CODE}} - {{TITLE}}',
       pdfFiles: 'Αρχεία PDF',
       title: 'Ρύθμιση Έργου',
       subtitle:
@@ -639,9 +665,9 @@ const translations: Record<Language, Translation> = {
       showParagraph: 'Προβολή παραγράφου',
       sourceColumn: 'Στήλη προέλευσης',
       sampleValue: 'Τιμή δείγματος',
-      subtitle: 'Συνδέστε κάθε placeholder Word με στήλη Excel για ακριβή δημιουργία εγγράφων.',
+      subtitle: 'Συνδέστε κάθε placeholder Word με στήλη Excel και ρυθμίστε την ονοματοδοσία εξόδου DOCX/PDF.',
       templateFlowTitle: 'Ροή επεξεργασίας προτύπου',
-      title: 'Αντιστοίχιση Πεδίων Word',
+      title: 'Αντιστοίχιση Πεδίων & Ονόματος Αρχείου',
       tokenWithSample: (sample) => ` με τιμή δείγματος "${sample}"`,
       tokenWithoutSample: ' (δεν υπάρχει ακόμη τιμή δείγματος)',
       workbookVariable: 'Μεταβλητή workbook',
@@ -656,6 +682,10 @@ const translations: Record<Language, Translation> = {
         'Το πρότυπο φαίνεται ακόμη ανοιχτό στο Word. Αποθηκεύστε, κλείστε το Word και επαναφορτώστε πεδία.',
       statusTemplateEditedAt: (time) => `Εντοπίστηκε τελευταία αποθήκευση στις ${time}. Κάντε επαναφόρτωση πεδίων αν προσθέσατε ή μετονομάσατε placeholders.`,
       statusTemplateHint: 'Ανοίξτε το πρότυπο Word, αποθηκεύστε τις αλλαγές και κάντε επαναφόρτωση πεδίων.',
+      outputFilenamePatternDesc:
+        'Ελέγχει το όνομα αρχείου DOCX/PDF. Χρησιμοποίησε placeholders όπως {{APPLICATION_CODE}} και απλό κείμενο (π.χ. Σύμβαση - {{TITLE}}).',
+      outputFilenamePatternLabel: 'Μοτίβο Ονόματος Αρχείου DOCX/PDF',
+      outputFilenamePatternPlaceholder: '{{APPLICATION_CODE}} - {{TITLE}} - {{LANGUAGE}}',
     },
     emailBuilder: {
       activeTarget: (target) => `Ενεργό πεδίο: ${target}`,
@@ -690,19 +720,21 @@ const translations: Record<Language, Translation> = {
         'Ελέγξτε στήλες workbook, τιμές δείγματος και αντιστοιχίσεις πεδίων για Word και email.',
       title: 'Προεπισκόπηση Αντιστοίχισης Workbook',
       usedBy: 'Χρησιμοποιείται από',
-      usedByBoth: 'Word + Email',
-      usedByContract: 'Word',
+      usedByBoth: '[WORD Field] + Email',
+      usedByContract: '[WORD Field]',
       usedByEmail: 'Email',
       usedByNone: 'Κανένα',
       chooseVariable: 'Επιλέξτε μεταβλητή',
     },
     review: {
       badge: 'Έλεγχος',
+      checksPassSummary: (passed, total) => `${passed}/${total} Έλεγχοι OK`,
       emailBodyLength: 'Μήκος κειμένου email',
       fixIssue: 'Διόρθωση',
       goodToGenerateBody:
         'Τα αρχεία, οι αντιστοιχίσεις, ο φάκελος εξόδου και οι επιλογές δημιουργίας πέρασαν τον προέλεγχο.',
       goodToGenerateTitle: 'Έτοιμο για δημιουργία',
+      hideDetails: 'Απόκρυψη λεπτομερειών',
       issuesFound: (count) => `${count} θέματα χρειάζονται έλεγχο`,
       mappedColumns: 'Αντιστοιχισμένες στήλες workbook',
       mappedWordFields: 'Αντιστοιχισμένα πεδία Word',
@@ -716,6 +748,7 @@ const translations: Record<Language, Translation> = {
       rowsFound: 'Γραμμές που βρέθηκαν',
       selectedOutput: 'Επιλεγμένη έξοδος',
       setupCheck: 'Έλεγχος Ρύθμισης',
+      showDetails: 'Προβολή λεπτομερειών',
       subtitle: 'Τελικός έλεγχος κάλυψης προτύπων, αντιστοιχίσεων και ρυθμίσεων εξόδου πριν τη δημιουργία.',
       statusFail: 'ΑΠΟΤΥΧΙΑ',
       statusPass: 'OK',
@@ -735,6 +768,7 @@ const translations: Record<Language, Translation> = {
       refreshing: 'Ανανέωση προεπισκόπησης πηγών...',
       row: 'Γραμμή',
       subtitle: 'Επιβεβαιώστε τα πεδία Word και δείγματα τιμών Excel πριν την αντιστοίχιση.',
+      wordTemplateNotSelected: 'Επιλέξτε πρότυπο Word για προεπισκόπηση placeholders. Ο έλεγχος φόρτωσης Excel εκτελείται ήδη.',
     },
     success: {
       createdFiles: 'Δημιουργημένα αρχεία',

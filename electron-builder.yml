@@ -3,7 +3,7 @@ productName: DocGen Studio
 publish:
   provider: github
   owner: presdec
-  repo: greeklit-contracts-desktop
+  repo: docgen-studio-desktop
   releaseType: release
 directories:
   output: release

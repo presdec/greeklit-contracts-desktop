@@ -27,7 +27,7 @@ test('desktop app launches to main workflow shell', async () => {
   }
 
   await window.waitForLoadState('networkidle');
-  await expect(window.getByText('Document Generation Workspace')).toBeVisible();
+  await expect(window.getByRole('heading', { name: 'DocGen Studio' })).toBeVisible();
   await expect(window.getByText('Workflow progress')).toBeVisible();
 
   await app.close();

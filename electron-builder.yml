@@ -1,5 +1,10 @@
 appId: gr.presdec.docgenstudio
 productName: DocGen Studio
+publish:
+  provider: github
+  owner: presdec
+  repo: greeklit-contracts-desktop
+  releaseType: release
 directories:
   output: release
 files:

@@ -126,16 +126,29 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def prune_other_runtime_dirs(runtime_root: Path, active_runtime_key: str) -> None:
+    if not runtime_root.exists():
+        return
+
+    for child in runtime_root.iterdir():
+        if child.name == ".gitignore":
+            continue
+        if child.is_dir() and child.name != active_runtime_key:
+            shutil.rmtree(child, ignore_errors=True)
+
+
 def main() -> int:
     args = parse_args()
     app_dir = Path(__file__).resolve().parents[1]
     workspace_root = app_dir.parent
     runtime_key = node_platform_key()
-    output_dir = app_dir / "runtime" / runtime_key
+    runtime_root = app_dir / "runtime"
+    output_dir = runtime_root / runtime_key
     build_dir = app_dir / ".runtime-build" / runtime_key
     spec_dir = build_dir / "spec"
 
     ensure_pyinstaller()
+    prune_other_runtime_dirs(runtime_root, runtime_key)
 
     if args.clean and output_dir.exists():
         shutil.rmtree(output_dir)

@@ -18,11 +18,11 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            command: pnpm dist:win
+            command: pnpm dist:win -- --publish always
             artifact_pattern: release/*.exe
             artifact_name: windows-release
           - os: ubuntu-latest
-            command: pnpm dist:linux
+            command: pnpm dist:linux -- --publish always
             artifact_pattern: |
               release/*.AppImage
               release/*.deb

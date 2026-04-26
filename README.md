@@ -1,45 +1,69 @@
-# Greeklit Contracts Desktop
+# Doc Gen Studio
 
 [![Build](https://github.com/presdec/greeklit-contracts-desktop/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/presdec/greeklit-contracts-desktop/actions/workflows/build.yml)
 [![Test](https://github.com/presdec/greeklit-contracts-desktop/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/presdec/greeklit-contracts-desktop/actions/workflows/test.yml)
 [![Release](https://img.shields.io/github/v/release/presdec/greeklit-contracts-desktop?display_name=tag)](https://github.com/presdec/greeklit-contracts-desktop/releases)
 
-This folder is the starting point for turning the existing Python contract generator into a cleaner desktop product built with Vite and Electron.
+Doc Gen Studio is a desktop app for high-volume document generation from Excel data and Word templates.
 
-## Goal
+It is built for teams that need to produce accurate, personalized documents quickly, without moving sensitive data to cloud services and without maintaining brittle manual workflows.
 
-Keep the proven local workflow:
+## Why This App Exists
 
-- upload/select one Excel workbook
-- upload/select one DOCX template
-- upload/select one email template
-- map placeholders to Excel columns
-- generate DOCX, PDF, and email outputs
+Most document generation setups break down in one of two ways:
 
-Wrap that workflow in a simple desktop UI so a non-technical user can run it without editing raw files by hand.
+- They are too manual: copy/paste into templates, one document at a time.
+- They are too technical: scripts and tooling that only one person on the team can safely run.
 
-## Proposed stack
+Doc Gen Studio closes that gap. It gives non-technical users a clear UI, while preserving the proven Python runtime that powers robust generation.
 
-- `Electron`: desktop shell, local file access, packaging
-- `Vite`: fast frontend dev/build tooling
-- `React` + `TypeScript`: UI and app state
-- `Mantine`: practical component library for the desktop UI
-- `TanStack Router`: app navigation without committing to a full-stack framework
-- `Sentry`: error tracking once external users begin testing
-- `Python`: keep the existing generator logic at first, exposed to Electron through a small local runner layer
+## Core USPs
 
-## Tooling requirements
+- Local-first and privacy-conscious
+	- Your workbook, templates, and generated files stay on your machine.
+	- No mandatory SaaS dependency and no per-seat document-generation subscription.
 
-- `pnpm` is the required package manager
-- Node `24.15.0` is pinned in `.nvmrc` and `.node-version`
-- `.npmrc` enables `engine-strict=true`
-- TypeScript is pinned to the current stable line, `5.9.2`
+- Fast at scale
+	- Turn one spreadsheet and one template into hundreds of outputs in one run.
+	- Generate DOCX, PDF, and email-draft artifacts in a single workflow.
 
-TypeScript `7` is not available as a stable release right now, so the app baseline uses the latest stable TypeScript instead.
+- Reliable mapping workflow
+	- Explicit field mapping between template placeholders and spreadsheet columns.
+	- Fewer silent errors and easier review before generation.
 
-## Setup
+- Practical for real operations
+	- Built as a desktop app for teams who need predictable local file access.
+	- No need to ask users to run Python scripts manually.
 
-From the `app/` directory:
+- Hybrid architecture that is easy to evolve
+	- Electron + React UI for usability.
+	- Python runtime for proven document generation behavior.
+	- Clean boundary between interface and generation logic.
+
+## Who It Is For
+
+- Legal and contracts teams preparing high-volume document sets.
+- Operations teams sending personalized notices, forms, or packs.
+- Small teams replacing fragile mail-merge workflows with a repeatable process.
+
+## What You Can Do Today
+
+- Select an Excel workbook.
+- Select a DOCX template.
+- Select an email template.
+- Map placeholders to workbook columns.
+- Generate outputs in bulk.
+
+## Tech Stack
+
+- Electron
+- Vite
+- React + TypeScript
+- Python runtime tools
+
+## Development Setup
+
+From the app directory:
 
 ```bash
 nvm use
@@ -51,28 +75,15 @@ Useful scripts:
 
 - `pnpm dev`
 - `pnpm build`
-- `pnpm preview`
-- `pnpm typecheck`
+- `pnpm test:e2e`
 - `pnpm lint`
-- `pnpm lint:fix`
-- `pnpm format`
-- `pnpm format:check`
+- `pnpm typecheck`
 
-## CI/CD
+## Release Artifacts
 
-GitHub Actions workflows are configured in `.github/workflows`:
+Tagged builds publish desktop release assets to GitHub Releases.
 
-- `build.yml`: runs on pushes to `main` and pull requests, installs dependencies, and runs `pnpm build`.
-- `test.yml`: runs on pushes to `main` and pull requests, builds the app, then runs Playwright end-to-end tests with `pnpm test:e2e`.
-- `release.yml`: runs on `v*` tags and manual dispatch, builds release artifacts for Windows (`pnpm dist:win`) and Linux AppImage (`pnpm dist:linux:appimage`), then uploads them as workflow artifacts.
+- Windows installer (`.exe`)
+- Linux packages (`.AppImage`, `.deb`, `.rpm`, `.pacman`)
 
-## Initial structure
-
-- `docs/`: product and MVP planning
-- `electron/`: Electron main/preload process files
-- `src/`: Vite frontend app
-
-## Next document
-
-See `docs/mvp-plan.md` for the rollout plan and MVP feature set.
-See `docs/desktop-stack.md` for stack decisions and what to defer.
+Note: the GitHub Packages tab is separate from GitHub Releases. Doc Gen Studio currently publishes downloadable release assets, not registry packages.

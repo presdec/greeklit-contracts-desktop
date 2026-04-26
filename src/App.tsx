@@ -1,160 +1,39 @@
-import { useCallback, useMemo, useState } from 'react';
-import { Alert, Badge, Box, Button, Card, Divider, Group, Paper, Progress, SimpleGrid, Stack, Text, Title } from '@mantine/core';
+import { Alert, Badge, Box, Button, Card, Divider, Group, Progress, SegmentedControl, SimpleGrid, Stack, Text, Title } from '@mantine/core';
 import { ContractMappingPanel } from './components/ContractMappingPanel';
 import { EmailTemplateEditor } from './components/EmailTemplateEditor';
+import { GenerationProgressPanel } from './components/GenerationProgressPanel';
+import { GenerationSuccessPanel } from './components/GenerationSuccessPanel';
 import { ProjectSetupPanel } from './components/ProjectSetupPanel';
 import { ReviewSummaryPanel } from './components/ReviewSummaryPanel';
 import { SetupSourcePreviewPanel } from './components/SetupSourcePreviewPanel';
 import { StepList } from './components/StepList';
 import { TemplatePreviewPanel } from './components/TemplatePreviewPanel';
 import { WorkbookPreviewPanel } from './components/WorkbookPreviewPanel';
-import { useEmailTemplateBuilder } from './hooks/useEmailTemplateBuilder';
-import { useContractTemplateSettings } from './hooks/useContractTemplateSettings';
-import { useProjectSetup } from './hooks/useProjectSetup';
-import { useWorkbookPreview } from './hooks/useWorkbookPreview';
-import type { WizardStepId } from './types/template';
-import type { GenerateProjectResult } from '../shared/desktop';
-
-const stepCopy = {
-  1: {
-    description:
-      'Choose the project details and quickly confirm the workbook and contract template loaded correctly.',
-    title: 'Project Setup',
-  },
-  2: {
-    description:
-      'Map the contract fields to workbook values and decide whether the run creates DOCX files, PDFs, or both.',
-    title: 'Contract Mapping',
-  },
-  3: {
-    description:
-      'Build the email template only after the source files and contract mappings look right.',
-    title: 'Email Template Builder',
-  },
-  4: {
-    description:
-      'Check the rendered preview and mapping summary before you commit the setup.',
-    title: 'Review And Commit',
-  },
-} as const;
-
-const nextStepCopy = {
-  1: 'Once the source preview looks right, continue to contract mapping.',
-  2: 'Next up: build the email template after the contract mapping is ready.',
-  3: 'Next up: review the rendered output before you commit the setup.',
-  4: 'Next up: persist variable assignments into the project file and reuse them during generation.',
-} as const;
+import { useWorkspaceController } from './features/workspace/useWorkspaceController';
+import { useI18n } from './i18n';
 
 export function App() {
   const desktopApp = globalThis.window.desktopApp;
+  const { copy, language, setLanguage } = useI18n();
 
   if (!desktopApp) {
     return (
       <main className="app-shell">
-        <Alert color="red" radius="lg" title="Desktop bridge unavailable" variant="light">
-          The Electron preload bridge did not load, so the desktop UI cannot access file dialogs yet.
+        <Alert color="red" radius="lg" title={copy.app.desktopBridgeUnavailableTitle} variant="light">
+          {copy.app.desktopBridgeUnavailableBody}
         </Alert>
       </main>
     );
   }
 
-  const projectSetup = useProjectSetup(desktopApp);
-  const templateBuilder = useEmailTemplateBuilder();
-  const [activeStep, setActiveStep] = useState<WizardStepId>(1);
-  const [generationError, setGenerationError] = useState<string | null>(null);
-  const [generationResult, setGenerationResult] = useState<GenerateProjectResult | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const workbookPreview = useWorkbookPreview(
-    desktopApp,
-    projectSetup.project,
-    templateBuilder.emailVariables,
-  );
-  const contractSettings = useContractTemplateSettings(
-    workbookPreview.contractVariables,
-    workbookPreview.availableVariables,
-    workbookPreview.rows,
-  );
-
-  const handleSaveProject = useCallback(async () => {
-    const savedPath = await projectSetup.saveProject();
-    return savedPath ? `Saved project to ${savedPath}.` : null;
-  }, [projectSetup]);
-
-  const handleOpenProject = useCallback(async () => {
-    const filePath = await projectSetup.openProject();
-    return filePath ? `Loaded project from ${filePath}.` : null;
-  }, [projectSetup]);
-
-  const handleGenerateProject = useCallback(async () => {
-    setIsGenerating(true);
-    setGenerationError(null);
-
-    try {
-      const variableColumns = workbookPreview.rows.reduce<Record<string, string>>((accumulator, row) => {
-        if (row.selectedVariable) {
-          accumulator[row.selectedVariable] = row.columnLetter;
-        }
-        return accumulator;
-      }, {});
-
-      const result = await desktopApp.generateProject({
-        emailTemplate: templateBuilder.emailTemplate,
-        generationOptions: contractSettings.generationOptions,
-        project: projectSetup.project,
-        tokenMappings: contractSettings.tokenMappings,
-        variableColumns,
-      });
-
-      setGenerationResult(result);
-    } catch (error) {
-      setGenerationResult(null);
-      setGenerationError(error instanceof Error ? error.message : 'Generation failed.');
-    } finally {
-      setIsGenerating(false);
-    }
-  }, [
-    contractSettings.generationOptions,
-    contractSettings.tokenMappings,
-    desktopApp,
-    projectSetup.project,
-    templateBuilder.emailTemplate,
-    workbookPreview.rows,
-  ]);
-
-  const pickerRequests = useMemo(() => ({
-    workbookPath: {
-      defaultPath: projectSetup.project.workbookPath || undefined,
-      filters: [{ extensions: ['xlsx', 'xlsm', 'xls'], name: 'Excel Workbooks' }],
-      mode: 'file' as const,
-      title: 'Select Workbook',
-    },
-    contractTemplatePath: {
-      defaultPath: projectSetup.project.contractTemplatePath || undefined,
-      filters: [{ extensions: ['docx'], name: 'Word Templates' }],
-      mode: 'file' as const,
-      title: 'Select Contract Template',
-    },
-    emailTemplatePath: {
-      defaultPath: projectSetup.project.emailTemplatePath || undefined,
-      filters: [{ extensions: ['txt'], name: 'Text Templates' }],
-      mode: 'file' as const,
-      title: 'Select Email Template',
-    },
-    outputFolderPath: {
-      defaultPath: projectSetup.project.outputFolderPath || undefined,
-      mode: 'directory' as const,
-      title: 'Select Output Folder',
-    },
-  }), [projectSetup.project]);
-
-  const handlePickPath = useCallback((
-    field: 'workbookPath' | 'contractTemplatePath' | 'emailTemplatePath' | 'outputFolderPath',
-  ) => {
-    void projectSetup.pickProjectPath(field, pickerRequests[field]);
-  }, [pickerRequests, projectSetup]);
-
-  const currentStep = stepCopy[activeStep];
-  const nextStepHint = nextStepCopy[activeStep];
+  const controller = useWorkspaceController(desktopApp);
+  const currentStep = copy.steps[controller.activeStep];
+  const selectedOutputs = [
+    controller.contractSettings.generationOptions.generateDocx ? copy.outputLabels.word : null,
+    controller.contractSettings.generationOptions.generatePdf ? copy.outputLabels.pdf : null,
+    controller.contractSettings.generationOptions.generateEmailDrafts ? copy.outputLabels.email : null,
+  ].filter(Boolean) as string[];
+  const selectedOutputLabel = selectedOutputs.length > 0 ? selectedOutputs.join(' + ') : copy.outputLabels.none;
 
   return (
     <main className="app-shell">
@@ -163,24 +42,40 @@ export function App() {
           <Stack gap="xl">
             <Stack gap="xs">
               <Group justify="space-between">
-                <Badge color="teal" variant="light">Desktop MVP</Badge>
-                <Text c="dimmed" size="sm">{desktopApp.platform}</Text>
+                <Badge color="teal" variant="light">{copy.sidebar.desktopMvp}</Badge>
+                <SegmentedControl
+                  data={[
+                    { label: 'EN', value: 'en' },
+                    { label: 'EL', value: 'el' },
+                  ]}
+                  onChange={(value) => setLanguage(value as 'en' | 'el')}
+                  size="xs"
+                  value={language}
+                />
               </Group>
-              <Title order={2}>Greeklit Contracts Desktop</Title>
+              <Title order={2}>{copy.sidebar.title}</Title>
               <Text c="dimmed">
-                Move through setup, template building, and review in order instead of juggling everything at once.
+                {copy.sidebar.description}
               </Text>
             </Stack>
 
             <Box>
               <Group justify="space-between">
-                <Text fw={600}>Workflow progress</Text>
-                <Text c="dimmed" size="sm">Step {activeStep} of 4</Text>
+                <Text fw={600}>{copy.sidebar.workflowProgress}</Text>
+                <Text c="dimmed" size="sm">
+                  {copy.sidebar.stepOf(controller.currentStepIndex + 1, controller.visibleSteps.length)}
+                </Text>
               </Group>
-              <Progress color="teal" mt="sm" radius="xl" size="lg" value={(activeStep / 4) * 100} />
+              <Progress
+                color="teal"
+                mt="sm"
+                radius="xl"
+                size="lg"
+                value={((controller.currentStepIndex + 1) / controller.visibleSteps.length) * 100}
+              />
             </Box>
 
-            <StepList activeStep={activeStep} />
+            <StepList activeStep={controller.activeStep} visibleSteps={controller.visibleSteps} />
           </Stack>
         </Card>
 
@@ -188,148 +83,222 @@ export function App() {
           <Stack gap="xl">
             <Group justify="space-between">
               <Stack gap={4}>
-                <Text c="teal.8" fw={700} size="sm" tt="uppercase">Step {activeStep}</Text>
+                <Text c="teal.8" fw={700} size="sm" tt="uppercase">
+                  {language === 'el' ? `Βήμα ${controller.activeStep}` : `Step ${controller.activeStep}`}
+                </Text>
                 <Title order={1}>{currentStep.title}</Title>
                 <Text c="dimmed">{currentStep.description}</Text>
               </Stack>
-              <Button loading={projectSetup.isOpeningProject} onClick={() => void handleOpenProject()} size="md" variant="default">
-                Open Recent Project
+              <Button
+                loading={controller.projectPersistence.isOpeningProject}
+                onClick={() => void controller.handleOpenProject()}
+                size="md"
+                variant="default"
+              >
+                {copy.app.openRecentProject}
               </Button>
             </Group>
 
-            {workbookPreview.loadError ? (
-              <Alert color="red" radius="lg" title="Could not load workbook preview" variant="light">
-                {workbookPreview.loadError}
+            {controller.workbookPreview.loadError ? (
+              <Alert color="red" radius="lg" title={copy.app.couldNotLoadWorkbookPreview} variant="light">
+                {controller.workbookPreview.loadError}
               </Alert>
             ) : null}
 
-            {generationError ? (
-              <Alert color="red" radius="lg" title="Generation failed" variant="light">
-                {generationError}
+            {controller.generationError ? (
+              <Alert color="red" radius="lg" title={copy.app.generationFailedTitle} variant="light">
+                {controller.generationError}
               </Alert>
             ) : null}
 
-            {generationResult ? (
-              <Alert color="teal" radius="lg" title="Generation complete" variant="light">
-                Generated {generationResult.generatedCount} rows, skipped {generationResult.skippedCount}. Report at {generationResult.reportPath}
+            {controller.templateActionError ? (
+              <Alert color="red" radius="lg" title={copy.app.couldNotSaveExampleTemplate} variant="light">
+                {controller.templateActionError}
               </Alert>
             ) : null}
 
-            {activeStep === 1 ? (
-              <Stack gap="xl">
-                <ProjectSetupPanel
-                  activePicker={projectSetup.activePicker}
-                  onPickPath={handlePickPath}
-                  project={projectSetup.project}
-                  setProject={projectSetup.setProject}
-                />
-                <SetupSourcePreviewPanel
-                  contractVariables={workbookPreview.contractVariables}
-                  isLoading={workbookPreview.isLoading}
-                  loadError={workbookPreview.loadError}
-                  sampleRows={workbookPreview.sampleRows}
-                />
-              </Stack>
+            {controller.generationResult ? (
+              <Alert color="teal" radius="lg" title={copy.app.generationCompleteTitle} variant="light">
+                {copy.app.generationCompleteSummary(
+                  controller.generationResult.generatedCount,
+                  controller.generationResult.skippedCount,
+                )}
+              </Alert>
             ) : null}
 
-            {activeStep === 2 ? (
-              <ContractMappingPanel
-                availableVariables={workbookPreview.availableVariables}
-                generationOptions={contractSettings.generationOptions}
-                mappedContractFields={contractSettings.mappedContractFields}
-                setGenerationOption={contractSettings.setGenerationOption}
-                setTokenMapping={contractSettings.setTokenMapping}
-                tokenContexts={workbookPreview.contractTokenContexts}
-                tokenMappings={contractSettings.tokenMappings}
-                tokens={workbookPreview.contractVariables}
-                variableSources={contractSettings.variableSources}
+            {controller.generationInfo ? (
+              <Alert color="blue" radius="lg" title={copy.app.generationStatusTitle} variant="light">
+                {controller.generationInfo}
+              </Alert>
+            ) : null}
+
+            {controller.activeStep === 3 && !controller.canContinueFromStep3 ? (
+              <Alert color="red" radius="lg" title={copy.app.mapAllFieldsTitle} variant="light">
+                {controller.unmappedContractTokens.length > 0
+                  ? copy.app.missingWordMappings(controller.unmappedContractTokens.join(', '))
+                  : ''}
+                {controller.contractSettings.generationOptions.generateEmailDrafts
+                  && controller.unmappedEmailVariables.length > 0
+                  ? copy.app.missingEmailMappings(controller.unmappedEmailVariables.join(', '))
+                  : ''}
+              </Alert>
+            ) : null}
+
+            {controller.isGenerating ? (
+              <GenerationProgressPanel
+                elapsedSeconds={controller.generationElapsedSeconds}
+                fallbackRowsFound={controller.workbookPreview.totalRows}
+                generationOptions={controller.contractSettings.generationOptions}
+                progress={controller.generationProgress}
+                progressValue={controller.generationProgressValue}
+                selectedOutputLabel={selectedOutputLabel}
+                stage={controller.generationStage}
               />
             ) : null}
 
-            {activeStep === 3 ? (
+            {controller.activeStep === 1 ? (
               <Stack gap="xl">
-                <SimpleGrid cols={{ base: 1, xl: 2 }} spacing="xl" verticalSpacing="xl">
-                  <EmailTemplateEditor
-                    activeEditor={templateBuilder.activeEditor}
-                    availableVariables={workbookPreview.availableVariables}
-                    editorRefs={templateBuilder.editorRefs}
-                    emailTemplate={templateBuilder.emailTemplate}
-                    insertFieldToken={(variable) => {
-                      const token = templateBuilder.insertFieldToken(variable);
-                      void token;
-                    }}
-                    setActiveEditor={templateBuilder.setActiveEditor}
-                    updateEmailField={templateBuilder.updateEmailField}
-                  />
-                  <TemplatePreviewPanel
-                    emailTemplate={templateBuilder.emailTemplate}
-                    sampleValues={workbookPreview.sampleValues}
-                  />
-                </SimpleGrid>
-                <WorkbookPreviewPanel
-                  availableVariables={workbookPreview.availableVariables}
-                  isLoading={workbookPreview.isLoading}
-                  loadError={workbookPreview.loadError}
-                  onAssignmentChange={workbookPreview.setFieldAssignment}
-                  rows={workbookPreview.rows}
+                <ProjectSetupPanel
+                  activePicker={controller.projectSetup.activePicker}
+                  generationOptions={controller.contractSettings.generationOptions}
+                  onPickPath={controller.handlePickPath}
+                  onSaveStarterTemplate={(kind) => void controller.handleSaveStarterTemplate(kind)}
+                  project={controller.projectSetup.project}
+                  setGenerationOption={controller.contractSettings.setGenerationOption}
+                  setProject={controller.projectSetup.setProject}
+                />
+                <SetupSourcePreviewPanel
+                  contractVariables={controller.workbookPreview.contractVariables}
+                  isLoading={controller.workbookPreview.isLoading}
+                  loadError={controller.workbookPreview.loadError}
+                  sampleRows={controller.workbookPreview.sampleRows}
                 />
               </Stack>
             ) : null}
 
-            {activeStep === 4 ? (
-              <SimpleGrid cols={{ base: 1, xl: 2 }} spacing="xl" verticalSpacing="xl">
-                <TemplatePreviewPanel
-                  emailTemplate={templateBuilder.emailTemplate}
-                  sampleValues={workbookPreview.sampleValues}
+            {controller.activeStep === 2 ? (
+              <ContractMappingPanel
+                availableVariables={controller.workbookPreview.availableVariables}
+                contractTemplatePath={controller.projectSetup.project.contractTemplatePath}
+                isOpeningTemplate={controller.isOpeningTemplate}
+                isReloadingTemplate={
+                  controller.isReloadingTemplate || controller.workbookPreview.isLoading
+                }
+                mappedContractFields={controller.contractSettings.mappedContractFields}
+                onOpenTemplate={() => void controller.handleOpenContractTemplate()}
+                onReloadTemplate={() => void controller.handleReloadTemplateFields()}
+                setTokenMapping={controller.contractSettings.setTokenMapping}
+                templateStatus={controller.workbookPreview.templateStatus}
+                tokenContexts={controller.workbookPreview.contractTokenContexts}
+                tokenMappings={controller.contractSettings.tokenMappings}
+                tokens={controller.workbookPreview.contractVariables}
+                variableSources={controller.contractSettings.variableSources}
+              />
+            ) : null}
+
+            {controller.activeStep === 3 ? (
+              <Stack gap="xl">
+                <SimpleGrid cols={{ base: 1, xl: 2 }} spacing="xl" verticalSpacing="xl">
+                  <EmailTemplateEditor
+                    activeEditor={controller.templateBuilder.activeEditor}
+                    availableVariables={controller.workbookPreview.availableVariables}
+                    editorRefs={controller.templateBuilder.editorRefs}
+                    emailTemplate={controller.templateBuilder.emailTemplate}
+                    insertFieldToken={controller.templateBuilder.insertFieldToken}
+                    setActiveEditor={controller.templateBuilder.setActiveEditor}
+                    updateEmailField={controller.templateBuilder.updateEmailField}
+                  />
+                  <TemplatePreviewPanel
+                    emailTemplate={controller.templateBuilder.emailTemplate}
+                    sampleValues={controller.workbookPreview.sampleValues}
+                  />
+                </SimpleGrid>
+                <WorkbookPreviewPanel
+                  availableVariables={controller.workbookPreview.availableVariables}
+                  isLoading={controller.workbookPreview.isLoading}
+                  loadError={controller.workbookPreview.loadError}
+                  onAssignmentChange={controller.workbookPreview.setFieldAssignment}
+                  rows={controller.workbookPreview.rows}
                 />
+              </Stack>
+            ) : null}
+
+            {controller.activeStep === 4 ? (
+              controller.generationResult ? (
+                <GenerationSuccessPanel
+                  isOpeningPath={controller.isOpeningPath}
+                  onOpenPath={(targetPath) => void controller.handleOpenPath(targetPath)}
+                  onStartAgain={controller.handleStartAgain}
+                  result={controller.generationResult}
+                />
+              ) : (
                 <ReviewSummaryPanel
-                  generationOptions={contractSettings.generationOptions}
-                  mappedContractFields={contractSettings.mappedContractFields}
-                  emailTemplate={templateBuilder.emailTemplate}
-                  rows={workbookPreview.rows}
-                  totalContractFields={workbookPreview.contractVariables.length}
+                  generationOptions={controller.contractSettings.generationOptions}
+                  mappedContractFields={controller.contractSettings.mappedContractFields}
+                  emailTemplate={controller.templateBuilder.emailTemplate}
+                  onGoToStep={controller.setActiveStep}
+                  preflight={controller.preflight.result}
+                  preflightLoading={controller.preflight.isLoading}
+                  rows={controller.workbookPreview.rows}
+                  totalContractFields={controller.workbookPreview.contractVariables.length}
+                  totalRows={controller.workbookPreview.totalRows}
                 />
-              </SimpleGrid>
+              )
             ) : null}
 
             <Divider />
 
             <Group justify="space-between">
               <Stack gap={2}>
-                <Text c="dimmed">
-                  {nextStepHint}
-                </Text>
-                {projectSetup.lastProjectPath ? (
+                <Text c="dimmed">{copy.steps[controller.activeStep].nextHint}</Text>
+                {controller.projectPersistence.lastProjectPath ? (
                   <Text c="dimmed" size="sm">
-                    Project file: {projectSetup.lastProjectPath}
+                    {copy.app.projectFileLabel}: {controller.projectPersistence.lastProjectPath}
                   </Text>
                 ) : null}
               </Stack>
               <Group>
-                {activeStep > 1 ? (
-                  <Button onClick={() => setActiveStep((current: WizardStepId) => (current - 1) as WizardStepId)} size="md" variant="default">
-                    Back
+                {controller.activeStep > 1 ? (
+                  <Button
+                    onClick={() => {
+                      if (controller.previousStep) {
+                        controller.setActiveStep(controller.previousStep);
+                      }
+                    }}
+                    size="md"
+                    variant="default"
+                  >
+                    {copy.app.back}
                   </Button>
                 ) : null}
                 <Button
-                  loading={projectSetup.isSavingProject}
-                  onClick={() => void handleSaveProject()}
+                  loading={controller.projectPersistence.isSavingProject}
+                  onClick={() => void controller.handleSaveProject()}
                   size="md"
                   variant="default"
                 >
-                  Save Draft Setup
+                  {copy.app.saveDraftSetup}
                 </Button>
-                {activeStep < 4 ? (
-                  <Button onClick={() => setActiveStep((current: WizardStepId) => (current + 1) as WizardStepId)} size="md">
-                    {activeStep === 1
-                      ? 'Continue To Contract Mapping'
-                      : activeStep === 2
-                        ? 'Continue To Email Builder'
-                        : 'Continue To Review'}
+                {controller.nextStep ? (
+                  <Button
+                    disabled={controller.activeStep === 3 && !controller.canContinueFromStep3}
+                    onClick={() => {
+                      if (controller.nextStep) {
+                        controller.setActiveStep(controller.nextStep);
+                      }
+                    }}
+                    size="md"
+                  >
+                    {copy.app.continueTo} {copy.steps[controller.nextStep].title}
                   </Button>
                 ) : (
-                  <Button loading={isGenerating} onClick={() => void handleGenerateProject()} size="md">
-                    {isGenerating ? 'Generating...' : 'Generate Now'}
+                  <Button
+                    disabled={!controller.canGenerateNow}
+                    loading={controller.isGenerating || controller.preflight.isLoading}
+                    onClick={() => void controller.handleGenerateProject()}
+                    size="md"
+                  >
+                    {controller.isGenerating ? copy.app.generating : copy.app.generatingNow}
                   </Button>
                 )}
               </Group>

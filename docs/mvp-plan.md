@@ -1,357 +1,205 @@
-# Vite + Electron MVP Plan
+# Desktop MVP Plan
 
-## Product framing
+## Product Goal
 
-The strongest first version is not a generic "document automation platform". It is a focused desktop tool for operations/admin users who already work in Excel and Word and need to generate contracts plus ready-to-send emails quickly and safely.
+Build a calm Windows desktop tool that lets a non-technical user:
 
-## Core user promise
+- choose an Excel workbook
+- choose a Word contract template
+- map placeholders to workbook columns
+- build or load an email template
+- generate DOCX files, PDFs, and combined email-draft DOCX output
+- review outputs without touching a terminal
 
-"Load your spreadsheet and template files, check the field mappings, and generate all contracts, PDFs, and email drafts from one guided desktop workflow."
+The app should stay local-first and workflow-first. It is not a SaaS product, shared workspace, CRM, online editor, or email-sending tool.
 
-## Why desktop first
+## Current Status
 
-- Matches the current local/private workflow
-- Avoids early SaaS complexity: auth, storage, multi-tenancy, billing
-- Lets us reuse the current Python generator with minimal risk
-- Better fit for users handling sensitive contract and payment data
+The product is past the shell stage. The guided workflow, local file pickers, workbook inspection, Word placeholder mapping, email editor, live preview, centralized preflight, generation orchestration, output review, starter templates, project save/open, and English/Greek UI structure are in place.
 
-## Chosen stack
+The remaining MVP work is stabilization:
 
-- `Electron`
-- `Vite`
-- `React`
-- `TypeScript` `5.9.2`
-- `Mantine`
-- `TanStack Router`
-- `Sentry` after internal alpha
-- existing `Python` generator
+- finish the packaged runtime story so a shipped Windows app does not depend on a user-managed Python install
+- keep generator progress tied to real backend events
+- harden PDF backend detection and packaging
+- repair and expand desktop workflow tests
+- polish performance and workflow friction in the existing pages
 
-Tooling baseline:
+## MVP Scope
 
-- Node `24.15.0` LTS via `.nvmrc`
-- `pnpm` `10.15.1`
-- `engine-strict=true`
+### In Scope
 
-For the first version, do not build around:
+- local file-based workflow
+- one workbook at a time
+- one Word template at a time
+- one email template per project
+- English and Greek UI support
+- DOCX output
+- PDF output when a backend is available
+- combined email-draft DOCX output
+- project save/open
+- output review inside the app
 
-- `TanStack Start`
-- `Clerk`
-- `Neon`
-- `Supabase`
-- `Resend`
-- `Recharts`
-
-Those can be revisited once the app clearly needs hosted features or analytics.
-
-## Architecture plan
-
-### Phase 1: Wrap the existing script
-
-- Keep `generate_contracts.py` as the generation engine
-- Add a thin Electron main-process service that handles file pickers, project config save/load, Python invocation, and progress/log streaming
-- Use a preload bridge so the frontend never gets unrestricted Node access
-
-### Phase 2: Move from script-shaped config to app-shaped config
-
-- Replace manual editing of `generator_config.json`, `field_mapping.txt`, and `email_template.txt` with forms in the UI
-- Save a per-project app config in a structured JSON format
-- Generate the legacy config files behind the scenes while the Python engine remains unchanged
-
-### Phase 3: Extract shared business logic
-
-- Move validation and placeholder inspection into reusable modules
-- Decide later whether to keep Python as the long-term engine or port parts of the workflow into Node if packaging and maintenance justify it
-
-## Desktop app flow
-
-The first-run experience should be a guided 5-step wizard:
-
-1. Choose workbook
-2. Choose DOCX contract template
-3. Choose email template
-4. Review placeholder mappings
-5. Generate outputs
-
-After generation, show:
-
-- total rows processed
-- skipped rows with reasons
-- generated contracts count
-- generated PDFs count
-- output folder shortcut
-- report/log summary
-
-## MVP features
-
-These are the first features worth building because they remove the current friction without expanding scope too early.
-
-### 1. Guided project setup
-
-- Select workbook, DOCX template, and email template using file pickers
-- Select output folder
-- Save/reopen a project configuration
-- Show clear file validity checks before generation starts
-
-### 2. Placeholder detection and mapping UI
-
-- Parse placeholders from DOCX and email template
-- Show detected placeholders in one table
-- Let the user map each placeholder to an Excel column
-- Auto-suggest mappings from header names when possible
-- Highlight unmapped or duplicate/problematic fields
-
-### 3. Safe generation run
-
-- One "Generate" action
-- Progress indicator by row and by stage
-- Cancel protection so partial output is clearly labeled if a run stops
-- Run summary with warnings and skipped rows
-
-### 4. Output review
-
-- Open output folder from the app
-- Show generated file groups for contracts, PDFs, email drafts, and the report
-
-### 5. Simple settings
-
-- date format
-- filename pattern
-- worksheet name
-- header row
-- data start row
-- PDF conversion toggle
-
-## Explicitly not MVP
-
-These are tempting, but they should wait until people outside your wife's workflow are using the tool.
+### Out Of Scope
 
 - cloud sync
 - user accounts
-- auth providers
 - team collaboration
-- online editor for DOCX templates
+- hosted database
 - built-in email sending
-- hosted email delivery APIs
-- CRM integrations
-- e-sign integrations
-- template marketplace
-- multi-workbook batching
-- analytics dashboard
-- hosted database dependencies
+- native `.eml` draft generation
+- full Word template editing inside the app
+- CRM, e-sign, or analytics integrations
 
-## Ease-of-use priorities
+## Workflow
 
-The app should be friendlier than the script in very concrete ways.
+The MVP workflow should stay four steps, with steps skipped only when their output type is disabled:
 
-### Priority A: Remove file-editing
+1. Project Setup
+2. Field Mapping
+3. Email Builder
+4. Review And Generate
 
-Users should not touch raw config files, mapping text files, or command lines.
+Project Setup answers the first important user question: "Did I load the correct files and rows?"
 
-### Priority B: Prevent bad runs
+That means the setup page should keep showing:
 
-Before generation starts, the app should block or clearly warn on:
+- selected workbook, Word template, and output folder
+- worksheet, header row, and first data row settings
+- selected output types
+- detected Word placeholders
+- sample workbook rows
+- starter template download actions
 
-- missing files
-- invalid worksheet name
-- missing placeholder mappings
-- invalid output folder
-- PDF conversion tool not available
+## Scorecard
 
-### Priority C: Make errors understandable
+### 1. Setup Confidence
 
-Use plain-language messages like:
+Status: `Done`
 
-- "The template uses `{{AUTHOR}}`, but it is not mapped to an Excel column."
-- "LibreOffice was not found, so PDF export is unavailable."
-- "Row 17 was skipped because `EMAIL_TO` is empty."
+Users can load source files, choose output options, inspect detected placeholders, and verify workbook sample rows before moving forward.
 
-### Priority D: Preserve trust
+### 2. Explicit Mapping
 
-Show exactly where files are written, what was skipped, and why. For admin workflows, predictability matters more than visual polish.
+Status: `Done`
 
-## Suggested frontend structure
+Workbook variables, Word placeholders, and email tokens are visible. Required unmapped fields are surfaced before generation.
 
-```text
-app/
-  electron/
-    main.ts
-    preload.ts
-    pythonRunner.ts
-  src/
-    main.tsx
-    App.tsx
-    features/
-      project/
-      mapping/
-      generation/
-      settings/
-    components/
-      FilePickerField.tsx
-      MappingTable.tsx
-      RunSummary.tsx
-      StepWizard.tsx
-    lib/
-      sentry.ts
-      types.ts
-      validation.ts
-```
+### 3. Safe Generation
 
-## Technical rollout
+Status: `Mostly done`
 
-### Milestone 1: Working shell
+Generation is centralized behind preflight and now supports backend progress events. The remaining risk is release/runtime packaging, not the basic generation workflow.
 
-- Initialize Vite React TypeScript app
-- Add Mantine provider and base theme
-- Add TanStack Router for app screens
-- Add Electron main and preload process
-- Launch desktop window in dev mode
-- Add file picker bridge
+### 4. Trustworthy Output Review
 
-### Milestone 2: Project setup UI
+Status: `Done`
 
-- Build the wizard shell
-- Store selected paths and basic settings in app state
-- Save/load project config
+The success view shows generated counts, warnings, output folders, reports, combined email drafts, and a structured output tree.
 
-### Milestone 3: Mapping UI
+### 5. Project Persistence
 
-- Detect placeholders from DOCX and email template
-- Read worksheet headers
-- Build manual mapping table
-- Validate all required mappings
+Status: `Done`
 
-### Milestone 4: Generator integration
+Saved projects restore setup paths, row settings, generation options, mappings, email template content, optional email-source settings, and current step.
 
-- Invoke the Python generator from Electron
-- Stream logs/progress to UI
-- Surface result summary and output folder link
+### 6. Preflight Validation
 
-### Milestone 5: Packaging
+Status: `Done`
 
-- Bundle Python runtime strategy
-- Add Sentry for renderer and main process before external testing
-- Build signed Windows installer first
-- Test on a clean non-dev machine
+Preflight checks output selection, runtime entrypoints, workbook access, Word template access, output folder writability, worksheet settings, mappings, required placeholders, and PDF capability.
 
-## Packaging note
+### 7. Generation Orchestration
 
-The biggest implementation risk is bundling Python plus PDF conversion dependencies cleanly for non-technical users. That is why the MVP should target:
+Status: `Mostly done`
 
-- Windows first
-- local installed Python allowed during internal alpha, if needed
-- a later packaging pass once the workflow is validated
+`electron/main.ts` delegates to service modules. Payload building, preflight, generation, and progress parsing are centralized. Remaining work is packaging-grade runtime coverage and better failure-path tests.
 
-## Success criteria for MVP
+### 8. Windows Packaging And Runtime
+
+Status: `Implemented in app contract, clean-machine validation pending`
+
+The app now has a platform-neutral runtime layout and packaged mode no longer falls back to repo Python scripts. Runtime executables are built into `app/runtime/<platform>-<arch>/` and should be included in packaged resources. The remaining release task is validating the packaged build on a clean Windows machine.
+
+Acceptance criteria:
+
+- packaged app does not require the user to install or manage Python
+- Electron prefers packaged executables over repo scripts
+- DOCX generation works on a clean Windows machine
+- PDF generation works when an available backend is present
+- DOCX generation still works when PDF conversion is unavailable
+- temporary generation files are written into app-controlled locations
+- runtime discovery can extend to Linux later without changing the service contract
+
+### 9. i18n And Greek Support
+
+Status: `Initial MVP done, copy cleanup needed`
+
+The i18n structure and language persistence are in place. Some Greek strings in the source appear mojibaked and should be repaired before release.
+
+### 10. Automated Verification
+
+Status: `Partial`
+
+Static checks matter, but desktop workflow coverage is still thin.
+
+Acceptance criteria:
+
+- `pnpm typecheck` passes
+- `pnpm lint` passes
+- desktop launch smoke test passes
+- save/open project roundtrip has automated coverage
+- setup preview flow has automated coverage
+- generation happy path has automated coverage
+- at least one failure-path generation test exists
+
+## Page Review Notes
+
+### Project Setup
+
+Keep as the workflow anchor. It already has the right MVP controls. Improvements should stay focused on validation clarity, preview freshness, and avoiding stale workbook/template inspection results.
+
+### Field Mapping
+
+The page is MVP-appropriate. Keep the table and paragraph preview, but avoid adding a full Word editor. Useful improvements are faster reload feedback, clearer locked-template messaging, and focused empty states.
+
+### Email Builder
+
+This is the main renderer performance hot spot. Typing in the body updates shared workspace state, which can cause unrelated workbook mapping tables to rerender. The editor should keep live preview, but heavy panels should only refresh when their actual inputs change.
+
+### Review And Generate
+
+The review page is close to MVP-ready. Preflight should be slightly buffered so rapid edits do not trigger redundant backend validation calls, and every failed check should point back to the right page.
+
+### Output Review
+
+The success view is useful and should stay simple: counts, warnings, open folder/report/drafts actions, and a generated file tree. Do not expand into a document manager for MVP.
+
+## Recommended Next Order
+
+1. Keep typecheck, lint, and desktop launch green.
+2. Finish the packaged runtime story for Windows without hardcoding Windows-only assumptions into service contracts.
+3. Validate DOCX generation on a clean Windows machine.
+4. Harden PDF backend detection and document the fallback behavior.
+5. Expand end-to-end tests for save/open, setup preview, generation success, and generation failure.
+6. Repair mojibaked Greek source strings before release.
+7. Add reusable setup templates after runtime packaging is stable.
+
+## Release Success Criteria
 
 The MVP is successful if a non-technical user can:
 
-- create a project without editing text files
-- understand missing mappings immediately
-- run generation without touching a terminal
-- recover from common mistakes on their own
+- load their workbook and template files correctly
+- understand what is mapped and what is missing
+- use the app in English or Greek
+- generate outputs without using the terminal
+- recover from common mistakes without developer help
+- resume a saved project without rebuilding the setup
 
-## Recommended first build order
+## Short Takeaway
 
-1. Vite + Electron shell
-2. File pickers and project save/load
-3. Placeholder/mapping screen
-4. Python generator runner
-5. Run summary and output explorer
+The product is no longer "build the shell."
 
-## What Could Be Improved Next (Priority Order)
+The product is now:
 
-1. Complete end-to-end generation from the desktop UI
-
-- Wire one Generate action from renderer to Electron to Python.
-- Stream plain progress and logs per stage so users can trust the run.
-- Return a clear summary with processed rows, skipped rows, and output counts.
-
-2. Add preflight checks that block bad runs
-
-- Validate selected files, worksheet, header/data rows, and output folder before run.
-- Warn or block when required placeholders are unmapped.
-- If PDF is enabled, check conversion capability before starting.
-
-3. Package Python and libraries cleanly for distribution (no backend required)
-
-- Keep Python local-first for MVP.
-- Freeze helper scripts into Windows executables (for example, with PyInstaller) and bundle them in Electron resources.
-- Version-lock Python dependencies and build per target architecture.
-- Keep backend out of scope unless the product needs accounts, sync, collaboration, or hosted processing.
-
-4. Persist full project state, not just setup paths
-
-- Save/reopen mappings, generation options, and email template content in app-shaped project config.
-- Keep legacy text config generation behind the scenes while Python remains the execution engine.
-
-5. Add output review and recovery tools
-
-- Open output folder from the app.
-- Show generated files grouped by type and skipped rows with reasons.
-- Make partial runs clearly labeled when interrupted.
-
-6. Prepare packaging and release readiness
-
-- Add Sentry in renderer and main process before broader testing.
-- Produce signed Windows installer and test on a clean non-dev machine.
-- Verify startup diagnostics for missing local dependencies.
-
-## Implementation Plan
-
-### Phase A: Generator path to green (1-2 days)
-
-1. Add `generate` IPC contract and handler in Electron main.
-2. Convert current in-memory UI state into generator payload/config.
-3. Execute generator process and return structured run result.
-
-Exit criteria:
-
-- A non-technical user can click Generate and receive contracts/PDFs/emails without terminal use.
-
-### Phase B: Safety and clarity (1-2 days)
-
-1. Implement preflight validator and user-facing error messages.
-2. Add progress UI (row and stage), cancel protection messaging, and run logs.
-3. Add run summary panel with skipped reasons and counts.
-
-Exit criteria:
-
-- Users understand why a run is blocked or why rows were skipped.
-
-### Phase C: Python packaging strategy (2-4 days)
-
-1. Choose distribution mode for internal alpha:
-
-- Option A (fastest): require local Python with robust detection.
-- Option B (better UX): bundle frozen Python executables in app resources.
-
-2. Lock dependencies and create reproducible Windows build script.
-3. Add runtime capability checks (Python runtime and PDF conversion tooling).
-
-Exit criteria:
-
-- Installer works on a clean machine with predictable runtime behavior.
-
-### Phase D: Project persistence and output UX (1-2 days)
-
-1. Extend project config model to include mappings/template/output options.
-2. Implement output explorer links and grouped file review.
-3. Confirm save/open roundtrip restores the full working state.
-
-Exit criteria:
-
-- Users can stop and resume projects without redoing setup and mapping.
-
-### Phase E: Release hardening (1-2 days)
-
-1. Add Sentry in both processes.
-2. Smoke-test critical flows on clean Windows machine.
-3. Create release checklist for signing and internal rollout.
-
-Exit criteria:
-
-- Internal alpha can be installed and used without developer intervention.
-
-## Short product takeaway
-
-Do not widen scope yet. The winning first version is a calm, reliable desktop assistant for one repetitive admin workflow, not a full online document platform.
+"Stabilize the workflow, keep the bilingual UI coherent, and finish the packaging/runtime story."

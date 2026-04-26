@@ -1,0 +1,47 @@
+appId: gr.presdec.docgenstudio
+productName: DocGen Studio
+directories:
+  output: release
+files:
+  - dist-electron/**
+  - package.json
+extraResources:
+  - from: runtime
+    to: runtime
+    filter:
+      - "**/*"
+  - from: templates
+    to: templates
+    filter:
+      - "**/*"
+win:
+  artifactName: "${productName} Setup ${version}.${ext}"
+  target:
+    - target: nsis
+      arch:
+        - x64
+linux:
+  artifactName: "${name}-${version}-${arch}.${ext}"
+  category: Office
+  description: Turn your Excel data and Word template into hundreds of personalised documents, PDFs, and email drafts — locally, with no cloud and no subscription.
+  executableName: docgen-studio
+  maintainer: Philip Prescott-Decie
+  synopsis: Desktop bulk document generation from Excel and Word templates
+  target:
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+    - target: rpm
+      arch:
+        - x64
+    - target: pacman
+      arch:
+        - x64
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+asar: true

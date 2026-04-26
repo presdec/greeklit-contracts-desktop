@@ -1,3 +1,7 @@
 dist
 dist-electron
 node_modules
+.runtime-build
+release
+runtime/*
+!runtime/.gitignore

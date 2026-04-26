@@ -72,6 +72,27 @@ body {
   padding: 18px;
 }
 
+.preview-body--html p,
+.preview-body--html ul,
+.preview-body--html ol {
+  margin: 0 0 12px;
+}
+
+.preview-body--html ul,
+.preview-body--html ol {
+  padding-left: 22px;
+}
+
+.preview-body--html p:last-child,
+.preview-body--html ul:last-child,
+.preview-body--html ol:last-child {
+  margin-bottom: 0;
+}
+
+.email-rich-editor .tiptap {
+  min-height: 220px;
+}
+
 .field-chip {
   border: 1px solid rgba(18, 184, 134, 0.22);
   background: rgba(235, 252, 247, 0.92);
@@ -80,6 +101,41 @@ body {
 
 .field-chip:hover {
   transform: translateY(-1px);
+}
+
+.execution-panel {
+  border-color: rgba(245, 159, 0, 0.22);
+}
+
+.output-tree-row {
+  width: 100%;
+  min-height: 34px;
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.output-tree-row:hover:not(:disabled) {
+  background: rgba(18, 184, 134, 0.08);
+}
+
+.output-tree-row:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.output-tree-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mantine-Table-table td,

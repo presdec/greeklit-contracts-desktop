@@ -1,80 +1,46 @@
-import { existsSync } from 'node:fs';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { execFile } from 'node:child_process';
-import { createRequire } from 'node:module';
-import { promisify } from 'node:util';
-import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { tmpdir } from 'node:os';
-
+import { dirname } from 'node:path';
 import type * as ElectronModule from 'electron';
 import type {
   FileDialogRequest,
+  GenerateProjectProgress,
   GenerateProjectRequest,
-  GenerateProjectResult,
   InspectProjectRequest,
-  InspectProjectResult,
-  ProjectConfig,
+  OpenPathRequest,
+  SavedProjectDocument,
+  SaveStarterTemplateRequest,
+  TemplateStatusRequest,
 } from '../shared/desktop';
+import { generateProject, inspectProjectInternal, runProjectPreflight } from './services/generation';
+import {
+  openProjectDocument,
+  pickPath,
+  saveProjectDocument,
+  saveStarterTemplate,
+} from './services/projectFiles';
+import { getTemplateStatus } from './services/templateStatus';
+import type { RuntimeEnvironment } from './lib/runtimePaths';
 
-const require = createRequire(import.meta.url);
+// Electron main is built as CommonJS so runtime module resolution stays stable.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const electron = require('electron') as typeof ElectronModule;
-const { app, BrowserWindow, dialog, ipcMain } = electron;
-const execFileAsync = promisify(execFile);
-
+const { app, BrowserWindow, dialog, ipcMain, shell } = electron;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 let mainWindow: InstanceType<typeof BrowserWindow> | null = null;
 
-function getWorkspaceRoot() {
-  return resolve(__dirname, '../../..');
+function getRuntimeEnvironment(): RuntimeEnvironment {
+  return {
+    appDataPath: app.getPath('userData'),
+    homePath: app.getPath('home'),
+    isPackaged: app.isPackaged,
+    resourcesPath: process.resourcesPath,
+    tempPath: app.getPath('temp'),
+  };
 }
 
-function getPythonPath() {
-  return join(app.getPath('home'), 'anaconda3', 'python.exe');
-}
-
-function getGeneratorScriptPath() {
-  return resolve(getWorkspaceRoot(), 'generate_contracts.py');
-}
-
-function renderEmailTemplateText(request: GenerateProjectRequest) {
-  return [
-    `Subject: ${request.emailTemplate.subject}`,
-    `To: ${request.emailTemplate.to}`,
-    `Cc: ${request.emailTemplate.cc}`,
-    '',
-    request.emailTemplate.body,
-  ].join('\n');
-}
-
-function parseCount(stdout: string, label: string) {
-  const match = stdout.match(new RegExp(`${label}\\s+(\\d+)`));
-  return match ? Number(match[1]) : 0;
-}
-
-function parsePathLine(stdout: string, prefix: string) {
-  const line = stdout
-    .split(/\r?\n/)
-    .map((item) => item.trim())
-    .find((item) => item.startsWith(prefix));
-
-  if (!line) {
-    return '';
-  }
-
-  return line.slice(prefix.length).trim();
-}
-
-function resolveWorkspacePath(pathValue?: string) {
-  if (!pathValue) {
-    return undefined;
-  }
-
-  return isAbsolute(pathValue) ? pathValue : resolve(getWorkspaceRoot(), pathValue);
-}
-
-function createWindow(): void {
+function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1360,
     height: 900,
@@ -124,7 +90,9 @@ function createWindow(): void {
     console.log('Renderer finished load');
   });
 
-  mainWindow.webContents.openDevTools({ mode: 'detach' });
+  if (!app.isPackaged) {
+    mainWindow.webContents.openDevTools({ mode: 'detach' });
+  }
 
   if (process.env.ELECTRON_RENDERER_URL) {
     void mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL);
@@ -133,245 +101,76 @@ function createWindow(): void {
   }
 }
 
-ipcMain.handle(
-  'desktop-app:pick-path',
-  async (_event, request: FileDialogRequest) => {
-    const properties: Electron.OpenDialogOptions['properties'] =
-      request.mode === 'directory' ? ['openDirectory'] : ['openFile'];
-    const browserWindow = mainWindow ?? BrowserWindow.getFocusedWindow() ?? undefined;
-
-    const result = browserWindow
-      ? await dialog.showOpenDialog(browserWindow, {
-          defaultPath: request.defaultPath,
-          filters: request.filters,
-          properties,
-          title: request.title,
-        })
-      : await dialog.showOpenDialog({
-          defaultPath: request.defaultPath,
-          filters: request.filters,
-          properties,
-          title: request.title,
-        });
-
-    if (result.canceled || result.filePaths.length === 0) {
-      return null;
-    }
-
-    return result.filePaths[0];
-  },
-);
-
-ipcMain.handle('desktop-app:save-project', async (_event, project: ProjectConfig) => {
-  const browserWindow = mainWindow ?? BrowserWindow.getFocusedWindow() ?? undefined;
-
-  const result = browserWindow
-    ? await dialog.showSaveDialog(browserWindow, {
-        defaultPath: 'greeklit-project.json',
-        filters: [
-          {
-            extensions: ['json'],
-            name: 'Greeklit Project',
-          },
-        ],
-        title: 'Save Project Setup',
-      })
-    : await dialog.showSaveDialog({
-        defaultPath: 'greeklit-project.json',
-        filters: [
-          {
-            extensions: ['json'],
-            name: 'Greeklit Project',
-          },
-        ],
-        title: 'Save Project Setup',
-      });
-
-  if (result.canceled || !result.filePath) {
-    return null;
-  }
-
-  await writeFile(result.filePath, JSON.stringify(project, null, 2), 'utf8');
-  return result.filePath;
-});
-
-ipcMain.handle('desktop-app:open-project', async () => {
-  const browserWindow = mainWindow ?? BrowserWindow.getFocusedWindow() ?? undefined;
-
-  const result = browserWindow
-    ? await dialog.showOpenDialog(browserWindow, {
-        filters: [
-          {
-            extensions: ['json'],
-            name: 'Greeklit Project',
-          },
-        ],
-        properties: ['openFile'],
-        title: 'Open Project Setup',
-      })
-    : await dialog.showOpenDialog({
-        filters: [
-          {
-            extensions: ['json'],
-            name: 'Greeklit Project',
-          },
-        ],
-        properties: ['openFile'],
-        title: 'Open Project Setup',
-      });
-
-  if (result.canceled || result.filePaths.length === 0) {
-    return null;
-  }
-
-  const filePath = result.filePaths[0];
-
-  if (!filePath) {
-    return null;
-  }
-
-  const contents = await readFile(filePath, 'utf8');
-
-  return {
-    filePath,
-    project: JSON.parse(contents) as ProjectConfig,
+function registerIpcHandlers() {
+  const dialogDeps = {
+    BrowserWindow,
+    dialog,
+    getRuntimeEnvironment,
+    getMainWindow: () => mainWindow,
   };
-});
 
-ipcMain.handle(
-  'desktop-app:inspect-project',
-  async (_event, request: InspectProjectRequest) => {
-    const scriptPath = join(__dirname, '../../scripts/inspect_project.py');
-    const pythonPath = getPythonPath();
-    const payload = JSON.stringify({
-      ...request,
-      contractTemplatePath: resolveWorkspacePath(request.contractTemplatePath),
-      workbookPath: resolveWorkspacePath(request.workbookPath),
-    });
-    const { stdout } = await execFileAsync(pythonPath, [scriptPath, payload], {
-      cwd: getWorkspaceRoot(),
-      windowsHide: true,
-    });
+  ipcMain.handle('desktop-app:pick-path', async (_event, request: FileDialogRequest) =>
+    pickPath(dialogDeps, request),
+  );
 
-    return JSON.parse(stdout) as InspectProjectResult;
-  },
-);
+  ipcMain.handle('desktop-app:save-project', async (_event, project: SavedProjectDocument) =>
+    saveProjectDocument(dialogDeps, project),
+  );
 
-ipcMain.handle(
-  'desktop-app:generate-project',
-  async (_event, request: GenerateProjectRequest) => {
-    if (!request.generationOptions.generateDocx && !request.generationOptions.generatePdf) {
-      throw new Error('Choose at least one output format before generation.');
-    }
+  ipcMain.handle(
+    'desktop-app:save-starter-template',
+    async (_event, request: SaveStarterTemplateRequest) => saveStarterTemplate(dialogDeps, request),
+  );
 
-    const mappedEntries = Object.entries(request.tokenMappings)
-      .map(([token, variable]) => {
-        const column = variable ? request.variableColumns[variable] : '';
-        return {
-          column,
-          token,
-        };
-      })
-      .filter((entry) => entry.column);
+  ipcMain.handle('desktop-app:open-project', async () => openProjectDocument(dialogDeps));
 
-    if (mappedEntries.length === 0) {
-      throw new Error('No contract mappings were provided. Map at least one DOCX token before generation.');
-    }
+  ipcMain.handle(
+    'desktop-app:get-template-status',
+    async (_event, request: TemplateStatusRequest) => getTemplateStatus(
+      getRuntimeEnvironment(),
+      request,
+    ),
+  );
 
-    const workspaceRoot = getWorkspaceRoot();
-    const generatorScriptPath = getGeneratorScriptPath();
-    const pythonPath = getPythonPath();
-    const temporaryDir = await mkdtemp(join(tmpdir(), 'greeklit-run-'));
-    const mappingPath = join(temporaryDir, 'field_mapping.txt');
-    const emailTemplatePath = join(temporaryDir, 'email_template.txt');
-    const configPath = join(temporaryDir, 'generator_config.json');
-    const outputDir = resolveWorkspacePath(request.project.outputFolderPath);
-    const workbookPath = resolveWorkspacePath(request.project.workbookPath);
-    const contractTemplatePath = resolveWorkspacePath(request.project.contractTemplatePath);
+  ipcMain.handle(
+    'desktop-app:inspect-project',
+    async (_event, request: InspectProjectRequest) => inspectProjectInternal(
+      getRuntimeEnvironment(),
+      request,
+    ),
+  );
 
-    if (!existsSync(generatorScriptPath)) {
-      throw new Error(`Generator script was not found at ${generatorScriptPath}.`);
-    }
+  ipcMain.handle(
+    'desktop-app:validate-project',
+    async (_event, request: GenerateProjectRequest) => runProjectPreflight(
+      getRuntimeEnvironment(),
+      request,
+    ),
+  );
 
-    if (!outputDir || !workbookPath || !contractTemplatePath) {
-      throw new Error('Workbook, contract template, and output folder are required before generation.');
-    }
-
-    const convertToPdf = request.generationOptions.generatePdf;
-    const keepDocxOutput = request.generationOptions.generateDocx;
-    const mappingContents = mappedEntries
-      .map((entry) => `${entry.token}=${entry.column}`)
-      .join('\n');
-
-    const config = {
-      attach_contract_to_eml: true,
-      combined_email_filename: 'email_drafts.txt',
-      contract_output_subdir: 'contracts',
-      contract_template_path: contractTemplatePath,
-      convert_to_pdf: convertToPdf,
-      data_start_row: request.project.dataStartRow,
-      date_format: '%Y-%m-%d',
-      email_output_subdir: 'emails',
-      email_template_path: emailTemplatePath,
-      filename_pattern: '{{APPLICATION_CODE}} - {{TITLE}} - {{LANGUAGE}}',
-      header_row: request.project.headerRow,
-      keep_docx_output: keepDocxOutput,
-      libreoffice_path: 'C:/Program Files/LibreOffice/program/soffice.exe',
-      mapping_path: mappingPath,
-      output_dir: outputDir,
-      pdf_conversion_workers: 4,
-      pdf_output_subdir: 'contracts_pdf',
-      report_filename: 'generation_report.txt',
-      row_identity_placeholders: ['ID'],
-      skip_if_column_contains: {
-        AI: ['απορρι', 'reject'],
+  ipcMain.handle(
+    'desktop-app:generate-project',
+    async (event, request: GenerateProjectRequest) => generateProject(
+      getRuntimeEnvironment(),
+      request,
+      (progress: GenerateProjectProgress) => {
+        event.sender.send('desktop-app:generation-progress', progress);
       },
-      skip_if_row_fill_colors: ['FFFCB3B3'],
-      workbook_path: workbookPath,
-      worksheet_name: request.project.worksheetName,
-    };
+    ),
+  );
 
-    try {
-      await writeFile(mappingPath, `${mappingContents}\n`, 'utf8');
-      await writeFile(emailTemplatePath, renderEmailTemplateText(request), 'utf8');
-      await writeFile(configPath, JSON.stringify(config, null, 2), 'utf8');
-
-      const { stderr, stdout } = await execFileAsync(
-        pythonPath,
-        [generatorScriptPath, '--config', configPath],
-        {
-          cwd: workspaceRoot,
-          windowsHide: true,
-        },
-      );
-
-      const result: GenerateProjectResult = {
-        combinedEmailPath:
-          parsePathLine(stdout, 'Combined email drafts file:') || join(outputDir, 'email_drafts.txt'),
-        contractsDir:
-          parsePathLine(stdout, 'Contract DOCX directory:') || join(outputDir, 'contracts'),
-        generatedCount: parseCount(stdout, 'Generated'),
-        outputDir,
-        pdfDir:
-          parsePathLine(stdout, 'Contract PDF directory:') || join(outputDir, 'contracts_pdf'),
-        reportPath: parsePathLine(stdout, 'Report:') || join(outputDir, 'generation_report.txt'),
-        skippedCount: parseCount(stdout, 'Skipped'),
-        stderr,
-        stdout,
-        warnings: stdout
-          .split(/\r?\n/)
-          .map((line) => line.trim())
-          .filter((line) => line.startsWith('Warning:')),
-      };
-
-      return result;
-    } finally {
-      await rm(temporaryDir, { force: true, recursive: true });
+  ipcMain.handle('desktop-app:open-path', async (_event, request: OpenPathRequest) => {
+    if (!request.targetPath) {
+      return 'Path is required.';
     }
-  },
-);
+
+    const openError = await shell.openPath(request.targetPath);
+    return openError || null;
+  });
+}
 
 app.whenReady().then(() => {
+  registerIpcHandlers();
   createWindow();
 
   app.on('activate', () => {

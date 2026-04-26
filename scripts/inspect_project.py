@@ -240,6 +240,7 @@ def inspect_workbook(payload):
         "dataStartRow": data_start_row,
         "headerRow": header_row,
         "sampleRows": sample_rows,
+        "totalRows": max(0, worksheet.max_row - data_start_row + 1),
         "worksheetName": payload["worksheet_name"],
     }
 

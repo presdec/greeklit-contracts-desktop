@@ -1,16 +1,15 @@
+import { useAtom } from 'jotai/react';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { initialEmailTemplate } from '../data/defaults';
 import { extractTokens } from '../lib/template';
-import type { EditorField, EmailTemplateState } from '../types/template';
+import { emailTemplateAtom } from '../state/workspace';
+import type { EditorField } from '../types/template';
 
 export function useEmailTemplateBuilder() {
   const subjectRef = useRef<HTMLInputElement>(null);
   const toRef = useRef<HTMLInputElement>(null);
   const ccRef = useRef<HTMLInputElement>(null);
-  const bodyRef = useRef<HTMLTextAreaElement>(null);
   const fieldRefs = useMemo(
     () => ({
-      body: bodyRef,
       cc: ccRef,
       subject: subjectRef,
       to: toRef,
@@ -19,7 +18,7 @@ export function useEmailTemplateBuilder() {
   );
 
   const [activeEditor, setActiveEditor] = useState<EditorField>('body');
-  const [emailTemplate, setEmailTemplate] = useState<EmailTemplateState>(initialEmailTemplate);
+  const [emailTemplate, setEmailTemplate] = useAtom(emailTemplateAtom);
 
   const updateEmailField = useCallback((field: EditorField, value: string) => {
     setEmailTemplate((current) => {
@@ -33,6 +32,10 @@ export function useEmailTemplateBuilder() {
 
   const insertFieldToken = useCallback((variable: string) => {
     const token = `{{${variable}}}`;
+    if (activeEditor === 'body') {
+      return token;
+    }
+
     const targetRef = fieldRefs[activeEditor].current;
 
     setEmailTemplate((current) => {
@@ -64,12 +67,18 @@ export function useEmailTemplateBuilder() {
     return token;
   }, [activeEditor, fieldRefs]);
 
-  const emailVariables = useMemo(
+  const emailVariableSignature = useMemo(
     () =>
       extractTokens(
         `${emailTemplate.subject}\n${emailTemplate.to}\n${emailTemplate.cc}\n${emailTemplate.body}`,
-      ).map((token) => token.replace(/[{}]/g, '')),
-    [emailTemplate],
+      )
+        .map((token) => token.replace(/[{}]/g, ''))
+        .join('\u0000'),
+    [emailTemplate.body, emailTemplate.cc, emailTemplate.subject, emailTemplate.to],
+  );
+  const emailVariables = useMemo(
+    () => (emailVariableSignature ? emailVariableSignature.split('\u0000') : []),
+    [emailVariableSignature],
   );
 
   return {

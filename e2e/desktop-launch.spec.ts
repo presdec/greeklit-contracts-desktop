@@ -1,11 +1,13 @@
 import { expect, test, _electron as electron } from '@playwright/test';
-
-const isWindows = process.platform === 'win32';
-const electronBinary = isWindows ? './node_modules/.bin/electron.cmd' : './node_modules/.bin/electron';
+import electronBinary from 'electron';
 
 test('desktop app launches to main workflow shell', async () => {
+  const launchEnv = { ...process.env };
+  delete launchEnv.ELECTRON_RUN_AS_NODE;
+
   const app = await electron.launch({
-    args: ['dist-electron/main/main.js'],
+    args: ['.'],
+    env: launchEnv,
     executablePath: electronBinary,
   });
 
@@ -25,7 +27,7 @@ test('desktop app launches to main workflow shell', async () => {
   }
 
   await window.waitForLoadState('networkidle');
-  await expect(window.getByText('Greeklit Contracts Desktop')).toBeVisible();
+  await expect(window.getByText('Document Generation Workspace')).toBeVisible();
   await expect(window.getByText('Workflow progress')).toBeVisible();
 
   await app.close();

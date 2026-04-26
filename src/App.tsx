@@ -196,6 +196,7 @@ export function App() {
                   project={controller.projectSetup.project}
                   setGenerationOption={controller.contractSettings.setGenerationOption}
                   setProject={controller.projectSetup.setProject}
+                  worksheetOptions={controller.workbookPreview.worksheetNames}
                 />
                 <SetupSourcePreviewPanel
                   contractVariables={controller.workbookPreview.contractVariables}

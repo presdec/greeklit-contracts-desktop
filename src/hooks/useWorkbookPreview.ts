@@ -26,6 +26,7 @@ export function useWorkbookPreview(
   const [sampleRows, setSampleRows] = useState<WorkbookPreviewSampleRow[]>([]);
   const [templateStatus, setTemplateStatus] = useState<TemplateStatusResult | null>(null);
   const [totalRows, setTotalRows] = useState(0);
+  const [worksheetNames, setWorksheetNames] = useState<string[]>([]);
   const [refreshTick, setRefreshTick] = useState(0);
   const previewRequestId = useRef(0);
 
@@ -41,6 +42,7 @@ export function useWorkbookPreview(
     setSampleRows([]);
     setTemplateStatus(null);
     setTotalRows(0);
+    setWorksheetNames([]);
   }, []);
 
   const loadTemplateStatus = useCallback(async () => {
@@ -94,6 +96,7 @@ export function useWorkbookPreview(
       setContractVariables(result.contractTokens);
       setSampleRows(result.sampleRows);
       setTotalRows(result.totalRows);
+      setWorksheetNames(result.worksheetNames ?? []);
       if (!worksheetName && result.worksheetName) {
         onResolvedWorksheetName?.(result.worksheetName);
       }
@@ -251,5 +254,6 @@ export function useWorkbookPreview(
     setFieldAssignment,
     templateStatus,
     totalRows,
+    worksheetNames,
   };
 }

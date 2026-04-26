@@ -158,6 +158,21 @@ function resolveRuntimeEntrypoint(
     };
   }
 
+  // In development, prefer the source script so runtime behavior always matches
+  // the latest checked-in Python code instead of a potentially stale built exe.
+  if (!environment.isPackaged) {
+    const devPath = getDevEntrypointPath(name);
+    if (existsSync(devPath)) {
+      return {
+        absolutePath: devPath,
+        exists: true,
+        mode: 'python-script',
+        name,
+        source: 'dev-script',
+      };
+    }
+  }
+
   const runtimePath = getRuntimeExecutableCandidates(name, environment)
     .find((candidate) => existsSync(candidate));
   if (runtimePath) {

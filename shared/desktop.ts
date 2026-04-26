@@ -161,4 +161,5 @@ export type InspectProjectResult = {
   sampleRows: WorkbookPreviewSampleRow[];
   totalRows: number;
   worksheetName: string;
+  worksheetNames: string[];
 };

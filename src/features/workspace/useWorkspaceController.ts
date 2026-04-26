@@ -74,23 +74,26 @@ export function useWorkspaceController(desktopApp: Window['desktopApp']) {
       ),
     [projectSetup.project.outputFilenamePattern],
   );
+
+  const handleResolvedWorksheetName = useCallback((worksheetName: string) => {
+    projectSetup.setProject((current) => {
+      if (current.worksheetName.trim() || !worksheetName) {
+        return current;
+      }
+
+      return {
+        ...current,
+        worksheetName,
+      };
+    });
+  }, [projectSetup.setProject]);
+
   const workbookPreview = useWorkbookPreview(
     desktopApp,
     projectSetup.project,
     templateBuilder.emailVariables,
     filenameVariables,
-    (worksheetName) => {
-      projectSetup.setProject((current) => {
-        if (current.worksheetName.trim() || !worksheetName) {
-          return current;
-        }
-
-        return {
-          ...current,
-          worksheetName,
-        };
-      });
-    },
+    handleResolvedWorksheetName,
   );
   const contractSettings = useContractTemplateSettings(
     workbookPreview.contractVariables,

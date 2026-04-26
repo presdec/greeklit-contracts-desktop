@@ -43,17 +43,26 @@ function ContractMappingPanelComponent({
 }: Props) {
   const { copy } = useI18n();
   const [previewToken, setPreviewToken] = useState<string | null>(null);
-  const filenameInputRef = useRef<HTMLInputElement>(null);
   const filenameSelectionStart = useRef<number>(outputFilenamePattern.length);
 
   const filenameTokens = useMemo(
-    () =>
-      workbookRows
+    () => {
+      const seen = new Set<string>();
+
+      return workbookRows
         .map((row) => ({
           header: row.header,
           variable: row.selectedVariable || row.suggestedVariable || '',
         }))
-        .filter((t) => t.variable),
+        .filter((token) => {
+          if (!token.variable || seen.has(token.variable)) {
+            return false;
+          }
+
+          seen.add(token.variable);
+          return true;
+        });
+    },
     [workbookRows],
   );
 
@@ -62,15 +71,7 @@ function ContractMappingPanelComponent({
     const pos = filenameSelectionStart.current;
     const next = outputFilenamePattern.slice(0, pos) + token + outputFilenamePattern.slice(pos);
     setOutputFilenamePattern(next);
-    const newPos = pos + token.length;
-    filenameSelectionStart.current = newPos;
-    requestAnimationFrame(() => {
-      const input = filenameInputRef.current;
-      if (input) {
-        input.focus();
-        input.setSelectionRange(newPos, newPos);
-      }
-    });
+    filenameSelectionStart.current = pos + token.length;
   }
 
   const previewContent = useMemo(() => {
@@ -204,7 +205,7 @@ function ContractMappingPanelComponent({
                 <Group gap="xs">
                   {filenameTokens.map(({ header, variable }) => (
                     <Button
-                      key={variable}
+                      key={`${variable}:${header}`}
                       className="field-chip"
                       onClick={() => insertFilenameToken(variable)}
                       radius="xl"
@@ -230,7 +231,6 @@ function ContractMappingPanelComponent({
                 filenameSelectionStart.current = (event.currentTarget as HTMLInputElement).selectionStart ?? event.currentTarget.value.length;
               }}
               placeholder={copy.contractMapping.outputFilenamePatternPlaceholder}
-              ref={filenameInputRef}
               value={outputFilenamePattern}
             />
           </Stack>

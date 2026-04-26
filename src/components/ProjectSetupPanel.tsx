@@ -1,4 +1,4 @@
-import { Badge, Checkbox, Group, NumberInput, Paper, SimpleGrid, Stack, Text, TextInput, Title } from '@mantine/core';
+import { Badge, Checkbox, Group, NumberInput, Paper, Select, SimpleGrid, Stack, Text, Title } from '@mantine/core';
 import type { StarterTemplateKind } from '../../shared/desktop';
 import type { ProjectConfig } from '../../shared/desktop';
 import type { GenerationOptions } from '../types/template';
@@ -18,6 +18,7 @@ type Props = {
   project: ProjectConfig;
   setGenerationOption: (key: keyof GenerationOptions, value: boolean) => void;
   setProject: React.Dispatch<React.SetStateAction<ProjectConfig>>;
+  worksheetOptions: string[];
 };
 
 export function ProjectSetupPanel({
@@ -28,6 +29,7 @@ export function ProjectSetupPanel({
   project,
   setGenerationOption,
   setProject,
+  worksheetOptions,
 }: Props) {
   const { copy } = useI18n();
   const wantsDocumentOutput = generationOptions.generateDocx || generationOptions.generatePdf;
@@ -115,8 +117,33 @@ export function ProjectSetupPanel({
         </SimpleGrid>
 
         <SimpleGrid cols={{ base: 1, md: 3 }} spacing="lg">
-          <TextInput description={copy.projectSetup.worksheetDesc} label={copy.projectSetup.worksheet} onChange={(event) => setProject((current) => ({ ...current, worksheetName: event.currentTarget.value }))} value={project.worksheetName} />
-          <NumberInput description={copy.projectSetup.headerRowDesc} label={copy.projectSetup.headerRow} min={1} onChange={(value) => setProject((current) => ({ ...current, headerRow: Number(value) || 1 }))} value={project.headerRow} />
+          <Select
+            data={worksheetOptions}
+            description={copy.projectSetup.worksheetDesc}
+            label={copy.projectSetup.worksheet}
+            onChange={(value) => setProject((current) => ({
+              ...current,
+              worksheetName: value ?? '',
+            }))}
+            placeholder={copy.projectSetup.worksheetPlaceholder}
+            searchable
+            value={project.worksheetName || worksheetOptions[0] || null}
+          />
+          <NumberInput
+            description={copy.projectSetup.headerRowDesc}
+            label={copy.projectSetup.headerRow}
+            min={1}
+            onChange={(value) => setProject((current) => {
+              const headerRow = Number(value) || 1;
+
+              return {
+                ...current,
+                dataStartRow: headerRow + 1,
+                headerRow,
+              };
+            })}
+            value={project.headerRow}
+          />
           <NumberInput description={copy.projectSetup.dataStartRowDesc} label={copy.projectSetup.dataStartRow} min={1} onChange={(value) => setProject((current) => ({ ...current, dataStartRow: Number(value) || 1 }))} value={project.dataStartRow} />
         </SimpleGrid>
       </Stack>

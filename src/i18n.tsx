@@ -96,6 +96,7 @@ type Translation = {
     wordPlaceholder: string;
     worksheet: string;
     worksheetDesc: string;
+    worksheetPlaceholder: string;
     downloadExcelExample: string;
     downloadWordExample: string;
     downloadEmailExample: string;
@@ -370,6 +371,7 @@ const translations: Record<Language, Translation> = {
       wordPlaceholder: 'Select Word template (.docx)',
       worksheet: 'Worksheet Name',
       worksheetDesc: 'Sheet name to read from your workbook.',
+      worksheetPlaceholder: 'Select worksheet',
       downloadExcelExample: 'Download example Excel file',
       downloadWordExample: 'Download example Word template',
       downloadEmailExample: 'Download example email template',
@@ -653,6 +655,7 @@ const translations: Record<Language, Translation> = {
       wordPlaceholder: 'Επιλέξτε πρότυπο Word (.docx)',
       worksheet: 'Όνομα Φύλλου',
       worksheetDesc: 'Όνομα φύλλου για ανάγνωση από το workbook.',
+      worksheetPlaceholder: 'Επιλέξτε φύλλο',
       downloadExcelExample: 'Λήψη παραδείγματος Excel',
       downloadWordExample: 'Λήψη παραδείγματος Word',
       downloadEmailExample: 'Λήψη παραδείγματος email',

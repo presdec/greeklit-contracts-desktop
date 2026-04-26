@@ -201,11 +201,12 @@ def parse_positive_int(value, fallback):
 
 def inspect_workbook(payload):
     workbook = load_workbook(payload["workbook_path"], data_only=True, read_only=True)
+    worksheet_names = list(workbook.sheetnames)
     worksheet_name = (payload.get("worksheet_name") or "").strip()
-    if worksheet_name and worksheet_name in workbook.sheetnames:
+    if worksheet_name and worksheet_name in worksheet_names:
         worksheet = workbook[worksheet_name]
     else:
-        worksheet = workbook[workbook.sheetnames[0]]
+        worksheet = workbook[worksheet_names[0]]
     header_row = parse_positive_int(payload.get("header_row"), 1)
     data_start_row = parse_positive_int(payload.get("data_start_row"), max(2, header_row + 1))
 
@@ -254,6 +255,7 @@ def inspect_workbook(payload):
         "sampleRows": sample_rows,
         "totalRows": max(0, worksheet.max_row - data_start_row + 1),
         "worksheetName": worksheet.title,
+        "worksheetNames": worksheet_names,
     }
 
 

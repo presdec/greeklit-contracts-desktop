@@ -138,11 +138,11 @@ def get_column_letter(index):
 
 def extract_contract_tokens(path_value):
     if not path_value:
-        return []
+        return {"contexts": {}, "tokens": []}
 
     path = Path(path_value)
     if not path.exists() or path.suffix.lower() != ".docx":
-        return []
+        return {"contexts": {}, "tokens": []}
 
     tokens = set()
     token_contexts = {}
@@ -199,22 +199,22 @@ def inspect_workbook(payload):
 
     columns = []
     for cell in worksheet[header_row]:
-      if cell.value is None:
-          continue
-      header = normalize_cell_value(cell.value)
-      if not header:
-          continue
-      sample_value = normalize_cell_value(
-          worksheet[f"{get_column_letter(cell.column)}{data_start_row}"].value
-      )
-      columns.append(
-          {
-              "columnLetter": get_column_letter(cell.column),
-              "header": header,
-              "sampleValue": sample_value,
-              "suggestedVariable": normalize_header_to_variable(header),
-          }
-      )
+        if cell.value is None:
+            continue
+        header = normalize_cell_value(cell.value)
+        if not header:
+            continue
+        sample_value = normalize_cell_value(
+            worksheet[f"{get_column_letter(cell.column)}{data_start_row}"].value
+        )
+        columns.append(
+            {
+                "columnLetter": get_column_letter(cell.column),
+                "header": header,
+                "sampleValue": sample_value,
+                "suggestedVariable": normalize_header_to_variable(header),
+            }
+        )
 
     sample_rows = []
     for row_number in range(data_start_row, data_start_row + 3):

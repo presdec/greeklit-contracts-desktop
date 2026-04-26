@@ -165,10 +165,10 @@ function ContractMappingPanelComponent({
           </Alert>
 
           <TextInput
-            description={copy.projectSetup.outputFilenamePatternDesc}
-            label={copy.projectSetup.outputFilenamePatternLabel}
+            description={copy.contractMapping.outputFilenamePatternDesc}
+            label={copy.contractMapping.outputFilenamePatternLabel}
             onChange={(event) => setOutputFilenamePattern(event.currentTarget.value)}
-            placeholder={copy.projectSetup.outputFilenamePatternPlaceholder}
+            placeholder={copy.contractMapping.outputFilenamePatternPlaceholder}
             value={outputFilenamePattern}
           />
 

@@ -129,6 +129,9 @@ type Translation = {
     statusTemplateLocked: string;
     statusTemplateEditedAt: (time: string) => string;
     statusTemplateHint: string;
+    outputFilenamePatternDesc: string;
+    outputFilenamePatternLabel: string;
+    outputFilenamePatternPlaceholder: string;
   };
   emailBuilder: {
     activeTarget: (target: string) => string;
@@ -260,9 +263,9 @@ const translations: Record<Language, Translation> = {
         nextHint: 'Next step adapts to the output types you selected.',
       },
       2: {
-        title: 'Field Mapping',
+        title: 'Field & Filename Mapping',
         description:
-          'Connect each placeholder in your Word template to the matching Excel column. This is what makes every generated file unique and accurate.',
+          'Connect each placeholder in your Word template to the matching Excel column, and define the DOCX/PDF output filename pattern.',
         nextHint: 'Next: build or review the email template with live field tokens.',
       },
       3: {
@@ -383,9 +386,9 @@ const translations: Record<Language, Translation> = {
       showParagraph: 'Show paragraph',
       sourceColumn: 'Source column',
       sampleValue: 'Sample value',
-      subtitle: 'Connect each Word placeholder to an Excel column so document generation stays accurate.',
+      subtitle: 'Connect each Word placeholder to an Excel column, and configure DOCX/PDF output naming.',
       templateFlowTitle: 'Template editing flow',
-      title: 'Word Field Mapping',
+      title: 'Field & Filename Mapping',
       tokenWithSample: (sample) => ` with sample value "${sample}"`,
       tokenWithoutSample: ' (no mapped sample value yet)',
       workbookVariable: 'Workbook variable',
@@ -400,6 +403,10 @@ const translations: Record<Language, Translation> = {
         'The template still looks open in Word. Save your changes, close Word, then reload fields.',
       statusTemplateEditedAt: (time) => `Last saved change detected at ${time}. Reload fields after saving if you added or renamed placeholders.`,
       statusTemplateHint: 'Open the Word template, save your edits, then reload fields to pull in new placeholders.',
+      outputFilenamePatternDesc:
+        'Controls DOCX/PDF file names. Use placeholders like {{APPLICATION_CODE}} and plain text (for example: Contract - {{TITLE}}).',
+      outputFilenamePatternLabel: 'DOCX/PDF Filename Pattern',
+      outputFilenamePatternPlaceholder: '{{APPLICATION_CODE}} - {{TITLE}} - {{LANGUAGE}}',
     },
     emailBuilder: {
       activeTarget: (target) => `Active target: ${target}`,
@@ -535,9 +542,9 @@ const translations: Record<Language, Translation> = {
         nextHint: 'Το επόμενο βήμα προσαρμόζεται στους τύπους εξόδου που επιλέξατε.',
       },
       2: {
-        title: 'Αντιστοίχιση Πεδίων',
+        title: 'Αντιστοίχιση Πεδίων & Ονόματος Αρχείου',
         description:
-          'Συνδέστε κάθε placeholder του προτύπου Word με την αντίστοιχη στήλη Excel. Αυτό κάνει κάθε παραγόμενο αρχείο μοναδικό και ακριβές.',
+          'Συνδέστε κάθε placeholder του προτύπου Word με την αντίστοιχη στήλη Excel και ορίστε το μοτίβο ονόματος αρχείου για DOCX/PDF.',
         nextHint: 'Επόμενο: δημιουργήστε ή ελέγξτε το πρότυπο email με ζωντανά πεδία.',
       },
       3: {
@@ -658,9 +665,9 @@ const translations: Record<Language, Translation> = {
       showParagraph: 'Προβολή παραγράφου',
       sourceColumn: 'Στήλη προέλευσης',
       sampleValue: 'Τιμή δείγματος',
-      subtitle: 'Συνδέστε κάθε placeholder Word με στήλη Excel για ακριβή δημιουργία εγγράφων.',
+      subtitle: 'Συνδέστε κάθε placeholder Word με στήλη Excel και ρυθμίστε την ονοματοδοσία εξόδου DOCX/PDF.',
       templateFlowTitle: 'Ροή επεξεργασίας προτύπου',
-      title: 'Αντιστοίχιση Πεδίων Word',
+      title: 'Αντιστοίχιση Πεδίων & Ονόματος Αρχείου',
       tokenWithSample: (sample) => ` με τιμή δείγματος "${sample}"`,
       tokenWithoutSample: ' (δεν υπάρχει ακόμη τιμή δείγματος)',
       workbookVariable: 'Μεταβλητή workbook',
@@ -675,6 +682,10 @@ const translations: Record<Language, Translation> = {
         'Το πρότυπο φαίνεται ακόμη ανοιχτό στο Word. Αποθηκεύστε, κλείστε το Word και επαναφορτώστε πεδία.',
       statusTemplateEditedAt: (time) => `Εντοπίστηκε τελευταία αποθήκευση στις ${time}. Κάντε επαναφόρτωση πεδίων αν προσθέσατε ή μετονομάσατε placeholders.`,
       statusTemplateHint: 'Ανοίξτε το πρότυπο Word, αποθηκεύστε τις αλλαγές και κάντε επαναφόρτωση πεδίων.',
+      outputFilenamePatternDesc:
+        'Ελέγχει το όνομα αρχείου DOCX/PDF. Χρησιμοποίησε placeholders όπως {{APPLICATION_CODE}} και απλό κείμενο (π.χ. Σύμβαση - {{TITLE}}).',
+      outputFilenamePatternLabel: 'Μοτίβο Ονόματος Αρχείου DOCX/PDF',
+      outputFilenamePatternPlaceholder: '{{APPLICATION_CODE}} - {{TITLE}} - {{LANGUAGE}}',
     },
     emailBuilder: {
       activeTarget: (target) => `Ενεργό πεδίο: ${target}`,

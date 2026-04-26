@@ -203,3 +203,7 @@ The release workflow:
 ## License
 
 [MIT](LICENSE) © Philip Prescott-Decie
+
+## Support
+
+See [SUPPORT.md](SUPPORT.md) for help options.

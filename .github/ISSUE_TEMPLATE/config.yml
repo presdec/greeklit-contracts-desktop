@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Email support
+    url: mailto:presdec+docgen@gmail.com
+    about: Questions that don't fit a GitHub issue
+  - name: Support the project on Ko-fi
+    url: https://ko-fi.com/presdec
+    about: Buy me a coffee if Doc Gen Studio saves you time

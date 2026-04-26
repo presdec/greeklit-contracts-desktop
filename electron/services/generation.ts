@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { execFile, spawn } from 'node:child_process';
 import { isAbsolute, join } from 'node:path';
 import { promisify } from 'node:util';
@@ -130,6 +130,19 @@ async function convertCombinedEmailHtmlToDocx(htmlPath: string) {
   await writeFile(docxPath, docxBuffer);
   await rm(htmlPath, { force: true });
   return docxPath;
+}
+
+async function convertEmailDraftHtmlDirectoryToDocx(directoryPath: string) {
+  const items = await readdir(directoryPath, { withFileTypes: true });
+
+  for (const item of items) {
+    if (!item.isFile() || !item.name.toLowerCase().endsWith('.html')) {
+      continue;
+    }
+
+    const htmlPath = join(directoryPath, item.name);
+    await convertCombinedEmailHtmlToDocx(htmlPath);
+  }
 }
 
 function parseCount(stdout: string, label: string) {
@@ -370,6 +383,9 @@ async function buildGenerationContext(
   const runtime = await resolveRuntime(environment);
   const wantsDocumentOutput =
     request.generationOptions.generateDocx || request.generationOptions.generatePdf;
+  const emailOutputMode = request.generationOptions.generateEmailDrafts
+    ? request.generationOptions.emailOutputMode
+    : null;
   const requiredContractTokens = wantsDocumentOutput ? Object.keys(request.tokenMappings) : [];
   const optionalEmailTemplatePath = request.project.useOptionalEmailSource
     ? resolveProjectPath(request.project.emailTemplatePath, environment)
@@ -440,7 +456,7 @@ async function buildGenerationContext(
     .slice(0, 1);
   const config: Record<string, unknown> = {
     attach_contract_to_eml: true,
-    combined_email_filename: request.generationOptions.generateEmailDrafts
+    combined_email_filename: emailOutputMode === 'combined_docx'
       ? 'email_drafts.html'
       : '__skip_email_drafts.html',
     contract_output_subdir: 'contracts',
@@ -449,6 +465,7 @@ async function buildGenerationContext(
     data_start_row: request.project.dataStartRow,
     date_format: '%Y-%m-%d',
     email_output_subdir: 'emails',
+    email_output_mode: emailOutputMode,
     email_template_path: emailTemplatePath,
     filename_pattern: filenamePattern,
     header_row: request.project.headerRow,
@@ -474,6 +491,7 @@ async function buildGenerationContext(
           data_start_row: request.project.dataStartRow,
           email_template_text: emailTemplateText,
           mapping: Object.fromEntries(mappedEntries.map((entry) => [entry.token, entry.column])),
+          email_output_mode: emailOutputMode,
           output_dir: outputDir,
           workbook_path: workbookPath,
           worksheet_name: request.project.worksheetName,
@@ -777,12 +795,26 @@ export async function generateProject(
       total: 0,
     });
 
-    const combinedEmailPath = request.generationOptions.generateEmailDrafts
-      ? await convertCombinedEmailHtmlToDocx(
-        parsePathLine(stdout, 'Combined email drafts file:')
-          || join(context.outputDir ?? '', 'email_drafts.html'),
-      )
-      : null;
+    const emailOutputMode = request.generationOptions.emailOutputMode;
+    const emailDraftsDirectory =
+      parsePathLine(stdout, 'Email drafts directory:') || join(context.outputDir ?? '', 'emails');
+    let emailDraftsPath: string | null = null;
+
+    if (request.generationOptions.generateEmailDrafts) {
+      if (emailOutputMode === 'combined_docx') {
+        emailDraftsPath = await convertCombinedEmailHtmlToDocx(
+          parsePathLine(stdout, 'Combined email drafts file:')
+            || join(context.outputDir ?? '', 'email_drafts.html'),
+        );
+      } else if (emailOutputMode === 'separate_docx') {
+        if (existsSync(emailDraftsDirectory)) {
+          await convertEmailDraftHtmlDirectoryToDocx(emailDraftsDirectory);
+        }
+        emailDraftsPath = emailDraftsDirectory;
+      } else {
+        emailDraftsPath = emailDraftsDirectory;
+      }
+    }
 
     if (!request.generationOptions.generateEmailDrafts) {
       const hiddenEmailPath = join(context.outputDir ?? '', '__skip_email_drafts.html');
@@ -797,7 +829,7 @@ export async function generateProject(
     const pdfCount = countFilesInSubdir(createdEntries, 'contracts_pdf', '.pdf');
 
     return {
-      combinedEmailPath,
+      emailDraftsPath,
       contractsDir:
         parsePathLine(stdout, 'Contract DOCX directory:') || join(context.outputDir ?? '', 'contracts'),
       createdEntries,

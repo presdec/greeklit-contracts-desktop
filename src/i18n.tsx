@@ -69,6 +69,11 @@ type Translation = {
     dataStartRow: string;
     dataStartRowDesc: string;
     emailDrafts: string;
+    emailOutputModeCombinedDocx: string;
+    emailOutputModeDesc: string;
+    emailOutputModeLabel: string;
+    emailOutputModeSeparateDocx: string;
+    emailOutputModeSeparateEml: string;
     emailFileDesc: string;
     emailFileLabel: string;
     emailFilePlaceholder: string;
@@ -135,6 +140,9 @@ type Translation = {
     outputFilenamePatternDesc: string;
     outputFilenamePatternLabel: string;
     outputFilenamePatternPlaceholder: string;
+    outputFilenamePatternPreviewLabel: string;
+    outputFilenamePatternMissingTitle: string;
+    outputFilenamePatternMissingBody: string;
     filenameTokensHint: string;
   };
   emailBuilder: {
@@ -328,7 +336,7 @@ const translations: Record<Language, Translation> = {
     outputLabels: {
       word: 'Word (.docx)',
       pdf: 'PDF',
-      email: 'Email drafts (.docx)',
+      email: 'Email drafts',
       none: 'Nothing selected',
     },
     stepList: {
@@ -340,6 +348,11 @@ const translations: Record<Language, Translation> = {
       dataStartRow: 'Data Start Row',
       dataStartRowDesc: 'First row containing actual data records.',
       emailDrafts: 'Email drafts (.docx)',
+      emailOutputModeCombinedDocx: 'One combined DOCX file',
+      emailOutputModeDesc: 'Choose whether email drafts are exported as one DOCX file, separate DOCX files, or separate EML files.',
+      emailOutputModeLabel: 'Email draft output mode',
+      emailOutputModeSeparateDocx: 'Separate DOCX files',
+      emailOutputModeSeparateEml: 'Separate EML files',
       emailFileDesc: 'Choose a text file used as the email template source.',
       emailFileLabel: 'Email Template File',
       emailFilePlaceholder: 'Select template file (.txt)',
@@ -415,6 +428,9 @@ const translations: Record<Language, Translation> = {
         'Controls DOCX/PDF file names. Use placeholders like {{APPLICATION_CODE}} and plain text (for example: Contract - {{TITLE}}).',
       outputFilenamePatternLabel: 'DOCX/PDF Filename Pattern',
       outputFilenamePatternPlaceholder: '{{APPLICATION_CODE}} - {{TITLE}} - {{LANGUAGE}}',
+      outputFilenamePatternPreviewLabel: 'Preview with first data row',
+      outputFilenamePatternMissingTitle: 'Pattern token not mapped to a selected variable',
+      outputFilenamePatternMissingBody: 'Assign workbook variables for:',
       filenameTokensHint: 'Click a column to insert it into the pattern:',
     },
     emailBuilder: {
@@ -612,7 +628,7 @@ const translations: Record<Language, Translation> = {
     outputLabels: {
       word: 'Word (.docx)',
       pdf: 'PDF',
-      email: 'Προσχέδια email (.docx)',
+      email: 'Προσχέδια email',
       none: 'Δεν έχει επιλεγεί τίποτα',
     },
     stepList: {
@@ -624,6 +640,11 @@ const translations: Record<Language, Translation> = {
       dataStartRow: 'Γραμμή Έναρξης Δεδομένων',
       dataStartRowDesc: 'Πρώτη γραμμή με πραγματικές εγγραφές δεδομένων.',
       emailDrafts: 'Προσχέδια email (.docx)',
+      emailOutputModeCombinedDocx: 'Ένα ενιαίο αρχείο DOCX',
+      emailOutputModeDesc: 'Επιλέξτε αν τα προσχέδια email θα εξαχθούν ως ένα DOCX, ως ξεχωριστά DOCX ή ως ξεχωριστά EML.',
+      emailOutputModeLabel: 'Τρόπος εξαγωγής προσχεδίων email',
+      emailOutputModeSeparateDocx: 'Ξεχωριστά αρχεία DOCX',
+      emailOutputModeSeparateEml: 'Ξεχωριστά αρχεία EML',
       emailFileDesc: 'Επιλέξτε αρχείο κειμένου ως πηγή προτύπου email.',
       emailFileLabel: 'Αρχείο Προτύπου Email',
       emailFilePlaceholder: 'Επιλέξτε αρχείο προτύπου (.txt)',
@@ -699,6 +720,9 @@ const translations: Record<Language, Translation> = {
         'Ελέγχει το όνομα αρχείου DOCX/PDF. Χρησιμοποίησε placeholders όπως {{APPLICATION_CODE}} και απλό κείμενο (π.χ. Σύμβαση - {{TITLE}}).',
       outputFilenamePatternLabel: 'Μοτίβο Ονόματος Αρχείου DOCX/PDF',
       outputFilenamePatternPlaceholder: '{{APPLICATION_CODE}} - {{TITLE}} - {{LANGUAGE}}',
+      outputFilenamePatternPreviewLabel: 'Προεπισκόπηση με την πρώτη γραμμή δεδομένων',
+      outputFilenamePatternMissingTitle: 'Token ονόματος χωρίς αντιστοίχιση σε επιλεγμένη μεταβλητή',
+      outputFilenamePatternMissingBody: 'Ορίστε μεταβλητές workbook για:',
       filenameTokensHint: 'Κάντε κλικ σε στήλη για εισαγωγή στο μοτίβο:',
     },
     emailBuilder: {

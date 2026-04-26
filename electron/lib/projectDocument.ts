@@ -19,7 +19,8 @@ const defaultEmailTemplate = {
   to: '',
 };
 
-const defaultGenerationOptions = {
+const defaultGenerationOptions: SavedProjectDocument['generationOptions'] = {
+  emailOutputMode: 'combined_docx',
   generateDocx: true,
   generateEmailDrafts: true,
   generatePdf: true,
@@ -58,9 +59,13 @@ export function normalizeProjectDocument(value: unknown): SavedProjectDocument {
     },
     generationOptions: {
       ...defaultGenerationOptions,
-      ...Object.fromEntries(
-        Object.entries(generationOptionsRecord).filter(([, item]) => typeof item === 'boolean'),
-      ),
+      ...Object.fromEntries(Object.entries(generationOptionsRecord).filter(([key, item]) => {
+        if (key === 'emailOutputMode') {
+          return item === 'combined_docx' || item === 'separate_docx' || item === 'separate_eml';
+        }
+
+        return typeof item === 'boolean';
+      })),
     },
     project: {
       ...defaultProjectConfig,

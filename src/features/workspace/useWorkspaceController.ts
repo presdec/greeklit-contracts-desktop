@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAtom } from 'jotai/react';
-import { activeStepAtom } from '../../state/workspace';
+import { activeStepAtom, generationOptionsAtom } from '../../state/workspace';
 import { useProjectPersistence } from '../../hooks/useProjectPersistence';
 import { useProjectPreflight } from '../../hooks/useProjectPreflight';
 import { useEmailTemplateBuilder } from '../../hooks/useEmailTemplateBuilder';
@@ -52,6 +52,7 @@ export function useWorkspaceController(desktopApp: Window['desktopApp']) {
   const projectPersistence = useProjectPersistence(desktopApp);
   const templateBuilder = useEmailTemplateBuilder();
   const [activeStep, setActiveStep] = useAtom(activeStepAtom);
+  const [generationOptions] = useAtom(generationOptionsAtom);
   const [generationElapsedSeconds, setGenerationElapsedSeconds] = useState(0);
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [generationInfo, setGenerationInfo] = useState<string | null>(null);
@@ -91,7 +92,7 @@ export function useWorkspaceController(desktopApp: Window['desktopApp']) {
   const workbookPreview = useWorkbookPreview(
     desktopApp,
     projectSetup.project,
-    templateBuilder.emailVariables,
+    generationOptions.generateEmailDrafts ? templateBuilder.emailVariables : [],
     filenameVariables,
     handleResolvedWorksheetName,
   );

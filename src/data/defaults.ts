@@ -58,6 +58,7 @@ export const canonicalVariables = [
 ];
 
 export const defaultGenerationOptions: GenerationOptions = {
+  emailOutputMode: 'combined_docx',
   generateDocx: true,
   generateEmailDrafts: true,
   generatePdf: true,

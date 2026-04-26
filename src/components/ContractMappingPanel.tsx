@@ -1,6 +1,7 @@
 import { memo, useMemo, useRef, useState } from 'react';
 import { Alert, Badge, Button, Divider, Group, Modal, Paper, Select, Stack, Table, Text, TextInput, Title } from '@mantine/core';
 import type { TemplateStatusResult } from '../../shared/desktop';
+import { extractTokens, renderTemplate, tokenName } from '../lib/template';
 import type { WorkbookPreviewRow } from '../types/template';
 import { useI18n } from '../i18n';
 
@@ -64,6 +65,40 @@ function ContractMappingPanelComponent({
         });
     },
     [workbookRows],
+  );
+
+  const filenameSampleValues = useMemo(
+    () =>
+      workbookRows.reduce<Record<string, string>>((accumulator, row) => {
+        if (row.selectedVariable) {
+          accumulator[row.selectedVariable] = row.sampleValue;
+        }
+        return accumulator;
+      }, {}),
+    [workbookRows],
+  );
+
+  const selectedVariables = useMemo(
+    () => new Set(workbookRows.filter((row) => row.selectedVariable).map((row) => row.selectedVariable)),
+    [workbookRows],
+  );
+
+  const filenamePatternVariables = useMemo(
+    () =>
+      Array.from(new Set(extractTokens(outputFilenamePattern)
+        .map(tokenName)
+        .filter((name) => name.trim().length > 0))),
+    [outputFilenamePattern],
+  );
+
+  const missingFilenameVariables = useMemo(
+    () => filenamePatternVariables.filter((name) => !selectedVariables.has(name)),
+    [filenamePatternVariables, selectedVariables],
+  );
+
+  const filenamePatternPreview = useMemo(
+    () => renderTemplate(outputFilenamePattern, filenameSampleValues),
+    [filenameSampleValues, outputFilenamePattern],
   );
 
   function insertFilenameToken(variable: string) {
@@ -233,6 +268,17 @@ function ContractMappingPanelComponent({
               placeholder={copy.contractMapping.outputFilenamePatternPlaceholder}
               value={outputFilenamePattern}
             />
+
+            <Stack gap={4}>
+              <Text c="dimmed" fw={500} size="xs">{copy.contractMapping.outputFilenamePatternPreviewLabel}</Text>
+              <Text ff="monospace" size="sm">{filenamePatternPreview || '-'}</Text>
+            </Stack>
+
+            {missingFilenameVariables.length > 0 ? (
+              <Alert color="yellow" radius="md" title={copy.contractMapping.outputFilenamePatternMissingTitle} variant="light">
+                {copy.contractMapping.outputFilenamePatternMissingBody} {missingFilenameVariables.join(', ')}
+              </Alert>
+            ) : null}
           </Stack>
 
           {!tokens.length ? (

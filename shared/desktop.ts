@@ -31,6 +31,7 @@ export type ProjectOpenResult = {
 };
 
 export type GenerationOptionsInput = {
+  emailOutputMode: 'combined_docx' | 'separate_docx' | 'separate_eml';
   generateDocx: boolean;
   generateEmailDrafts: boolean;
   generatePdf: boolean;
@@ -100,7 +101,7 @@ export type OutputTreeEntry = {
 };
 
 export type GenerateProjectResult = {
-  combinedEmailPath: string | null;
+  emailDraftsPath: string | null;
   contractsDir: string;
   createdEntries: OutputTreeEntry[];
   docxCount: number;

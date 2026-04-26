@@ -147,7 +147,7 @@ export function App() {
               </Alert>
             ) : null}
 
-            {controller.generationResult ? (
+            {controller.activeStep === 4 && controller.generationResult ? (
               <Alert color="teal" radius="lg" title={copy.app.generationCompleteTitle} variant="light">
                 {copy.app.generationCompleteSummary(
                   controller.generationResult.generatedCount,
@@ -156,7 +156,7 @@ export function App() {
               </Alert>
             ) : null}
 
-            {controller.generationInfo ? (
+            {controller.activeStep === 4 && controller.generationInfo && !controller.generationResult ? (
               <Alert color="blue" radius="lg" title={copy.app.generationStatusTitle} variant="light">
                 {controller.generationInfo}
               </Alert>

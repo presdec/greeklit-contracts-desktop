@@ -136,7 +136,7 @@ export function GenerationSuccessPanel({
   result,
 }: Props) {
   const { copy } = useI18n();
-  const combinedEmailPath = result.combinedEmailPath;
+  const emailDraftsPath = result.emailDraftsPath;
   const treeNodes = useMemo(() => buildOutputTree(result.createdEntries), [result.createdEntries]);
 
   return (
@@ -198,8 +198,8 @@ export function GenerationSuccessPanel({
           <Button onClick={() => onOpenPath(result.reportPath)} size="xs" variant="light">
             {copy.success.openReport}
           </Button>
-          {combinedEmailPath ? (
-            <Button onClick={() => onOpenPath(combinedEmailPath)} size="xs" variant="light">
+          {emailDraftsPath ? (
+            <Button onClick={() => onOpenPath(emailDraftsPath)} size="xs" variant="light">
               {copy.success.openDrafts}
             </Button>
           ) : null}

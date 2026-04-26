@@ -8,6 +8,7 @@ export type EmailTemplateState = {
 };
 
 export type GenerationOptions = {
+  emailOutputMode: 'combined_docx' | 'separate_docx' | 'separate_eml';
   generateDocx: boolean;
   generateEmailDrafts: boolean;
   generatePdf: boolean;

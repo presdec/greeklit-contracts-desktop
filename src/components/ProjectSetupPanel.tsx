@@ -16,7 +16,10 @@ type Props = {
   ) => void;
   onSaveStarterTemplate: (kind: StarterTemplateKind) => void;
   project: ProjectConfig;
-  setGenerationOption: (key: keyof GenerationOptions, value: boolean) => void;
+  setGenerationOption: <K extends keyof GenerationOptions>(
+    key: K,
+    value: GenerationOptions[K],
+  ) => void;
   setProject: React.Dispatch<React.SetStateAction<ProjectConfig>>;
   worksheetOptions: string[];
 };
@@ -76,6 +79,23 @@ export function ProjectSetupPanel({
                 }
               />
             </Group>
+            {generationOptions.generateEmailDrafts ? (
+              <Select
+                data={[
+                  { label: copy.projectSetup.emailOutputModeCombinedDocx, value: 'combined_docx' },
+                  { label: copy.projectSetup.emailOutputModeSeparateDocx, value: 'separate_docx' },
+                  { label: copy.projectSetup.emailOutputModeSeparateEml, value: 'separate_eml' },
+                ]}
+                description={copy.projectSetup.emailOutputModeDesc}
+                label={copy.projectSetup.emailOutputModeLabel}
+                onChange={(value) =>
+                  setGenerationOption(
+                    'emailOutputMode',
+                    (value as GenerationOptions['emailOutputMode'] | null) ?? 'combined_docx',
+                  )}
+                value={generationOptions.emailOutputMode}
+              />
+            ) : null}
           </Stack>
         </Paper>
 

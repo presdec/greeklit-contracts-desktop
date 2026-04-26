@@ -45,7 +45,7 @@ export function useContractTemplateSettings(
     [contractVariables, tokenMappings],
   );
 
-  const setGenerationOption = useCallback((key: keyof GenerationOptions, value: boolean) =>
+  const setGenerationOption = useCallback(<K extends keyof GenerationOptions>(key: K, value: GenerationOptions[K]) =>
     setGenerationOptions((current) => {
       if (current[key] === value) {
         return current;

@@ -1,8 +1,8 @@
 # Greeklit Contracts Desktop
 
-[![Build](https://github.com/presdec/greeklit-contracts-desktop/actions/workflows/build.yml/badge.svg)](https://github.com/presdec/greeklit-contracts-desktop/actions/workflows/build.yml)
-[![Test](https://github.com/presdec/greeklit-contracts-desktop/actions/workflows/test.yml/badge.svg)](https://github.com/presdec/greeklit-contracts-desktop/actions/workflows/test.yml)
-[![Release](https://github.com/presdec/greeklit-contracts-desktop/actions/workflows/release.yml/badge.svg)](https://github.com/presdec/greeklit-contracts-desktop/actions/workflows/release.yml)
+[![Build](https://github.com/presdec/greeklit-contracts-desktop/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/presdec/greeklit-contracts-desktop/actions/workflows/build.yml)
+[![Test](https://github.com/presdec/greeklit-contracts-desktop/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/presdec/greeklit-contracts-desktop/actions/workflows/test.yml)
+[![Release](https://img.shields.io/github/v/release/presdec/greeklit-contracts-desktop?display_name=tag)](https://github.com/presdec/greeklit-contracts-desktop/releases)
 
 This folder is the starting point for turning the existing Python contract generator into a cleaner desktop product built with Vite and Electron.
 

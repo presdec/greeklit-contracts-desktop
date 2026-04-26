@@ -22,8 +22,12 @@ jobs:
             artifact_pattern: release/*.exe
             artifact_name: windows-release
           - os: ubuntu-latest
-            command: pnpm dist:linux:appimage
-            artifact_pattern: release/*.AppImage
+            command: pnpm dist:linux
+            artifact_pattern: |
+              release/*.AppImage
+              release/*.deb
+              release/*.rpm
+              release/*.pacman
             artifact_name: linux-release
 
     steps:

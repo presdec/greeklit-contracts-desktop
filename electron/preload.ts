@@ -6,6 +6,7 @@ import type {
   GenerateProjectResult,
   InspectProjectRequest,
   InspectProjectResult,
+  MenuAction,
   OpenPathRequest,
   ProjectPreflightResult,
   ProjectOpenResult,
@@ -38,6 +39,15 @@ contextBridge.exposeInMainWorld('desktopApp', {
     ipcRenderer.invoke('desktop-app:get-template-status', request) as Promise<TemplateStatusResult>,
   inspectProject: (request: InspectProjectRequest) =>
     ipcRenderer.invoke('desktop-app:inspect-project', request) as Promise<InspectProjectResult>,
+  onMenuAction: (listener: (action: MenuAction) => void) => {
+    const handler = (_event: ElectronModule.IpcRendererEvent, action: MenuAction) => {
+      listener(action);
+    };
+    ipcRenderer.on('desktop-app:menu-action', handler);
+    return () => {
+      ipcRenderer.removeListener('desktop-app:menu-action', handler);
+    };
+  },
   openPath: (request: OpenPathRequest) =>
     ipcRenderer.invoke('desktop-app:open-path', request) as Promise<null | string>,
   openProject: () =>

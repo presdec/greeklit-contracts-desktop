@@ -1,5 +1,43 @@
 # Release Notes
 
+## v0.2.10 (2026-04-26)
+
+### Added
+- Email draft output modes: one combined DOCX, separate DOCX files, or separate EML files.
+- Filename pattern preview using first-row sample data.
+- Warning when a filename pattern token is not mapped to a selected workbook variable.
+
+### Improved
+- Mapping workflow UX across filename pattern and workbook assignment views.
+
+### Fixed
+- Workbook "Used by Email" badges no longer appear when email generation is disabled.
+
+## v0.2.9 (2026-04-26)
+
+### Added
+- Worksheet dropdown sourced from workbook sheets.
+
+### Improved
+- Header row changes automatically move data start row to the next row, while still allowing manual override.
+
+### Fixed
+- Stabilized preview/render flow to prevent React update-depth crashes.
+- Development runtime now prefers source Python scripts over stale local executables.
+- Empty worksheet names now fall back to the first sheet more reliably.
+
+## v0.2.8 (2026-04-26)
+
+### Added
+- Click-to-insert filename token chips in Step 2.
+- Inline workbook column assignment panel in Step 2.
+
+### Improved
+- Added navigation warning when DOCX/PDF output is selected without a Word template.
+
+### Fixed
+- Workbook preview now resolves missing worksheet names and safer row defaults more reliably.
+
 ## v0.2.7 (2026-04-26)
 
 ### Added

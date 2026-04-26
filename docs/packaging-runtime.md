@@ -46,7 +46,7 @@ pnpm dist:dir
 This writes the app executable to:
 
 ```text
-release/win-unpacked/Greeklit Contracts.exe
+release/win-unpacked/DocGen Studio.exe
 ```
 
 Create the Windows installer:
@@ -58,8 +58,8 @@ pnpm dist:win
 This writes:
 
 ```text
-release/Greeklit Contracts Setup 0.1.0.exe
-release/win-unpacked/Greeklit Contracts.exe
+release/DocGen-Studio-Setup-<version>.exe
+release/win-unpacked/DocGen Studio.exe
 ```
 
 ## Linux Release Targets

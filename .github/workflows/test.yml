@@ -8,6 +8,24 @@ on:
   pull_request:
 
 jobs:
+  python-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Python dependencies
+        run: pip install openpyxl lxml pytest --quiet
+
+      - name: Run Python tests
+        run: python -m pytest scripts/tests/ -v
+
   e2e:
     runs-on: ubuntu-latest
 

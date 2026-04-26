@@ -13,25 +13,66 @@ It is built for teams that need to produce accurate, personalized documents quic
 
 ## Download
 
-> Pre-built installers are published on every tagged release. No build step required.
+> Pre-built installers are published on every tagged release. Most users should download the latest release rather than build from source.
 
-| Version | Platform | Download |
-|---------|----------|----------|
-| **v0.2.8** *(latest)* | Windows (x64) | [DocGen Studio Setup 0.2.8.exe](https://github.com/presdec/docgen-studio-desktop/releases/download/v0.2.8/DocGen%20Studio%20Setup%200.2.8.exe) |
-| **v0.2.8** *(latest)* | Linux AppImage | [docgen-studio-0.2.8-x64.AppImage](https://github.com/presdec/docgen-studio-desktop/releases/download/v0.2.8/docgen-studio-0.2.8-x64.AppImage) |
-| **v0.2.8** *(latest)* | Linux deb | [docgen-studio-0.2.8-x64.deb](https://github.com/presdec/docgen-studio-desktop/releases/download/v0.2.8/docgen-studio-0.2.8-x64.deb) |
-| **v0.2.8** *(latest)* | Linux rpm | [docgen-studio-0.2.8-x64.rpm](https://github.com/presdec/docgen-studio-desktop/releases/download/v0.2.8/docgen-studio-0.2.8-x64.rpm) |
-| **v0.2.8** *(latest)* | Linux pacman | [docgen-studio-0.2.8-x64.pacman](https://github.com/presdec/docgen-studio-desktop/releases/download/v0.2.8/docgen-studio-0.2.8-x64.pacman) |
+| Version | Package | Download |
+|---------|---------|----------|
+| **v0.2.10** *(latest)* | Windows installer | [DocGen-Studio-Setup-0.2.10.exe](https://github.com/presdec/docgen-studio-desktop/releases/download/v0.2.10/DocGen-Studio-Setup-0.2.10.exe) |
+| **v0.2.10** *(latest)* | Linux AppImage | [docgen-studio-0.2.10-x86_64.AppImage](https://github.com/presdec/docgen-studio-desktop/releases/download/v0.2.10/docgen-studio-0.2.10-x86_64.AppImage) |
+| **v0.2.10** *(latest)* | Linux deb | [docgen-studio-0.2.10-amd64.deb](https://github.com/presdec/docgen-studio-desktop/releases/download/v0.2.10/docgen-studio-0.2.10-amd64.deb) |
+| **v0.2.10** *(latest)* | Linux rpm | [docgen-studio-0.2.10-x86_64.rpm](https://github.com/presdec/docgen-studio-desktop/releases/download/v0.2.10/docgen-studio-0.2.10-x86_64.rpm) |
+| **v0.2.10** *(latest)* | Linux pacman | [docgen-studio-0.2.10-x64.pacman](https://github.com/presdec/docgen-studio-desktop/releases/download/v0.2.10/docgen-studio-0.2.10-x64.pacman) |
 
 All releases: [github.com/presdec/docgen-studio-desktop/releases](https://github.com/presdec/docgen-studio-desktop/releases)
+
+### Install Instructions
+
+**Windows (`.exe`)**
+
+1. Download `DocGen-Studio-Setup-0.2.10.exe`.
+2. Double-click the installer.
+3. Follow the setup wizard and launch Doc Gen Studio from the Start menu.
+
+**Linux AppImage**
+
+```bash
+chmod +x ./docgen-studio-0.2.10-x86_64.AppImage
+./docgen-studio-0.2.10-x86_64.AppImage
+```
+
+On Ubuntu or Debian, AppImage may require `libfuse2`:
+
+```bash
+sudo apt install libfuse2
+```
+
+**Ubuntu / Debian (`.deb`)**
+
+```bash
+sudo apt install ./docgen-studio-0.2.10-amd64.deb
+```
+
+If `apt` prints a warning about downloading unsandboxed as root for a local file, that is usually an `apt` local-file warning rather than a Doc Gen Studio packaging failure.
+
+**Fedora / RHEL (`.rpm`)**
+
+```bash
+sudo dnf install ./docgen-studio-0.2.10-x86_64.rpm
+```
+
+**Arch Linux (`.pacman`)**
+
+```bash
+sudo pacman -U ./docgen-studio-0.2.10-x64.pacman
+```
 
 ### Release History
 
 | Tag | Summary |
 |-----|---------|
-| [v0.2.8](https://github.com/presdec/docgen-studio-desktop/releases/tag/v0.2.8) | Filename token picker, column assignment in Step 2, worksheet fallback, navigation guard, i18n fixes |
-| [v0.2.7](https://github.com/presdec/docgen-studio-desktop/releases/tag/v0.2.7) | Configurable output filename pattern, first-class filename placeholders, collapsible Setup Check |
-| [v0.2.6](https://github.com/presdec/docgen-studio-desktop/releases/tag/v0.2.6) | Doc Gen Studio rebrand, tag-based CI publishing, runtime build cleanup |
+| [v0.2.10](https://github.com/presdec/docgen-studio-desktop/releases/tag/v0.2.10) | Email output modes, filename preview and warnings, mapping UX improvements |
+| [v0.2.9](https://github.com/presdec/docgen-studio-desktop/releases/tag/v0.2.9) | Render stability fixes, worksheet dropdown, first-sheet fallback, header/data row UX |
+| [v0.2.8](https://github.com/presdec/docgen-studio-desktop/releases/tag/v0.2.8) | Filename token picker, Step 2 column assignment, navigation guard, worksheet preview fixes |
 
 ---
 
@@ -46,11 +87,12 @@ Doc Gen Studio closes that gap. It gives non-technical users a clear UI, while p
 
 ## Core USPs
 
-- **Local-first and privacy-conscious** — Your workbook, templates, and generated files stay on your machine. No mandatory SaaS dependency and no per-seat document-generation subscription.
-- **Fast at scale** — Turn one spreadsheet and one template into hundreds of outputs in one run. Generate DOCX, PDF, and email-draft artifacts in a single workflow.
-- **Reliable mapping workflow** — Explicit field mapping between template placeholders and spreadsheet columns. Fewer silent errors and easier review before generation.
-- **Practical for real operations** — Built as a desktop app for teams who need predictable local file access. No need to ask users to run Python scripts manually.
-- **Hybrid architecture that is easy to evolve** — Electron + React UI for usability; Python runtime for proven document generation behavior; clean boundary between interface and generation logic.
+- **Private by default** — Excel files, Word templates, email drafts, and generated outputs stay on the local machine. No cloud dependency and no SaaS lock-in.
+- **Built for real-world bulk work** — Generate Word files, PDFs, and email drafts from one workbook-driven workflow instead of maintaining separate tools or manual mail merge steps.
+- **Safer mapping before generation** — Preview source rows, map placeholders explicitly, build output filenames from workbook fields, and catch missing mappings before a full run.
+- **Flexible delivery outputs** — Produce one combined email DOCX, separate email DOCX files, or separate EML files depending on how the team actually sends messages.
+- **Desktop UX over script maintenance** — The Python runtime stays behind the scenes while non-technical users work through a guided interface.
+- **Operationally practical** — Open templates, reload fields, save reusable setups, and inspect output trees directly from the app.
 
 ## Who It Is For
 
@@ -62,9 +104,10 @@ Doc Gen Studio closes that gap. It gives non-technical users a clear UI, while p
 
 - Select an Excel workbook, DOCX template, and email template.
 - Map Word placeholders to workbook columns with suggested auto-mapping.
-- Click Excel column chips to build DOCX/PDF filename patterns.
+- Click Excel column chips to build DOCX/PDF filename patterns and preview the first-row result.
 - Correct column → variable assignments inline in the mapping step.
 - Generate DOCX, PDF, and email drafts in bulk.
+- Choose whether email drafts are exported as one DOCX, separate DOCX files, or separate EML files.
 - Review generated outputs and open files directly from the app.
 
 ---
@@ -84,119 +127,13 @@ Doc Gen Studio closes that gap. It gives non-technical users a clear UI, while p
 | Testing | Playwright (e2e) |
 | Packaging | electron-builder |
 
----
+## Development, Source Builds, and Releasing
 
-## Building From Source
+Contributor and maintainer workflows now live in dedicated docs:
 
-### Prerequisites
-
-| Tool | Version |
-|------|---------|
-| Node.js | `>=24.15.0 <25` (use `.nvmrc` / `.node-version`) |
-| pnpm | `>=10.15.1 <11` |
-| Python | `>=3.10` (required only for runtime build) |
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/presdec/docgen-studio-desktop.git
-cd docgen-studio-desktop
-
-# 2. Pin the Node version (nvm or fnm)
-nvm use        # reads .nvmrc
-
-# 3. Install JS dependencies
-pnpm install
-
-# 4. Run the development app (hot-reloads renderer, rebuilds main on change)
-pnpm dev
-```
-
-Other useful scripts:
-
-```bash
-pnpm build          # TypeScript check + electron-vite production build
-pnpm typecheck      # tsc type-check only
-pnpm lint           # ESLint
-pnpm test:e2e       # Playwright end-to-end tests (requires a built app)
-```
-
-### Building the Python Runtime
-
-The Python runtime (`inspect_project`, `generator`, `generate_email_drafts`) is compiled with PyInstaller and must be built before packaging a distributable. The runtime is **already included** in downloaded release installers; you only need this step when modifying the Python scripts.
-
-```bash
-# Install PyInstaller and runtime dependencies, then compile
-pnpm runtime:build
-
-# Force a clean rebuild (removes previous output first)
-pnpm runtime:build:clean
-```
-
-The compiled runtime lands in `runtime/win32-x64/` (Windows) or `runtime/linux-x64/` (Linux).
-
----
-
-## Building Release Installers Locally
-
-These commands produce the same artifacts that CI publishes to GitHub Releases.
-
-### Windows installer (`.exe`)
-
-Run on a Windows machine:
-
-```bash
-pnpm dist:win
-```
-
-Output: `release/DocGen Studio Setup <version>.exe`
-
-### Linux packages
-
-Run on a Linux x64 machine (or a Linux CI runner):
-
-```bash
-# All Linux targets at once (AppImage, deb, rpm, pacman)
-pnpm dist:linux
-
-# Individual targets
-pnpm dist:linux:appimage
-pnpm dist:linux:deb
-pnpm dist:linux:fedora   # .rpm
-pnpm dist:linux:arch     # .pacman
-```
-
-Output: `release/docgen-studio-<version>-x64.<ext>`
-
-> **Note:** `pacman` (Arch Linux) builds can be significantly slower than other targets due to the packaging toolchain.
-
-### Unpacked directory (any platform, no installer)
-
-Useful for quickly inspecting the packaged app without creating an installer:
-
-```bash
-pnpm dist:dir
-```
-
-Output: `release/win-unpacked/` or `release/linux-unpacked/`
-
----
-
-## Releasing
-
-Releases are published automatically by GitHub Actions when a version tag is pushed.
-
-```bash
-# Create an annotated tag and push it — CI takes care of the rest
-git tag -a v0.X.Y -m "v0.X.Y - Short description"
-git push origin v0.X.Y
-```
-
-The release workflow:
-1. Syncs `package.json` version from the tag.
-2. Builds the Python runtime on each platform.
-3. Builds the Electron app.
-4. Packages platform-specific installers.
-5. Publishes artifacts to GitHub Releases.
+- [Development and source builds](docs/development.md)
+- [Packaging runtime contract](docs/packaging-runtime.md)
+- [Release notes](docs/release-notes.md)
 
 ---
 

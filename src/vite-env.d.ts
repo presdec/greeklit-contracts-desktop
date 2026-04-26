@@ -7,6 +7,7 @@ import type {
   GenerateProjectResult,
   InspectProjectRequest,
   InspectProjectResult,
+  MenuAction,
   OpenPathRequest,
   ProjectPreflightResult,
   ProjectOpenResult,
@@ -26,6 +27,7 @@ declare global {
       validateProject: (request: GenerateProjectRequest) => Promise<ProjectPreflightResult>;
       getTemplateStatus: (request: TemplateStatusRequest) => Promise<TemplateStatusResult>;
       inspectProject: (request: InspectProjectRequest) => Promise<InspectProjectResult>;
+      onMenuAction: (listener: (action: MenuAction) => void) => () => void;
       openPath: (request: OpenPathRequest) => Promise<null | string>;
       openProject: () => Promise<ProjectOpenResult | null>;
       pickPath: (request: FileDialogRequest) => Promise<string | null>;

@@ -59,6 +59,32 @@ export function App() {
     wantsDocumentOutput,
   ]);
 
+  useEffect(() => {
+    return desktopApp.onMenuAction((action) => {
+      switch (action) {
+        case 'open-project':
+          void controller.handleOpenProject();
+          break;
+        case 'save-project':
+          void controller.handleSaveProject();
+          break;
+        case 'open-contract-template':
+          void controller.handleOpenContractTemplate();
+          break;
+        case 'reload-template-fields':
+          void controller.handleReloadTemplateFields();
+          break;
+        case 'generate-project':
+          if (controller.canGenerateNow) {
+            void controller.handleGenerateProject();
+          }
+          break;
+        default:
+          break;
+      }
+    });
+  }, [controller, desktopApp]);
+
   return (
     <main className="app-shell">
       <div className="workspace">

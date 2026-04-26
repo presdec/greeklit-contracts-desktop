@@ -13,6 +13,13 @@ export type SaveStarterTemplateRequest = {
   kind: StarterTemplateKind;
 };
 
+export type MenuAction =
+  | 'generate-project'
+  | 'open-contract-template'
+  | 'open-project'
+  | 'reload-template-fields'
+  | 'save-project';
+
 export type ProjectConfig = {
   workbookPath: string;
   contractTemplatePath: string;

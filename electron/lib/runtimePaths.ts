@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { execFile } from 'node:child_process';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { homedir, tmpdir } from 'node:os';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import type { SaveStarterTemplateRequest } from '../../shared/desktop';
@@ -9,6 +10,14 @@ const execFileAsync = promisify(execFile);
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export type RuntimeEntrypointName = 'emailGenerator' | 'generator' | 'inspectProject';
+
+export type RuntimeEnvironment = {
+  appDataPath: string;
+  homePath: string;
+  isPackaged: boolean;
+  resourcesPath: string;
+  tempPath: string;
+};
 
 export type ResolvedPythonRuntime = {
   argsPrefix: string[];
@@ -21,6 +30,7 @@ export type ResolvedRuntimeEntrypoint = {
   exists: boolean;
   mode: 'packaged-executable' | 'python-script';
   name: RuntimeEntrypointName;
+  source: 'dev-runtime' | 'dev-script' | 'env' | 'missing' | 'packaged-runtime';
 };
 
 export type ResolvedRuntime = {
@@ -40,18 +50,37 @@ type CommandCandidate = {
 type RuntimeCommand = {
   args: string[];
   command: string;
+  cwd: string;
 };
 
 export function getWorkspaceRoot() {
   return resolve(__dirname, '../../..');
 }
 
-function getResourcesRoot() {
-  return process.resourcesPath ? resolve(process.resourcesPath) : getWorkspaceRoot();
+export function getDefaultRuntimeEnvironment(): RuntimeEnvironment {
+  return {
+    appDataPath: join(getWorkspaceRoot(), '.tmp', 'app-data'),
+    homePath: homedir(),
+    isPackaged: false,
+    resourcesPath: process.resourcesPath ? resolve(process.resourcesPath) : getWorkspaceRoot(),
+    tempPath: tmpdir(),
+  };
 }
 
-function getPackagedRuntimeRoot() {
-  return join(getResourcesRoot(), 'runtime');
+function getResourcesRoot(environment: RuntimeEnvironment) {
+  return environment.isPackaged ? resolve(environment.resourcesPath) : getWorkspaceRoot();
+}
+
+function getRuntimeBuildKey() {
+  return `${process.platform}-${process.arch}`;
+}
+
+function getPackagedRuntimeRoot(environment: RuntimeEnvironment) {
+  return join(getResourcesRoot(environment), 'runtime');
+}
+
+function getDevRuntimeRoot() {
+  return join(getWorkspaceRoot(), 'app', 'runtime');
 }
 
 function getPlatformExecutableName(baseName: string) {
@@ -80,21 +109,43 @@ function getDevEntrypointPath(name: RuntimeEntrypointName) {
   }[name];
 }
 
-function getPackagedEntrypointCandidates(name: RuntimeEntrypointName) {
-  const executableBaseName = {
+function getExecutableBaseName(name: RuntimeEntrypointName) {
+  return {
     emailGenerator: 'generate_email_drafts',
     generator: 'generate_contracts',
     inspectProject: 'inspect_project',
   }[name];
-  const executableName = getPlatformExecutableName(executableBaseName);
-
-  return uniqueStrings([
-    join(getPackagedRuntimeRoot(), executableName),
-    join(getResourcesRoot(), 'bin', executableName),
-  ]);
 }
 
-function resolveRuntimeEntrypoint(name: RuntimeEntrypointName): ResolvedRuntimeEntrypoint {
+function getRuntimeExecutableCandidates(
+  name: RuntimeEntrypointName,
+  environment: RuntimeEnvironment,
+) {
+  const executableName = getPlatformExecutableName(getExecutableBaseName(name));
+  const platformKey = getRuntimeBuildKey();
+  const packagedRuntimeRoot = getPackagedRuntimeRoot(environment);
+  const devRuntimeRoot = getDevRuntimeRoot();
+
+  const packagedCandidates = [
+    join(packagedRuntimeRoot, platformKey, executableName),
+    join(packagedRuntimeRoot, executableName),
+    join(getResourcesRoot(environment), 'bin', platformKey, executableName),
+    join(getResourcesRoot(environment), 'bin', executableName),
+  ];
+  const devCandidates = [
+    join(devRuntimeRoot, platformKey, executableName),
+    join(devRuntimeRoot, executableName),
+  ];
+
+  return environment.isPackaged
+    ? uniqueStrings(packagedCandidates)
+    : uniqueStrings([...packagedCandidates, ...devCandidates]);
+}
+
+function resolveRuntimeEntrypoint(
+  name: RuntimeEntrypointName,
+  environment: RuntimeEnvironment,
+): ResolvedRuntimeEntrypoint {
   const envOverride = process.env[getEntrypointEnvVar(name)];
 
   if (envOverride) {
@@ -103,25 +154,41 @@ function resolveRuntimeEntrypoint(name: RuntimeEntrypointName): ResolvedRuntimeE
       exists: existsSync(envOverride),
       mode: envOverride.toLowerCase().endsWith('.py') ? 'python-script' : 'packaged-executable',
       name,
+      source: 'env',
     };
   }
 
-  const packagedPath = getPackagedEntrypointCandidates(name).find((candidate) => existsSync(candidate));
-  if (packagedPath) {
+  const runtimePath = getRuntimeExecutableCandidates(name, environment)
+    .find((candidate) => existsSync(candidate));
+  if (runtimePath) {
     return {
-      absolutePath: packagedPath,
+      absolutePath: runtimePath,
       exists: true,
       mode: 'packaged-executable',
       name,
+      source: environment.isPackaged ? 'packaged-runtime' : 'dev-runtime',
     };
   }
 
-  const devPath = getDevEntrypointPath(name);
+  if (!environment.isPackaged) {
+    const devPath = getDevEntrypointPath(name);
+    return {
+      absolutePath: devPath,
+      exists: existsSync(devPath),
+      mode: 'python-script',
+      name,
+      source: 'dev-script',
+    };
+  }
+
+  const missingExecutable = getRuntimeExecutableCandidates(name, environment)[0]
+    ?? join(getPackagedRuntimeRoot(environment), getPlatformExecutableName(getExecutableBaseName(name)));
   return {
-    absolutePath: devPath,
-    exists: existsSync(devPath),
-    mode: 'python-script',
+    absolutePath: missingExecutable,
+    exists: false,
+    mode: 'packaged-executable',
     name,
+    source: 'missing',
   };
 }
 
@@ -137,23 +204,13 @@ async function canRunCommand(candidate: CommandCandidate, verifyArgs: string[]) 
   }
 }
 
-function getPythonCandidates(homePath: string): CommandCandidate[] {
+function getPythonCandidates(environment: RuntimeEnvironment): CommandCandidate[] {
   const pythonExecutableName = process.platform === 'win32' ? 'python.exe' : 'python';
   const workspaceVenv = join(
     getWorkspaceRoot(),
     '.venv',
     process.platform === 'win32' ? 'Scripts' : 'bin',
     pythonExecutableName,
-  );
-  const homeAnaconda = join(
-    homePath,
-    'anaconda3',
-    process.platform === 'win32' ? 'python.exe' : join('bin', 'python'),
-  );
-  const homeMiniconda = join(
-    homePath,
-    'miniconda3',
-    process.platform === 'win32' ? 'python.exe' : join('bin', 'python'),
   );
   const candidates: CommandCandidate[] = [
     process.env.GREEKLIT_PYTHON_PATH
@@ -172,14 +229,6 @@ function getPythonCandidates(homePath: string): CommandCandidate[] {
       command: workspaceVenv,
       label: 'workspace .venv',
     },
-    {
-      command: homeAnaconda,
-      label: 'home anaconda3',
-    },
-    {
-      command: homeMiniconda,
-      label: 'home miniconda3',
-    },
     process.platform === 'win32'
       ? {
           argsPrefix: ['-3'],
@@ -197,7 +246,12 @@ function getPythonCandidates(homePath: string): CommandCandidate[] {
     },
   ].filter((candidate): candidate is CommandCandidate => Boolean(candidate));
 
-  return candidates.filter((candidate, index, allCandidates) => {
+  const filteredCandidates = environment.isPackaged
+    && process.env.GREEKLIT_ALLOW_PACKAGED_PYTHON !== '1'
+    ? []
+    : candidates;
+
+  return filteredCandidates.filter((candidate, index, allCandidates) => {
     const signature = `${candidate.command}::${(candidate.argsPrefix ?? []).join(' ')}`;
     return allCandidates.findIndex((item) => {
       const itemSignature = `${item.command}::${(item.argsPrefix ?? []).join(' ')}`;
@@ -206,8 +260,8 @@ function getPythonCandidates(homePath: string): CommandCandidate[] {
   });
 }
 
-async function resolvePythonRuntime(homePath: string) {
-  for (const candidate of getPythonCandidates(homePath)) {
+async function resolvePythonRuntime(environment: RuntimeEnvironment) {
+  for (const candidate of getPythonCandidates(environment)) {
     const canRun = await canRunCommand(candidate, ['-V']);
     if (!canRun) {
       continue;
@@ -223,30 +277,42 @@ async function resolvePythonRuntime(homePath: string) {
   return null;
 }
 
-function getLibreOfficeCandidates(preferredCommand?: string) {
-  const bundledConsoleName = process.platform === 'win32' ? 'soffice.com' : 'soffice';
+function getLibreOfficeCandidates(
+  environment: RuntimeEnvironment,
+  preferredCommand?: string,
+) {
+  const consoleName = process.platform === 'win32' ? 'soffice.com' : 'soffice';
+  const packagedRuntimeRoot = getPackagedRuntimeRoot(environment);
+  const platformKey = getRuntimeBuildKey();
+  const platformCandidates = process.platform === 'win32'
+    ? [
+        'C:/Program Files/LibreOffice/program/soffice.com',
+        'C:/Program Files/LibreOffice/program/soffice.exe',
+        'C:/Program Files (x86)/LibreOffice/program/soffice.com',
+        'C:/Program Files (x86)/LibreOffice/program/soffice.exe',
+      ]
+    : process.platform === 'darwin'
+      ? ['/Applications/LibreOffice.app/Contents/MacOS/soffice']
+      : ['/usr/bin/soffice', '/usr/local/bin/soffice', '/snap/bin/libreoffice'];
 
   return uniqueStrings([
     process.env.GREEKLIT_LIBREOFFICE_PATH,
     preferredCommand,
-    join(getPackagedRuntimeRoot(), bundledConsoleName),
-    join(getResourcesRoot(), 'LibreOffice', 'program', bundledConsoleName),
+    join(packagedRuntimeRoot, platformKey, consoleName),
+    join(packagedRuntimeRoot, consoleName),
+    join(getResourcesRoot(environment), 'LibreOffice', 'program', consoleName),
     'soffice.com',
     'soffice',
     'libreoffice',
-    'C:/Program Files/LibreOffice/program/soffice.com',
-    'C:/Program Files/LibreOffice/program/soffice.exe',
-    'C:/Program Files (x86)/LibreOffice/program/soffice.com',
-    'C:/Program Files (x86)/LibreOffice/program/soffice.exe',
-    '/usr/bin/soffice',
-    '/usr/local/bin/soffice',
-    '/snap/bin/libreoffice',
-    '/Applications/LibreOffice.app/Contents/MacOS/soffice',
+    ...platformCandidates,
   ]);
 }
 
-export async function resolveLibreOfficeCommand(preferredCommand?: string) {
-  for (const candidate of getLibreOfficeCandidates(preferredCommand)) {
+export async function resolveLibreOfficeCommand(
+  environment: RuntimeEnvironment,
+  preferredCommand?: string,
+) {
+  for (const candidate of getLibreOfficeCandidates(environment, preferredCommand)) {
     const canRun = await canRunCommand(
       {
         command: candidate,
@@ -262,12 +328,12 @@ export async function resolveLibreOfficeCommand(preferredCommand?: string) {
   return null;
 }
 
-export async function resolveRuntime(homePath: string): Promise<ResolvedRuntime> {
+export async function resolveRuntime(environment: RuntimeEnvironment): Promise<ResolvedRuntime> {
   const runtime = {
-    emailGenerator: resolveRuntimeEntrypoint('emailGenerator'),
-    generator: resolveRuntimeEntrypoint('generator'),
-    inspectProject: resolveRuntimeEntrypoint('inspectProject'),
-    libreOfficeCommand: await resolveLibreOfficeCommand(),
+    emailGenerator: resolveRuntimeEntrypoint('emailGenerator', environment),
+    generator: resolveRuntimeEntrypoint('generator', environment),
+    inspectProject: resolveRuntimeEntrypoint('inspectProject', environment),
+    libreOfficeCommand: await resolveLibreOfficeCommand(environment),
     pythonRuntime: null,
   } satisfies ResolvedRuntime;
 
@@ -279,7 +345,7 @@ export async function resolveRuntime(homePath: string): Promise<ResolvedRuntime>
 
   return {
     ...runtime,
-    pythonRuntime: needsPythonRuntime ? await resolvePythonRuntime(homePath) : null,
+    pythonRuntime: needsPythonRuntime ? await resolvePythonRuntime(environment) : null,
   };
 }
 
@@ -292,6 +358,7 @@ export function buildRuntimeCommand(
   runtime: ResolvedRuntime,
   entrypointName: RuntimeEntrypointName,
   args: string[],
+  environment: RuntimeEnvironment,
 ): RuntimeCommand {
   const entrypoint = runtime[entrypointName];
 
@@ -299,6 +366,7 @@ export function buildRuntimeCommand(
     return {
       args,
       command: entrypoint.absolutePath,
+      cwd: environment.appDataPath,
     };
   }
 
@@ -311,23 +379,49 @@ export function buildRuntimeCommand(
   return {
     args: [...runtime.pythonRuntime.argsPrefix, entrypoint.absolutePath, ...args],
     command: runtime.pythonRuntime.command,
+    cwd: getWorkspaceRoot(),
   };
 }
 
-export function getStarterTemplatePath(kind: SaveStarterTemplateRequest['kind']) {
+export function getRuntimeTempRoot(environment: RuntimeEnvironment) {
+  return join(environment.appDataPath, 'runtime-temp');
+}
+
+export function getStarterTemplatePath(
+  kind: SaveStarterTemplateRequest['kind'],
+  environment = getDefaultRuntimeEnvironment(),
+) {
   const starterTemplateNames = {
     email: 'starter-email-template.txt',
     excel: 'starter-workbook.xlsx',
     word: 'starter-contract-template.docx',
   } as const;
+  const fileName = starterTemplateNames[kind];
+  const candidates = environment.isPackaged
+    ? [
+        join(getResourcesRoot(environment), 'templates', fileName),
+        join(getResourcesRoot(environment), 'app', 'templates', fileName),
+      ]
+    : [
+        join(getWorkspaceRoot(), 'app', 'templates', fileName),
+        join(getResourcesRoot(environment), 'templates', fileName),
+      ];
 
-  return resolve(getWorkspaceRoot(), 'app', 'templates', starterTemplateNames[kind]);
+  return candidates.find((candidate) => existsSync(candidate)) ?? candidates[0] ?? fileName;
 }
 
-export function resolveWorkspacePath(pathValue?: string) {
+export function resolveProjectPath(
+  pathValue: string | undefined,
+  environment = getDefaultRuntimeEnvironment(),
+) {
   if (!pathValue) {
     return undefined;
   }
 
-  return isAbsolute(pathValue) ? pathValue : resolve(getWorkspaceRoot(), pathValue);
+  if (isAbsolute(pathValue)) {
+    return pathValue;
+  }
+
+  const basePath = environment.isPackaged ? environment.homePath : getWorkspaceRoot();
+  return resolve(basePath, pathValue);
 }

@@ -2,11 +2,12 @@ import { copyFile, readFile, writeFile } from 'node:fs/promises';
 import type * as ElectronModule from 'electron';
 import type { SavedProjectDocument, SaveStarterTemplateRequest } from '../../shared/desktop';
 import { normalizeProjectDocument } from '../lib/projectDocument';
-import { getStarterTemplatePath } from '../lib/runtimePaths';
+import { getStarterTemplatePath, type RuntimeEnvironment } from '../lib/runtimePaths';
 
 type DialogDeps = {
   BrowserWindow: typeof ElectronModule.BrowserWindow;
   dialog: typeof ElectronModule.dialog;
+  getRuntimeEnvironment: () => RuntimeEnvironment;
   getMainWindow: () => InstanceType<typeof ElectronModule.BrowserWindow> | null;
 };
 
@@ -96,7 +97,7 @@ export async function saveStarterTemplate(
   deps: DialogDeps,
   request: SaveStarterTemplateRequest,
 ) {
-  const sourcePath = getStarterTemplatePath(request.kind);
+  const sourcePath = getStarterTemplatePath(request.kind, deps.getRuntimeEnvironment());
   const activeWindow = getActiveWindow(deps);
   const options = {
     defaultPath: {

@@ -18,7 +18,15 @@ type Props = {
 };
 
 function stepForCheck(checkId: string, generationOptions: GenerationOptions): WizardStepId | null {
-  if (['outputs', 'workbook', 'output-directory', 'worksheet', 'pdf-backend'].includes(checkId)) {
+  if ([
+    'outputs',
+    'workbook',
+    'output-directory',
+    'worksheet',
+    'pdf-backend',
+    'python-runtime',
+    'runtime-services',
+  ].includes(checkId)) {
     return 1;
   }
 
@@ -65,9 +73,9 @@ function localizePreflightCheck(check: ProjectPreflightCheck, language: 'en' | '
       label: 'Runtime Python',
       detail: 'Έλεγχος διαθεσιμότητας runtime Python.',
     },
-    'generator-script': {
-      label: 'Scripts generator',
-      detail: 'Έλεγχος ύπαρξης των απαραίτητων scripts generator.',
+    'runtime-services': {
+      label: 'Υπηρεσίες runtime',
+      detail: 'Έλεγχος ύπαρξης των απαραίτητων υπηρεσιών generator.',
     },
     'workbook': {
       label: 'Αρχείο workbook',

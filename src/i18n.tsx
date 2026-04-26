@@ -238,10 +238,10 @@ const translations: Record<Language, Translation> = {
       label: 'Language',
     },
     sidebar: {
-      desktopMvp: 'Desktop MVP',
-      title: 'Document Generation Workspace',
+      desktopMvp: 'DocGen Studio',
+      title: 'DocGen Studio',
       description:
-        'Use the tools you already know - Excel and Word - to generate hundreds or thousands of personalized documents and email drafts with less manual work.',
+        'Turn your Excel spreadsheet and Word template into hundreds of personalised documents, PDFs, and email drafts — runs entirely on your computer, no cloud, no subscription, no data leaving your desk.',
       workflowProgress: 'Workflow progress',
       stepOf: (current, total) => `Step ${current} of ${total}`,
     },
@@ -249,25 +249,25 @@ const translations: Record<Language, Translation> = {
       1: {
         title: 'Project Setup',
         description:
-          'Choose your workbook, Word template, and output folder, then confirm everything loads correctly before generating.',
-        nextHint: 'Next step depends on your selected output types.',
+          'Tell DocGen Studio which Excel file holds your data, which Word template to fill, and where to write the output. Verify everything loads before you commit to a full run.',
+        nextHint: 'Next step adapts to the output types you selected.',
       },
       2: {
         title: 'Field Mapping',
         description:
-          'Map template fields to Excel columns and choose output type so every file is generated consistently.',
-        nextHint: 'Next: finalize your email template with workbook field tokens.',
+          'Connect each placeholder in your Word template to the matching Excel column. This is what makes every generated file unique and accurate.',
+        nextHint: 'Next: build or review the email template with live field tokens.',
       },
       3: {
         title: 'Email Builder',
-        description: 'Build or edit your email template with click-to-insert fields from your workbook.',
-        nextHint: 'Next: run a final check before generating at scale.',
+        description: 'Compose your email subject, body, and recipients using click-to-insert fields from your workbook. A live preview shows exactly what each recipient will receive.',
+        nextHint: 'Next: run a final preflight check before bulk generation.',
       },
       4: {
         title: 'Review And Generate',
         description:
-          'Review mappings and previews, then generate Word files, PDFs, and/or email drafts in one run.',
-        nextHint: 'Tip: save this setup and reuse it for future batches.',
+          'Run preflight checks on your files, mappings, and output folder, then generate all Word documents, PDFs, and email drafts in a single run. Save the project to reuse the same setup next time.',
+        nextHint: 'Tip: save this project file to reuse the same setup for future batches.',
       },
     },
     app: {
@@ -505,10 +505,10 @@ const translations: Record<Language, Translation> = {
       label: 'Γλώσσα',
     },
     sidebar: {
-      desktopMvp: 'Desktop MVP',
-      title: 'Χώρος Εργασίας Παραγωγής Εγγράφων',
+      desktopMvp: 'DocGen Studio',
+      title: 'DocGen Studio',
       description:
-        'Χρησιμοποιήστε τα εργαλεία που ήδη γνωρίζετε - Excel και Word - για να παράγετε εκατοντάδες ή χιλιάδες εξατομικευμένα έγγραφα και προσχέδια email με λιγότερη χειροκίνητη δουλειά.',
+        'Μετατρέψτε το Excel και το Word που ήδη χρησιμοποιείτε σε εκατοντάδες εξατομικευμένα έγγραφα, PDF και προσχέδια email — εκτελείται αποκλειστικά στον υπολογιστή σας, χωρίς cloud, χωρίς συνδρομή, χωρίς αποστολή δεδομένων.',
       workflowProgress: 'Πρόοδος ροής εργασίας',
       stepOf: (current, total) => `Βήμα ${current} από ${total}`,
     },
@@ -516,25 +516,25 @@ const translations: Record<Language, Translation> = {
       1: {
         title: 'Ρύθμιση Έργου',
         description:
-          'Επιλέξτε workbook, πρότυπο Word και φάκελο εξόδου και επιβεβαιώστε ότι όλα φορτώνουν σωστά πριν τη δημιουργία.',
-        nextHint: 'Το επόμενο βήμα εξαρτάται από τους τύπους εξόδου που επιλέξατε.',
+          'Πείτε στο DocGen Studio ποιο αρχείο Excel περιέχει τα δεδομένα σας, ποιο πρότυπο Word να συμπληρώσει και πού να γράψει τα αποτελέσματα. Επιβεβαιώστε ότι όλα φορτώνουν πριν ξεκινήσετε.',
+        nextHint: 'Το επόμενο βήμα προσαρμόζεται στους τύπους εξόδου που επιλέξατε.',
       },
       2: {
         title: 'Αντιστοίχιση Πεδίων',
         description:
-          'Αντιστοιχίστε πεδία προτύπου σε στήλες Excel και επιλέξτε τύπο εξόδου για συνεπή δημιουργία αρχείων.',
-        nextHint: 'Επόμενο: ολοκληρώστε το πρότυπο email με πεδία workbook.',
+          'Συνδέστε κάθε placeholder του προτύπου Word με την αντίστοιχη στήλη Excel. Αυτό κάνει κάθε παραγόμενο αρχείο μοναδικό και ακριβές.',
+        nextHint: 'Επόμενο: δημιουργήστε ή ελέγξτε το πρότυπο email με ζωντανά πεδία.',
       },
       3: {
         title: 'Συντάκτης Email',
-        description: 'Δημιουργήστε ή επεξεργαστείτε το πρότυπο email με πεδία που εισάγονται με κλικ.',
-        nextHint: 'Επόμενο: κάντε τελικό έλεγχο πριν τη μαζική δημιουργία.',
+        description: 'Συντάξτε θέμα, σώμα και παραλήπτες χρησιμοποιώντας πεδία από το workbook με ένα κλικ. Η ζωντανή προεπισκόπηση δείχνει τι θα λάβει κάθε παραλήπτης.',
+        nextHint: 'Επόμενο: εκτελέστε τελικό έλεγχο πριν τη μαζική δημιουργία.',
       },
       4: {
         title: 'Έλεγχος και Δημιουργία',
         description:
-          'Ελέγξτε αντιστοιχίσεις και προεπισκοπήσεις και στη συνέχεια δημιουργήστε Word, PDF ή/και προσχέδια email.',
-        nextHint: 'Συμβουλή: αποθηκεύστε αυτή τη ρύθμιση για μελλοντικές παρτίδες.',
+          'Εκτελέστε προκαταρκτικούς ελέγχους σε αρχεία, αντιστοιχίσεις και φάκελο εξόδου, μετά δημιουργήστε όλα τα Word, PDF και προσχέδια email σε ένα μόνο βήμα. Αποθηκεύστε το έργο για επαναχρησιμοποίηση.',
+        nextHint: 'Συμβουλή: αποθηκεύστε το αρχείο έργου για να επαναχρησιμοποιήσετε την ίδια ρύθμιση στο μέλλον.',
       },
     },
     app: {

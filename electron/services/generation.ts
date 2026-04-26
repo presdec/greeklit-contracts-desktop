@@ -2,7 +2,6 @@ import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { execFile, spawn } from 'node:child_process';
 import { isAbsolute, join } from 'node:path';
-import { tmpdir } from 'node:os';
 import { promisify } from 'node:util';
 import type {
   GenerateProjectProgress,
@@ -17,14 +16,16 @@ import { collectOutputTree } from '../lib/outputTree';
 import {
   buildRuntimeCommand,
   describePythonRuntime,
-  getWorkspaceRoot,
+  getRuntimeTempRoot,
+  resolveProjectPath,
   resolveRuntime,
-  resolveWorkspacePath,
+  type RuntimeEnvironment,
   type ResolvedRuntime,
 } from '../lib/runtimePaths';
 
 const execFileAsync = promisify(execFile);
 const PROGRESS_PREFIX = '__GREEKLIT_PROGRESS__';
+const DEFAULT_FILENAME_PATTERN = '{{APPLICATION_CODE}} - {{TITLE}} - {{LANGUAGE}}';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const HTMLToDOCX = require('html-to-docx') as (
   html: string,
@@ -37,6 +38,7 @@ type GenerationContext = {
   command: {
     args: string[];
     command: string;
+    cwd: string;
   };
   config: Record<string, unknown>;
   contractTemplatePath?: string;
@@ -233,7 +235,7 @@ function runGenerationCommand(
 ) {
   return new Promise<{ stderr: string; stdout: string }>((resolvePromise, reject) => {
     const child = spawn(command.command, command.args, {
-      cwd: getWorkspaceRoot(),
+      cwd: command.cwd,
       windowsHide: true,
     });
     let stdout = '';
@@ -330,19 +332,31 @@ async function ensureOutputDirectory(outputDir?: string) {
 }
 
 export async function inspectProjectInternal(
-  homePath: string,
+  environment: RuntimeEnvironment,
   request: InspectProjectRequest,
   runtimeOverride?: ResolvedRuntime,
 ) {
-  const runtime = runtimeOverride ?? await resolveRuntime(homePath);
+  const runtime = runtimeOverride ?? await resolveRuntime(environment);
+  const workbookPath = resolveProjectPath(request.workbookPath, environment);
+  const contractTemplatePath = resolveProjectPath(request.contractTemplatePath, environment);
+
+  if (!workbookPath) {
+    throw new Error('Choose an Excel workbook before loading the preview.');
+  }
+
+  if (!existsSync(workbookPath)) {
+    throw new Error(`Workbook not found: ${workbookPath}`);
+  }
+
   const payload = JSON.stringify({
     ...request,
-    contractTemplatePath: resolveWorkspacePath(request.contractTemplatePath),
-    workbookPath: resolveWorkspacePath(request.workbookPath),
+    contractTemplatePath,
+    workbookPath,
   });
-  const command = buildRuntimeCommand(runtime, 'inspectProject', [payload]);
+  const command = buildRuntimeCommand(runtime, 'inspectProject', [payload], environment);
+  await mkdir(command.cwd, { recursive: true });
   const { stdout } = await execFileAsync(command.command, command.args, {
-    cwd: getWorkspaceRoot(),
+    cwd: command.cwd,
     windowsHide: true,
   });
 
@@ -350,25 +364,30 @@ export async function inspectProjectInternal(
 }
 
 async function buildGenerationContext(
-  homePath: string,
+  environment: RuntimeEnvironment,
   request: GenerateProjectRequest,
 ): Promise<GenerationContext> {
-  const runtime = await resolveRuntime(homePath);
+  const runtime = await resolveRuntime(environment);
   const wantsDocumentOutput =
     request.generationOptions.generateDocx || request.generationOptions.generatePdf;
   const requiredContractTokens = wantsDocumentOutput ? Object.keys(request.tokenMappings) : [];
   const optionalEmailTemplatePath = request.project.useOptionalEmailSource
-    ? resolveWorkspacePath(request.project.emailTemplatePath)
+    ? resolveProjectPath(request.project.emailTemplatePath, environment)
     : undefined;
   const emailTemplateText = request.project.useOptionalEmailSource
     ? optionalEmailTemplatePath
       ? normalizeOptionalEmailTemplateHtml(await readFile(optionalEmailTemplatePath, 'utf8'))
       : ''
     : buildEmailTemplateHtml(request);
+  const filenameTokens = wantsDocumentOutput ? extractTemplateTokens(DEFAULT_FILENAME_PATTERN) : [];
   const emailTokens = request.generationOptions.generateEmailDrafts
     ? extractTemplateTokens(emailTemplateText)
     : [];
-  const requiredPlaceholders = Array.from(new Set([...requiredContractTokens, ...emailTokens]));
+  const requiredPlaceholders = Array.from(new Set([
+    ...requiredContractTokens,
+    ...filenameTokens,
+    ...emailTokens,
+  ]));
 
   const mappingByPlaceholder = new Map<string, string>();
 
@@ -376,6 +395,13 @@ async function buildGenerationContext(
     for (const [token, variable] of Object.entries(request.tokenMappings)) {
       const column = variable ? request.variableColumns[variable] : '';
       if (column) {
+        mappingByPlaceholder.set(token, column);
+      }
+    }
+
+    for (const token of filenameTokens) {
+      const column = request.variableColumns[token] ?? '';
+      if (column && !mappingByPlaceholder.has(token)) {
         mappingByPlaceholder.set(token, column);
       }
     }
@@ -393,10 +419,15 @@ async function buildGenerationContext(
     token,
   }));
   const missingPlaceholders = requiredPlaceholders.filter((token) => !mappingByPlaceholder.has(token));
-  const outputDir = resolveWorkspacePath(request.project.outputFolderPath);
-  const workbookPath = resolveWorkspacePath(request.project.workbookPath);
-  const contractTemplatePath = resolveWorkspacePath(request.project.contractTemplatePath);
-  const temporaryDir = await mkdtemp(join(tmpdir(), 'greeklit-run-'));
+  const outputDir = resolveProjectPath(request.project.outputFolderPath, environment);
+  const workbookPath = resolveProjectPath(request.project.workbookPath, environment);
+  const contractTemplatePath = resolveProjectPath(
+    request.project.contractTemplatePath,
+    environment,
+  );
+  const temporaryRoot = getRuntimeTempRoot(environment);
+  await mkdir(temporaryRoot, { recursive: true });
+  const temporaryDir = await mkdtemp(join(temporaryRoot, 'run-'));
   const mappingPath = join(temporaryDir, 'field_mapping.txt');
   const emailTemplatePath = join(temporaryDir, 'email_template.html');
   const configPath = join(temporaryDir, 'generator_config.json');
@@ -416,7 +447,7 @@ async function buildGenerationContext(
     date_format: '%Y-%m-%d',
     email_output_subdir: 'emails',
     email_template_path: emailTemplatePath,
-    filename_pattern: '{{APPLICATION_CODE}} - {{TITLE}} - {{LANGUAGE}}',
+    filename_pattern: DEFAULT_FILENAME_PATTERN,
     header_row: request.project.headerRow,
     keep_docx_output: request.generationOptions.generateDocx,
     mapping_path: mappingPath,
@@ -444,8 +475,8 @@ async function buildGenerationContext(
           workbook_path: workbookPath,
           worksheet_name: request.project.worksheetName,
         }),
-      ])
-    : buildRuntimeCommand(runtime, 'generator', ['--config', configPath]);
+      ], environment)
+    : buildRuntimeCommand(runtime, 'generator', ['--config', configPath], environment);
 
   await writeFile(
     mappingPath,
@@ -470,7 +501,7 @@ async function buildGenerationContext(
 }
 
 export async function runProjectPreflight(
-  homePath: string,
+  environment: RuntimeEnvironment,
   request: GenerateProjectRequest,
 ): Promise<ProjectPreflightResult> {
   const checks: ProjectPreflightCheck[] = [];
@@ -504,7 +535,7 @@ export async function runProjectPreflight(
 
   let context: GenerationContext | null = null;
   try {
-    context = await buildGenerationContext(homePath, request);
+    context = await buildGenerationContext(environment, request);
   } catch (error) {
     addCheck(
       'payload',
@@ -524,13 +555,23 @@ export async function runProjectPreflight(
       context.runtime.generator,
       context.runtime.inspectProject,
     ].some((entrypoint) => entrypoint.mode === 'python-script');
+    const runtimeEntrypoints = [
+      context.runtime.generator,
+      context.runtime.emailGenerator,
+      context.runtime.inspectProject,
+    ];
+    const missingRuntimeEntrypoints = runtimeEntrypoints.filter((entrypoint) => !entrypoint.exists);
+    const runtimeSummary = runtimeEntrypoints
+      .map((entrypoint) =>
+        `${entrypoint.name}: ${entrypoint.exists ? entrypoint.source : 'missing'} (${entrypoint.absolutePath})`)
+      .join('; ');
 
     addCheck(
       'python-runtime',
       'Python runtime',
       !needsPythonRuntime || Boolean(context.runtime.pythonRuntime) ? 'pass' : 'fail',
       !needsPythonRuntime
-        ? 'Packaged runtime services are available; no Python interpreter is required.'
+        ? 'Packaged runtime services are configured; no Python interpreter is required.'
         : context.runtime.pythonRuntime
           ? `Python runtime detected via ${describePythonRuntime(context.runtime.pythonRuntime)}.`
           : 'No compatible Python runtime was found for the current generator scripts.',
@@ -539,16 +580,12 @@ export async function runProjectPreflight(
     addCheck(
       'runtime-services',
       'Runtime services',
-      context.runtime.generator.exists
-        && context.runtime.emailGenerator.exists
-        && context.runtime.inspectProject.exists
-        ? 'pass'
-        : 'fail',
-      context.runtime.generator.exists
-        && context.runtime.emailGenerator.exists
-        && context.runtime.inspectProject.exists
-        ? 'Generator, inspection, and email runtime services are available.'
-        : 'One or more generation runtime entrypoints are missing.',
+      missingRuntimeEntrypoints.length === 0 ? 'pass' : 'fail',
+      missingRuntimeEntrypoints.length === 0
+        ? `Generator, inspection, and email runtime services are available. ${runtimeSummary}`
+        : environment.isPackaged
+          ? `Packaged runtime entrypoints are missing: ${missingRuntimeEntrypoints.map((entrypoint) => entrypoint.name).join(', ')}. Build the runtime and include app/runtime as packaged resources.`
+          : `One or more runtime entrypoints are missing: ${runtimeSummary}`,
     );
 
     addCheck(
@@ -572,7 +609,10 @@ export async function runProjectPreflight(
     }
 
     if (request.generationOptions.generateEmailDrafts && request.project.useOptionalEmailSource) {
-      const emailTemplatePath = resolveWorkspacePath(request.project.emailTemplatePath);
+      const emailTemplatePath = resolveProjectPath(
+        request.project.emailTemplatePath,
+        environment,
+      );
       addCheck(
         'email-template-file',
         'Email template file',
@@ -605,7 +645,7 @@ export async function runProjectPreflight(
     }
 
     try {
-      const inspection = await inspectProjectInternal(homePath, {
+      const inspection = await inspectProjectInternal(environment, {
         contractTemplatePath: request.project.contractTemplatePath,
         dataStartRow: request.project.dataStartRow,
         headerRow: request.project.headerRow,
@@ -701,16 +741,16 @@ export async function runProjectPreflight(
 }
 
 export async function generateProject(
-  homePath: string,
+  environment: RuntimeEnvironment,
   request: GenerateProjectRequest,
   onProgress?: (progress: GenerateProjectProgress) => void,
 ): Promise<GenerateProjectResult> {
-  const preflight = await runProjectPreflight(homePath, request);
+  const preflight = await runProjectPreflight(environment, request);
   if (!preflight.canGenerate) {
     throw new Error(preflight.errors[0] ?? 'Preflight validation failed.');
   }
 
-  const context = await buildGenerationContext(homePath, request);
+  const context = await buildGenerationContext(environment, request);
   let latestProgress: GenerateProjectProgress | null = null;
   let latestRowsFound = 0;
   const trackProgress = (progress: GenerateProjectProgress) => {

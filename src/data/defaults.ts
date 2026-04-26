@@ -25,14 +25,14 @@ export const wizardSteps: WizardStep[] = [
 ];
 
 export const initialProject: ProjectConfig = {
-  workbookPath: 'input/GLF-GR-EN-8th (1).xlsx',
-  contractTemplatePath: 'Files/FULL OLD.docx',
+  workbookPath: '',
+  contractTemplatePath: '',
   emailTemplatePath: '',
   useOptionalEmailSource: false,
-  outputFolderPath: 'output/',
-  worksheetName: '8TH PERIOD',
-  headerRow: 2,
-  dataStartRow: 3,
+  outputFolderPath: '',
+  worksheetName: '',
+  headerRow: 1,
+  dataStartRow: 2,
 };
 
 export const initialEmailTemplate: EmailTemplateState = {

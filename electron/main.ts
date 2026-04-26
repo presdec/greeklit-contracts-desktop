@@ -20,6 +20,7 @@ import {
   saveStarterTemplate,
 } from './services/projectFiles';
 import { getTemplateStatus } from './services/templateStatus';
+import type { RuntimeEnvironment } from './lib/runtimePaths';
 
 // Electron main is built as CommonJS so runtime module resolution stays stable.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -28,6 +29,16 @@ const { app, BrowserWindow, dialog, ipcMain, shell } = electron;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 let mainWindow: InstanceType<typeof BrowserWindow> | null = null;
+
+function getRuntimeEnvironment(): RuntimeEnvironment {
+  return {
+    appDataPath: app.getPath('userData'),
+    homePath: app.getPath('home'),
+    isPackaged: app.isPackaged,
+    resourcesPath: process.resourcesPath,
+    tempPath: app.getPath('temp'),
+  };
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -79,7 +90,9 @@ function createWindow() {
     console.log('Renderer finished load');
   });
 
-  mainWindow.webContents.openDevTools({ mode: 'detach' });
+  if (!app.isPackaged) {
+    mainWindow.webContents.openDevTools({ mode: 'detach' });
+  }
 
   if (process.env.ELECTRON_RENDERER_URL) {
     void mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL);
@@ -92,6 +105,7 @@ function registerIpcHandlers() {
   const dialogDeps = {
     BrowserWindow,
     dialog,
+    getRuntimeEnvironment,
     getMainWindow: () => mainWindow,
   };
 
@@ -112,23 +126,32 @@ function registerIpcHandlers() {
 
   ipcMain.handle(
     'desktop-app:get-template-status',
-    async (_event, request: TemplateStatusRequest) => getTemplateStatus(request),
+    async (_event, request: TemplateStatusRequest) => getTemplateStatus(
+      getRuntimeEnvironment(),
+      request,
+    ),
   );
 
   ipcMain.handle(
     'desktop-app:inspect-project',
-    async (_event, request: InspectProjectRequest) => inspectProjectInternal(app.getPath('home'), request),
+    async (_event, request: InspectProjectRequest) => inspectProjectInternal(
+      getRuntimeEnvironment(),
+      request,
+    ),
   );
 
   ipcMain.handle(
     'desktop-app:validate-project',
-    async (_event, request: GenerateProjectRequest) => runProjectPreflight(app.getPath('home'), request),
+    async (_event, request: GenerateProjectRequest) => runProjectPreflight(
+      getRuntimeEnvironment(),
+      request,
+    ),
   );
 
   ipcMain.handle(
     'desktop-app:generate-project',
     async (event, request: GenerateProjectRequest) => generateProject(
-      app.getPath('home'),
+      getRuntimeEnvironment(),
       request,
       (progress: GenerateProjectProgress) => {
         event.sender.send('desktop-app:generation-progress', progress);

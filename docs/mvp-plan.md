@@ -117,9 +117,9 @@ Status: `Mostly done`
 
 ### 8. Windows Packaging And Runtime
 
-Status: `MVP blocker`
+Status: `Implemented in app contract, clean-machine validation pending`
 
-The app has platform-neutral runtime discovery concepts, but the release path still needs packaged generator services and validation on a clean Windows machine.
+The app now has a platform-neutral runtime layout and packaged mode no longer falls back to repo Python scripts. Runtime executables are built into `app/runtime/<platform>-<arch>/` and should be included in packaged resources. The remaining release task is validating the packaged build on a clean Windows machine.
 
 Acceptance criteria:
 

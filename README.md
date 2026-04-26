@@ -1,5 +1,9 @@
 # Greeklit Contracts Desktop
 
+[![Build](https://github.com/presdec/greeklit-contracts-desktop/actions/workflows/build.yml/badge.svg)](https://github.com/presdec/greeklit-contracts-desktop/actions/workflows/build.yml)
+[![Test](https://github.com/presdec/greeklit-contracts-desktop/actions/workflows/test.yml/badge.svg)](https://github.com/presdec/greeklit-contracts-desktop/actions/workflows/test.yml)
+[![Release](https://github.com/presdec/greeklit-contracts-desktop/actions/workflows/release.yml/badge.svg)](https://github.com/presdec/greeklit-contracts-desktop/actions/workflows/release.yml)
+
 This folder is the starting point for turning the existing Python contract generator into a cleaner desktop product built with Vite and Electron.
 
 ## Goal
@@ -53,6 +57,14 @@ Useful scripts:
 - `pnpm lint:fix`
 - `pnpm format`
 - `pnpm format:check`
+
+## CI/CD
+
+GitHub Actions workflows are configured in `.github/workflows`:
+
+- `build.yml`: runs on pushes to `main` and pull requests, installs dependencies, and runs `pnpm build`.
+- `test.yml`: runs on pushes to `main` and pull requests, builds the app, then runs Playwright end-to-end tests with `pnpm test:e2e`.
+- `release.yml`: runs on `v*` tags and manual dispatch, builds release artifacts for Windows (`pnpm dist:win`) and Linux AppImage (`pnpm dist:linux:appimage`), then uploads them as workflow artifacts.
 
 ## Initial structure
 

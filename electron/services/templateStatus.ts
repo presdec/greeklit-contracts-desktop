@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import type { TemplateStatusRequest, TemplateStatusResult } from '../../shared/desktop';
-import { resolveWorkspacePath } from '../lib/runtimePaths';
+import { resolveProjectPath, type RuntimeEnvironment } from '../lib/runtimePaths';
 
 function getWordLockFilePath(templatePath: string) {
   const directory = dirname(templatePath);
@@ -11,9 +11,10 @@ function getWordLockFilePath(templatePath: string) {
 }
 
 export async function getTemplateStatus(
+  environment: RuntimeEnvironment,
   request: TemplateStatusRequest,
 ): Promise<TemplateStatusResult> {
-  const templatePath = resolveWorkspacePath(request.templatePath) ?? '';
+  const templatePath = resolveProjectPath(request.templatePath, environment) ?? '';
 
   if (!templatePath || !existsSync(templatePath)) {
     return {

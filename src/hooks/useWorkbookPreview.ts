@@ -31,6 +31,16 @@ export function useWorkbookPreview(
     setRefreshTick((current) => current + 1);
   }, []);
 
+  const clearPreview = useCallback(() => {
+    setContractTokenContexts({});
+    setContractVariables([]);
+    setLoadError(null);
+    setRawColumns([]);
+    setSampleRows([]);
+    setTemplateStatus(null);
+    setTotalRows(0);
+  }, []);
+
   const loadTemplateStatus = useCallback(async () => {
     if (!project.contractTemplatePath) {
       setTemplateStatus(null);
@@ -48,6 +58,7 @@ export function useWorkbookPreview(
     previewRequestId.current = requestId;
 
     if (!project.workbookPath || !project.worksheetName) {
+      clearPreview();
       setIsLoading(false);
       return;
     }
@@ -85,6 +96,7 @@ export function useWorkbookPreview(
     }
   }, [
     desktopApp,
+    clearPreview,
     loadTemplateStatus,
     project.contractTemplatePath,
     project.dataStartRow,

@@ -10,7 +10,7 @@ from pathlib import Path
 
 RUNTIME_TARGETS = {
     "generate_contracts": {
-        "script": ("..", "generate_contracts.py"),
+        "script": ("scripts", "generate_contracts.py"),
     },
     "generate_email_drafts": {
         "script": ("scripts", "generate_email_drafts.py"),

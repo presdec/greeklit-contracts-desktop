@@ -14,8 +14,8 @@
   },
   "scripts": {
     "dev": "electron-vite dev",
-    "runtime:build": "node scripts/run_python_script.mjs scripts/build_runtime.py",
-    "runtime:build:clean": "node scripts/run_python_script.mjs scripts/build_runtime.py --clean",
+    "runtime:build": "node scripts/run_python_script.mjs -m pip install -r scripts/requirements-runtime-build.txt && node scripts/run_python_script.mjs scripts/build_runtime.py",
+    "runtime:build:clean": "node scripts/run_python_script.mjs -m pip install -r scripts/requirements-runtime-build.txt && node scripts/run_python_script.mjs scripts/build_runtime.py --clean",
     "runtime:assert:linux-x64": "node scripts/assert_runtime_target.mjs linux-x64",
     "build": "pnpm typecheck && electron-vite build",
     "build:release-ready": "pnpm runtime:build && pnpm build",

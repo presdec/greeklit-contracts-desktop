@@ -1,5 +1,22 @@
 # Release Notes
 
+## v0.2.7 (2026-04-26)
+
+### Added
+- Configurable output filename pattern for DOCX/PDF generation in the mapping step.
+- Filename placeholders are now treated as first-class mapping variables.
+
+### Improved
+- Renamed Step 2 and mapping panel copy to explicitly include filename mapping.
+- Setup page Load Check now focuses on workbook validation even before selecting a Word template.
+- Workbook mapping usage badges now clearly indicate `[WORD Field]` usage.
+- Setup Check section is collapsible with compact aggregate status (for example, `10/10 Checks Pass`).
+
+### Fixed
+- Prevented installed-app crash in `inspect_project.exe` when no contract template path is provided (`TypeError: list indices must be integers or slices, not str`).
+
+## Unreleased
+
 ## v0.2.6 (2026-04-26)
 
 ### Highlights
@@ -17,17 +34,3 @@
 - Resolved missing expected release-tag publication behavior caused by tag/version mismatch.
 - Corrected release command path so publish behavior is consistently applied by matrix target.
 
-## Unreleased
-
-### Added
-- Configurable output filename pattern for DOCX/PDF generation.
-- Output filename pattern editor moved into Field Mapping workflow.
-- Filename placeholders are now treated as first-class mapping variables.
-
-### Improved
-- Setup page Load Check now focuses on workbook validation even before selecting a Word template.
-- Workbook mapping usage badges now clearly indicate `[WORD Field]` usage.
-- Setup Check section is collapsible with compact aggregate status (for example, `10/10 Checks Pass`).
-
-### Notes
-- If output filename pattern uses plain text only, no extra filename placeholder mappings are required.

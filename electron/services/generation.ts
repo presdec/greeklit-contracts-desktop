@@ -83,16 +83,16 @@ function normalizeEmailBodyHtml(value: string) {
 }
 
 function buildInlineFieldHtml(label: string, value: string) {
-  return `<p><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</p>`;
+  return `<p><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value || '')}</p>`;
 }
 
 function buildEmailTemplateHtml(request: GenerateProjectRequest) {
   const bodyHtml = normalizeEmailBodyHtml(request.emailTemplate.body);
 
   return [
-    buildInlineFieldHtml('Subject', request.emailTemplate.subject),
-    buildInlineFieldHtml('To', request.emailTemplate.to),
-    buildInlineFieldHtml('Cc', request.emailTemplate.cc),
+    buildInlineFieldHtml('Subject', request.emailTemplate.subject || ''),
+    buildInlineFieldHtml('To', request.emailTemplate.to || ''),
+    buildInlineFieldHtml('Cc', request.emailTemplate.cc || ''),
     bodyHtml,
   ].join('');
 }
@@ -312,7 +312,7 @@ function extractTemplateTokens(value: string) {
   return matches.map((match) => match.replace(/[{}]/g, ''));
 }
 
-async function checkWordPdfCapability() {
+export async function checkWordPdfCapability() {
   if (process.platform !== 'win32') {
     return false;
   }
@@ -326,6 +326,64 @@ async function checkWordPdfCapability() {
 
   try {
     const { stdout } = await execFileAsync('powershell', command, { windowsHide: true });
+    return stdout.includes('available');
+  } catch {
+    return false;
+  }
+}
+
+export function hasLibreOfficePdfCapability(runtime: ResolvedRuntime) {
+  return Boolean(runtime.libreOfficeCommand);
+}
+
+export async function checkOutlookInstalledCapability() {
+  if (process.platform !== 'win32') {
+    return false;
+  }
+
+  const command = [
+    '-NoProfile',
+    '-NonInteractive',
+    '-Command',
+    [
+      '$paths = @(',
+      "'Registry::HKEY_CLASSES_ROOT\\Outlook.Application\\CLSID',",
+      "'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\OUTLOOK.EXE',",
+      "'HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\App Paths\\OUTLOOK.EXE'",
+      ');',
+      'foreach ($path in $paths) { if (Test-Path $path) { Write-Output "available"; exit 0 } }',
+      'exit 1',
+    ].join(' '),
+  ];
+
+  try {
+    const { stdout } = await execFileAsync('powershell', command, {
+      timeout: 5000,
+      windowsHide: true,
+    });
+    return stdout.includes('available');
+  } catch {
+    return false;
+  }
+}
+
+export async function checkOutlookMsgCapability() {
+  if (process.platform !== 'win32') {
+    return false;
+  }
+
+  const command = [
+    '-NoProfile',
+    '-NonInteractive',
+    '-Command',
+    '$outlook=$null; try { $outlook = New-Object -ComObject Outlook.Application; Write-Output "available" } catch { Write-Error $_; exit 1 } finally { if ($outlook -ne $null) { [System.Runtime.Interopservices.Marshal]::ReleaseComObject($outlook) | Out-Null } }',
+  ];
+
+  try {
+    const { stdout } = await execFileAsync('powershell', command, {
+      timeout: 10000,
+      windowsHide: true,
+    });
     return stdout.includes('available');
   } catch {
     return false;
@@ -454,6 +512,11 @@ async function buildGenerationContext(
   const rowIdentityPlaceholders = ['ID', 'APPLICATION_CODE', 'TITLE']
     .filter((placeholder) => mappedPlaceholderNames.has(placeholder))
     .slice(0, 1);
+  const rejectionColumn = request.project.rejectionColumn.trim().toUpperCase();
+  const rejectionValue = request.project.rejectionValue.trim();
+  const skipIfColumnEquals = rejectionColumn && rejectionValue
+    ? { [rejectionColumn]: [rejectionValue] }
+    : {};
   const config: Record<string, unknown> = {
     attach_contract_to_eml: true,
     combined_email_filename: emailOutputMode === 'combined_docx'
@@ -477,6 +540,7 @@ async function buildGenerationContext(
     report_filename: 'generation_report.txt',
     row_identity_placeholders: rowIdentityPlaceholders,
     skip_if_column_contains: {},
+    skip_if_column_equals: skipIfColumnEquals,
     skip_if_row_fill_colors: [],
     workbook_path: workbookPath,
     worksheet_name: request.project.worksheetName,
@@ -493,6 +557,7 @@ async function buildGenerationContext(
           mapping: Object.fromEntries(mappedEntries.map((entry) => [entry.token, entry.column])),
           email_output_mode: emailOutputMode,
           output_dir: outputDir,
+          skip_if_column_equals: skipIfColumnEquals,
           workbook_path: workbookPath,
           worksheet_name: request.project.worksheetName,
         }),
@@ -720,10 +785,31 @@ export async function runProjectPreflight(
       );
     }
 
+    if (
+      request.generationOptions.generateEmailDrafts
+      && request.generationOptions.emailOutputMode === 'separate_msg'
+    ) {
+      if (await checkOutlookMsgCapability()) {
+        addCheck(
+          'outlook-msg',
+          'Outlook MSG capability',
+          'pass',
+          'Outlook automation responded for MSG draft output.',
+        );
+      } else {
+        addCheck(
+          'outlook-msg',
+          'Outlook MSG capability',
+          'fail',
+          'MSG output is enabled, but Outlook automation did not respond. Close Outlook completely, reopen it, then retry; otherwise choose EML output.',
+        );
+      }
+    }
+
     let pdfBackend: ProjectPreflightResult['pdfBackend'] = 'none';
     if (request.generationOptions.generatePdf) {
       const libreOfficePath = context.runtime.libreOfficeCommand;
-      if (libreOfficePath) {
+      if (hasLibreOfficePdfCapability(context.runtime)) {
         pdfBackend = 'libreoffice';
         addCheck(
           'pdf-backend',

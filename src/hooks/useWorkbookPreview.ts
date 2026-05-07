@@ -17,6 +17,7 @@ export function useWorkbookPreview(
 ) {
   const [contractTokenContexts, setContractTokenContexts] = useState<Record<string, string>>({});
   const [contractVariables, setContractVariables] = useState<string[]>([]);
+  const [columnValues, setColumnValues] = useState<Record<string, string[]>>({});
   const [fieldAssignments, setFieldAssignments] = useAtom(variableColumnsAtom);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -37,6 +38,7 @@ export function useWorkbookPreview(
   const clearPreview = useCallback(() => {
     setContractTokenContexts({});
     setContractVariables([]);
+    setColumnValues({});
     setLoadError(null);
     setRawColumns([]);
     setSampleRows([]);
@@ -92,6 +94,7 @@ export function useWorkbookPreview(
       }
 
       setRawColumns(result.columns);
+      setColumnValues(result.columnValues ?? {});
       setContractTokenContexts(result.contractTokenContexts ?? {});
       setContractVariables(result.contractTokens);
       setSampleRows(result.sampleRows);
@@ -243,6 +246,7 @@ export function useWorkbookPreview(
 
   return {
     availableVariables,
+    columnValues,
     contractTokenContexts,
     contractVariables,
     isLoading,

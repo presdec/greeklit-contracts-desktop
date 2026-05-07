@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import type * as ElectronModule from 'electron';
 import type {
+  DesktopCapabilities,
   FileDialogRequest,
   GenerateProjectProgress,
   GenerateProjectRequest,
@@ -13,7 +14,14 @@ import type {
   SaveStarterTemplateRequest,
   TemplateStatusRequest,
 } from '../shared/desktop';
-import { generateProject, inspectProjectInternal, runProjectPreflight } from './services/generation';
+import {
+  checkOutlookInstalledCapability,
+  checkWordPdfCapability,
+  generateProject,
+  hasLibreOfficePdfCapability,
+  inspectProjectInternal,
+  runProjectPreflight,
+} from './services/generation';
 import {
   openProjectDocument,
   pickPath,
@@ -22,6 +30,7 @@ import {
 } from './services/projectFiles';
 import { getTemplateStatus } from './services/templateStatus';
 import type { RuntimeEnvironment } from './lib/runtimePaths';
+import { resolveRuntime } from './lib/runtimePaths';
 
 // Electron main is built as CommonJS so runtime module resolution stays stable.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -252,6 +261,21 @@ function registerIpcHandlers() {
   );
 
   ipcMain.handle('desktop-app:open-project', async () => openProjectDocument(dialogDeps));
+
+  ipcMain.handle('desktop-app:get-capabilities', async (): Promise<DesktopCapabilities> => {
+    const runtime = await resolveRuntime(getRuntimeEnvironment());
+    const pdfBackend = hasLibreOfficePdfCapability(runtime)
+      ? 'libreoffice'
+      : await checkWordPdfCapability()
+        ? 'word'
+        : 'none';
+
+    return {
+      outlookMsgDrafts: await checkOutlookInstalledCapability(),
+      pdfBackend,
+      platform: process.platform,
+    };
+  });
 
   ipcMain.handle(
     'desktop-app:get-template-status',

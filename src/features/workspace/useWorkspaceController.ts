@@ -11,6 +11,7 @@ import { useI18n } from '../../i18n';
 import { extractTokens, tokenName } from '../../lib/template';
 import type { WizardStepId } from '../../types/template';
 import type {
+  DesktopCapabilities,
   GenerateProjectProgress,
   GenerateProjectResult,
   StarterTemplateKind,
@@ -64,6 +65,11 @@ export function useWorkspaceController(desktopApp: Window['desktopApp']) {
   const [isOpeningPath, setIsOpeningPath] = useState(false);
   const [isReloadingTemplate, setIsReloadingTemplate] = useState(false);
   const [templateActionError, setTemplateActionError] = useState<string | null>(null);
+  const [desktopCapabilities, setDesktopCapabilities] = useState<DesktopCapabilities>({
+    outlookMsgDrafts: false,
+    pdfBackend: 'none',
+    platform: desktopApp.platform as NodeJS.Platform,
+  });
   const filenameVariables = useMemo(
     () =>
       Array.from(
@@ -101,6 +107,43 @@ export function useWorkspaceController(desktopApp: Window['desktopApp']) {
     workbookPreview.availableVariables,
     workbookPreview.rows,
   );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    void desktopApp.getCapabilities()
+      .then((capabilities) => {
+        if (isMounted) {
+          setDesktopCapabilities(capabilities);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setDesktopCapabilities({
+            outlookMsgDrafts: false,
+            pdfBackend: 'none',
+            platform: desktopApp.platform as NodeJS.Platform,
+          });
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [desktopApp]);
+
+  useEffect(() => {
+    if (
+      !desktopCapabilities.outlookMsgDrafts
+      && contractSettings.generationOptions.emailOutputMode === 'separate_msg'
+    ) {
+      contractSettings.setGenerationOption('emailOutputMode', 'combined_docx');
+    }
+  }, [
+    contractSettings,
+    contractSettings.generationOptions.emailOutputMode,
+    desktopCapabilities.outlookMsgDrafts,
+  ]);
 
   useEffect(() => {
     if (!isGenerating) {
@@ -374,7 +417,6 @@ export function useWorkspaceController(desktopApp: Window['desktopApp']) {
   ].filter(Boolean) as string[];
   const canGenerateNow =
     canContinueFromStep3
-    && !preflight.isLoading
     && !isGenerating
     && (preflight.result?.canGenerate ?? false);
 
@@ -383,6 +425,7 @@ export function useWorkspaceController(desktopApp: Window['desktopApp']) {
     canContinueFromStep3,
     canGenerateNow,
     contractSettings,
+    desktopCapabilities,
     currentStep: copy.steps[activeStep],
     currentStepIndex,
     generationElapsedSeconds,

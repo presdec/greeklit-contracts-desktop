@@ -33,6 +33,7 @@ DEFAULT_XML_PART_PREFIXES = (
     "word/endnotes.xml",
 )
 PROGRESS_PREFIX = "__GREEKLIT_PROGRESS__"
+OUTLOOK_MSG_TIMEOUT_SECONDS = 30
 
 
 @dataclass
@@ -60,6 +61,7 @@ class Config:
     libreoffice_path: Optional[Path]
     row_identity_placeholders: List[str]
     skip_if_column_contains: Dict[str, List[str]]
+    skip_if_column_equals: Dict[str, List[str]]
     skip_if_row_fill_colors: List[str]
 
 
@@ -143,6 +145,10 @@ def load_config(path: Path) -> Config:
         skip_if_column_contains={
             str(column).upper(): [str(item) for item in values]
             for column, values in raw.get("skip_if_column_contains", {}).items()
+        },
+        skip_if_column_equals={
+            str(column).upper(): [str(item) for item in values]
+            for column, values in raw.get("skip_if_column_equals", {}).items()
         },
         skip_if_row_fill_colors=[str(item).upper() for item in raw.get("skip_if_row_fill_colors", [])],
     )
@@ -315,6 +321,120 @@ def write_eml_draft(path: Path, row_values: Dict[str, str], rendered_html: str, 
     path.write_text(message.as_string(), encoding="utf-8")
 
 
+def create_msg_draft_via_outlook(
+    path: Path,
+    row_values: Dict[str, str],
+    rendered_html: str,
+    row_number: int,
+    attachment_path: Optional[Path] = None,
+    report_stage=None,
+) -> None:
+    def stage(value: str) -> None:
+        if report_stage:
+            report_stage(value)
+
+    try:
+        stage("import pythoncom/win32com")
+        import pythoncom  # type: ignore
+        import win32com.client  # type: ignore
+    except Exception as exc:
+        raise RuntimeError("Outlook MSG output requires pywin32 and Microsoft Outlook on Windows.") from exc
+
+    stage("CoInitialize")
+    pythoncom.CoInitialize()
+    outlook = None
+    mail = None
+    try:
+        stage("Dispatch Outlook.Application")
+        outlook = win32com.client.Dispatch("Outlook.Application")
+        stage("CreateItem")
+        mail = outlook.CreateItem(0)
+        stage("set fields")
+        mail.Subject = row_values.get("TITLE") or row_values.get("APPLICATION_CODE") or f"Generated draft row {row_number}"
+        mail.To = row_values.get("EMAIL_TO", "")
+        mail.CC = row_values.get("EMAIL_CC", "")
+        mail.HTMLBody = rendered_html
+        if attachment_path and attachment_path.exists():
+            stage("add attachment")
+            mail.Attachments.Add(str(attachment_path.resolve()))
+        stage("SaveAs")
+        mail.SaveAs(str(path.resolve()), 9)
+        stage("saved")
+    except Exception as exc:
+        raise RuntimeError(f"Could not create Outlook MSG draft: {exc}") from exc
+    finally:
+        mail = None
+        outlook = None
+        stage("CoUninitialize")
+        pythoncom.CoUninitialize()
+
+
+def self_worker_command() -> List[str]:
+    if getattr(sys, "frozen", False):
+        return [sys.executable]
+    return [sys.executable, str(Path(__file__).resolve())]
+
+
+def run_outlook_msg_worker(payload_path: Path) -> int:
+    payload = json.loads(payload_path.read_text(encoding="utf-8"))
+    stage_path = Path(payload["stage_path"])
+
+    def report_stage(value: str) -> None:
+        stage_path.write_text(value, encoding="utf-8")
+
+    create_msg_draft_via_outlook(
+        Path(payload["path"]),
+        {str(key): str(value) for key, value in payload["row_values"].items()},
+        str(payload["rendered_html"]),
+        int(payload["row_number"]),
+        Path(payload["attachment_path"]) if payload.get("attachment_path") else None,
+        report_stage,
+    )
+    return 0
+
+
+def write_msg_draft(
+    path: Path,
+    row_values: Dict[str, str],
+    rendered_html: str,
+    row_number: int,
+    attachment_path: Optional[Path] = None,
+) -> None:
+    with tempfile.TemporaryDirectory(prefix="docgen-msg-") as temp_dir:
+        temp_path = Path(temp_dir)
+        payload_path = temp_path / "payload.json"
+        stage_path = temp_path / "stage.txt"
+        payload = {
+            "attachment_path": str(attachment_path.resolve()) if attachment_path else None,
+            "path": str(path.resolve()),
+            "rendered_html": rendered_html,
+            "row_number": row_number,
+            "row_values": row_values,
+            "stage_path": str(stage_path),
+        }
+        payload_path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+        command = [*self_worker_command(), "--outlook-msg-worker", str(payload_path)]
+        try:
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                timeout=OUTLOOK_MSG_TIMEOUT_SECONDS,
+                check=False,
+            )
+        except subprocess.TimeoutExpired as exc:
+            last_stage = stage_path.read_text(encoding="utf-8") if stage_path.exists() else "startup"
+            raise RuntimeError(
+                f"Timed out after {OUTLOOK_MSG_TIMEOUT_SECONDS}s while creating Outlook MSG draft "
+                f"for row {row_number} ({last_stage}). Close Outlook completely, reopen it, and try again."
+            ) from exc
+
+        if result.returncode != 0:
+            details = (result.stderr or result.stdout).strip()
+            raise RuntimeError(details or f"Outlook MSG worker exited with code {result.returncode}.")
+
+
 def collect_used_placeholders(*placeholder_sets: Iterable[str]) -> Set[str]:
     result: Set[str] = set()
     for items in placeholder_sets:
@@ -392,6 +512,11 @@ def row_has_identity(values: Dict[str, str], identity_placeholders: Sequence[str
 
 
 def row_matches_skip_rules(ws, row_number: int, config: Config) -> Optional[str]:
+    for column_letter, rejected_values in config.skip_if_column_equals.items():
+        value = normalize_cell_value(ws[f"{column_letter}{row_number}"].value, config.date_format)
+        if any(value == rejected_value for rejected_value in rejected_values):
+            return f"column {column_letter} equals rejection value ({value})"
+
     for column_letter, keywords in config.skip_if_column_contains.items():
         value = normalize_cell_value(ws[f"{column_letter}{row_number}"].value, config.date_format)
         lowered = value.lower()
@@ -549,6 +674,11 @@ def write_report(
     for placeholder in sorted(mapping):
         lines.append(f"- {placeholder} = {mapping[placeholder]} (header: {header_snapshot.get(placeholder, '')})")
 
+    rejection_rules = [
+        f"{column} equals {', '.join(values)}"
+        for column, values in sorted(config.skip_if_column_equals.items())
+    ]
+
     lines.extend(
         [
             "",
@@ -556,6 +686,7 @@ def write_report(
             f"Email placeholders: {', '.join(sorted(email_placeholders)) or '(none)'}",
             f"Unmapped placeholders: {', '.join(sorted(unmapped_placeholders)) or '(none)'}",
             f"Unused mappings: {', '.join(sorted(unused_mappings)) or '(none)'}",
+            f"Rejection rules: {'; '.join(rejection_rules) if rejection_rules else '(none)'}",
             "",
             f"Generated rows: {len(generated)}",
             f"Skipped rows: {len(skipped)}",
@@ -600,11 +731,18 @@ def parse_args() -> argparse.Namespace:
         default="generator_config.json",
         help="Path to the generator configuration JSON file.",
     )
+    parser.add_argument(
+        "--outlook-msg-worker",
+        help=argparse.SUPPRESS,
+    )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
+    if args.outlook_msg_worker:
+        return run_outlook_msg_worker(Path(args.outlook_msg_worker))
+
     config_path = Path(args.config).resolve()
     emit_progress("prepare", "Loading generation configuration.", percent=2)
     config = load_config(config_path)
@@ -614,7 +752,7 @@ def main() -> int:
     emit_progress("prepare", "Inspecting templates and workbook.", percent=6)
     email_template = config.email_template_path.read_text(encoding="utf-8")
     email_output_mode = config.email_output_mode or "combined_docx"
-    writes_visible_email_drafts = email_output_mode in {"combined_docx", "separate_docx", "separate_eml"}
+    writes_visible_email_drafts = email_output_mode in {"combined_docx", "separate_docx", "separate_eml", "separate_msg"}
     _, contract_placeholders, _ = extract_docx_parts_and_placeholders(config.contract_template_path)
     email_placeholders = extract_text_placeholders(email_template) if writes_visible_email_drafts else set()
     filename_placeholders = extract_text_placeholders(config.filename_pattern)
@@ -947,6 +1085,16 @@ def main() -> int:
             eml_filename = ensure_unique_filename(draft_base_name, ".eml", email_filename_counter, pending.row_number)
             eml_path = email_output_dir / eml_filename
             write_eml_draft(eml_path, pending.row_values, pending.email_text, pending.row_number)
+        elif email_output_mode == "separate_msg":
+            draft_base_name = (
+                f"email draft - {application_code}"
+                if application_code
+                else f"email draft row {pending.row_number}"
+            )
+            msg_filename = ensure_unique_filename(draft_base_name, ".msg", email_filename_counter, pending.row_number)
+            msg_path = email_output_dir / msg_filename
+            attachment_path = pending.contract_output_path if config.attach_contract_to_eml else None
+            write_msg_draft(msg_path, pending.row_values, pending.email_text, pending.row_number, attachment_path)
 
     if email_output_mode == "combined_docx":
         write_combined_email_drafts_html(combined_email_path, combined_email_docx_entries)

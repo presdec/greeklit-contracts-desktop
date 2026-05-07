@@ -17,7 +17,7 @@ Doc Gen Studio is a free, open-source desktop app for teams that need to produce
 - **Batch in minutes, not hours.** Generate Word docs, PDFs, and email drafts from a single workbook run. One click replaces hours of copy-paste.
 - **Safe to hand to anyone.** A guided four-step workflow means non-technical team members can run generation without touching scripts or configuration files.
 - **Catch mistakes before you generate.** Live mapping preview, first-row filename preview, and unmapped-token warnings catch errors before a full run.
-- **Flexible email output.** Export email drafts as one combined DOCX, individual DOCX files, or ready-to-send `.eml` files — whichever fits your workflow.
+- **Flexible email output.** Export email drafts as one combined DOCX, individual DOCX files, ready-to-send `.eml` files, or Outlook `.msg` files — whichever fits your workflow.
 - **Respects your OS.** Follows your system light/dark theme. Full application menu with keyboard shortcuts.
 
 ## Who Is It For?
@@ -43,11 +43,11 @@ Doc Gen Studio is a free, open-source desktop app for teams that need to produce
 
 | Version | Package | Download |
 |---------|---------|----------|
-| **v0.2.11** *(latest)* | Windows installer | [DocGen-Studio-Setup-0.2.11.exe](https://github.com/presdec/docgen-studio-desktop/releases/download/v0.2.11/DocGen-Studio-Setup-0.2.11.exe) |
-| **v0.2.11** *(latest)* | Linux AppImage | [docgen-studio-0.2.11-x86_64.AppImage](https://github.com/presdec/docgen-studio-desktop/releases/download/v0.2.11/docgen-studio-0.2.11-x86_64.AppImage) |
-| **v0.2.11** *(latest)* | Linux deb | [docgen-studio-0.2.11-amd64.deb](https://github.com/presdec/docgen-studio-desktop/releases/download/v0.2.11/docgen-studio-0.2.11-amd64.deb) |
-| **v0.2.11** *(latest)* | Linux rpm | [docgen-studio-0.2.11-x86_64.rpm](https://github.com/presdec/docgen-studio-desktop/releases/download/v0.2.11/docgen-studio-0.2.11-x86_64.rpm) |
-| **v0.2.11** *(latest)* | Linux pacman | [docgen-studio-0.2.11-x64.pacman](https://github.com/presdec/docgen-studio-desktop/releases/download/v0.2.11/docgen-studio-0.2.11-x64.pacman) |
+| **v0.2.12** *(latest)* | Windows installer | [DocGen-Studio-Setup-0.2.12.exe](https://github.com/presdec/docgen-studio-desktop/releases/download/v0.2.12/DocGen-Studio-Setup-0.2.12.exe) |
+| **v0.2.12** *(latest)* | Linux AppImage | [docgen-studio-0.2.12-x86_64.AppImage](https://github.com/presdec/docgen-studio-desktop/releases/download/v0.2.12/docgen-studio-0.2.12-x86_64.AppImage) |
+| **v0.2.12** *(latest)* | Linux deb | [docgen-studio-0.2.12-amd64.deb](https://github.com/presdec/docgen-studio-desktop/releases/download/v0.2.12/docgen-studio-0.2.12-amd64.deb) |
+| **v0.2.12** *(latest)* | Linux rpm | [docgen-studio-0.2.12-x86_64.rpm](https://github.com/presdec/docgen-studio-desktop/releases/download/v0.2.12/docgen-studio-0.2.12-x86_64.rpm) |
+| **v0.2.12** *(latest)* | Linux pacman | [docgen-studio-0.2.12-x64.pacman](https://github.com/presdec/docgen-studio-desktop/releases/download/v0.2.12/docgen-studio-0.2.12-x64.pacman) |
 
 All releases: [github.com/presdec/docgen-studio-desktop/releases](https://github.com/presdec/docgen-studio-desktop/releases)
 
@@ -55,15 +55,15 @@ All releases: [github.com/presdec/docgen-studio-desktop/releases](https://github
 
 **Windows (`.exe`)**
 
-1. Download `DocGen-Studio-Setup-0.2.11.exe`.
+1. Download `DocGen-Studio-Setup-0.2.12.exe`.
 2. Double-click the installer.
 3. Follow the setup wizard and launch Doc Gen Studio from the Start menu.
 
 **Linux AppImage**
 
 ```bash
-chmod +x ./docgen-studio-0.2.11-x86_64.AppImage
-./docgen-studio-0.2.11-x86_64.AppImage
+chmod +x ./docgen-studio-0.2.12-x86_64.AppImage
+./docgen-studio-0.2.12-x86_64.AppImage
 ```
 
 On Ubuntu or Debian, AppImage may require `libfuse2`:
@@ -75,7 +75,7 @@ sudo apt install libfuse2
 **Ubuntu / Debian (`.deb`)**
 
 ```bash
-sudo apt install ./docgen-studio-0.2.11-amd64.deb
+sudo apt install ./docgen-studio-0.2.12-amd64.deb
 ```
 
 If `apt` prints a warning about downloading unsandboxed as root for a local file, that is an `apt` local-file warning, not a Doc Gen Studio packaging issue.
@@ -83,19 +83,20 @@ If `apt` prints a warning about downloading unsandboxed as root for a local file
 **Fedora / RHEL (`.rpm`)**
 
 ```bash
-sudo dnf install ./docgen-studio-0.2.11-x86_64.rpm
+sudo dnf install ./docgen-studio-0.2.12-x86_64.rpm
 ```
 
 **Arch Linux (`.pacman`)**
 
 ```bash
-sudo pacman -U ./docgen-studio-0.2.11-x64.pacman
+sudo pacman -U ./docgen-studio-0.2.12-x64.pacman
 ```
 
 ### Release History
 
 | Tag | Summary |
 |-----|---------|
+| [v0.2.12](https://github.com/presdec/docgen-studio-desktop/releases/tag/v0.2.12) | Outlook MSG drafts, row rejection filter, capabilities API, email header fixes |
 | [v0.2.11](https://github.com/presdec/docgen-studio-desktop/releases/tag/v0.2.11) | App menu, system theme, Linux AppImage fix, Ubuntu font fix, Python test suite, docs refresh |
 | [v0.2.10](https://github.com/presdec/docgen-studio-desktop/releases/tag/v0.2.10) | Email output modes, filename preview and warnings, mapping UX improvements |
 | [v0.2.9](https://github.com/presdec/docgen-studio-desktop/releases/tag/v0.2.9) | Worksheet dropdown, first-sheet fallback, header/data row auto-bump, render stability fixes |

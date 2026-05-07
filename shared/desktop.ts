@@ -25,6 +25,8 @@ export type ProjectConfig = {
   contractTemplatePath: string;
   emailTemplatePath: string;
   outputFilenamePattern: string;
+  rejectionColumn: string;
+  rejectionValue: string;
   useOptionalEmailSource: boolean;
   outputFolderPath: string;
   worksheetName: string;
@@ -37,8 +39,14 @@ export type ProjectOpenResult = {
   projectDocument: SavedProjectDocument;
 };
 
+export type DesktopCapabilities = {
+  outlookMsgDrafts: boolean;
+  pdfBackend: 'libreoffice' | 'none' | 'word';
+  platform: NodeJS.Platform;
+};
+
 export type GenerationOptionsInput = {
-  emailOutputMode: 'combined_docx' | 'separate_docx' | 'separate_eml';
+  emailOutputMode: 'combined_docx' | 'separate_docx' | 'separate_eml' | 'separate_msg';
   generateDocx: boolean;
   generateEmailDrafts: boolean;
   generatePdf: boolean;
@@ -161,6 +169,7 @@ export type WorkbookPreviewSampleRow = {
 };
 
 export type InspectProjectResult = {
+  columnValues: Record<string, string[]>;
   columns: WorkbookPreviewColumn[];
   contractTokenContexts: Record<string, string>;
   contractTokens: string[];

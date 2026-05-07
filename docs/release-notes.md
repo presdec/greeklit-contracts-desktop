@@ -1,9 +1,26 @@
 # Release Notes
 
+## v0.2.12 (2026-05-07)
+
+### Added
+- Outlook MSG draft output: email generator now creates `.msg` files via Outlook COM automation, with proper recipient handling using the Recipients collection (bypasses GAL name resolution).
+- Outlook capability detection: a new `getCapabilities` IPC call checks at startup whether Outlook automation is available; the MSG output mode option is only shown when it is.
+- Row rejection filter (`skip_if_column_equals`): configure a column and value to exclude matching rows from both contract and email generation, with a dedicated rejection column/value setup in the UI.
+- `DesktopCapabilities` type exposed to the renderer, covering platform, PDF backend, and Outlook MSG availability.
+- Column values from the workbook are now returned by `inspect_project` and used to populate the rejection value picker in the UI.
+
+### Fixed
+- Email template Subject, To, and Cc fields are now extracted from the rendered HTML and set as actual metadata on `.eml` and `.msg` files instead of appearing in the message body.
+- Undefined email template fields (Subject/To/Cc) no longer serialise as the literal string `"undefined"` in generated HTML.
+- Outlook MSG To/Cc fields are only set when non-empty, preventing Outlook from rejecting messages with empty recipient strings.
+- Values containing `undefined` tokens (from unresolved placeholders) are cleaned before being used as recipients or subject lines.
+- Document output modes (combined and separate DOCX/HTML) correctly include Subject/To/Cc header lines for human review, while `.eml`/`.msg` formats strip them from the body.
+- Generate button no longer shows as loading while preflight checks run.
+
 ## v0.2.10 (2026-04-26)
 
 ### Added
-- Email draft output modes: one combined DOCX, separate DOCX files, or separate EML files.
+- Email draft output modes: one combined DOCX, separate DOCX files, separate EML files, or Outlook MSG files.
 - Filename pattern preview using first-row sample data.
 - Warning when a filename pattern token is not mapped to a selected workbook variable.
 

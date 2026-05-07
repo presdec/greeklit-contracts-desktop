@@ -21,24 +21,22 @@
     linear-gradient(180deg, var(--app-bg-3) 0%, var(--app-bg-4) 100%);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    color: #e7f3ef;
-    color-scheme: dark;
-    --app-bg-1: rgba(16, 87, 74, 0.28);
-    --app-bg-2: rgba(122, 84, 42, 0.18);
-    --app-bg-3: #15211f;
-    --app-bg-4: #0f1716;
-    --app-card-bg: rgba(24, 33, 31, 0.96);
-    --app-panel-bg: rgba(30, 41, 39, 0.88);
-    --app-panel-strong-bg: rgba(34, 45, 43, 0.92);
-    --app-step-bg: rgba(31, 42, 40, 0.88);
-    --app-step-active-bg: rgba(20, 68, 57, 0.92);
-    --app-preview-bg: rgba(28, 38, 36, 0.92);
-    --app-border-color: rgba(231, 243, 239, 0.08);
-    --app-shadow-color: rgba(0, 0, 0, 0.3);
-    --app-hover-bg: rgba(18, 184, 134, 0.14);
-  }
+[data-mantine-color-scheme="dark"] {
+  color: #e7f3ef;
+  color-scheme: dark;
+  --app-bg-1: rgba(16, 87, 74, 0.28);
+  --app-bg-2: rgba(122, 84, 42, 0.18);
+  --app-bg-3: #15211f;
+  --app-bg-4: #0f1716;
+  --app-card-bg: rgba(24, 33, 31, 0.96);
+  --app-panel-bg: rgba(30, 41, 39, 0.88);
+  --app-panel-strong-bg: rgba(34, 45, 43, 0.92);
+  --app-step-bg: rgba(31, 42, 40, 0.88);
+  --app-step-active-bg: rgba(20, 68, 57, 0.92);
+  --app-preview-bg: rgba(28, 38, 36, 0.92);
+  --app-border-color: rgba(231, 243, 239, 0.08);
+  --app-shadow-color: rgba(0, 0, 0, 0.3);
+  --app-hover-bg: rgba(18, 184, 134, 0.14);
 }
 
 html,

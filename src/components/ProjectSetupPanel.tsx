@@ -1,13 +1,15 @@
 import { Badge, Checkbox, Group, NumberInput, Paper, Select, SimpleGrid, Stack, Text, Title } from '@mantine/core';
 import type { StarterTemplateKind } from '../../shared/desktop';
 import type { ProjectConfig } from '../../shared/desktop';
-import type { GenerationOptions } from '../types/template';
+import type { GenerationOptions, WorkbookPreviewRow } from '../types/template';
 import { useI18n } from '../i18n';
 import { FileField } from './FileField';
 
 type Props = {
   activePicker: keyof ProjectConfig | null;
   generationOptions: GenerationOptions;
+  columnValues: Record<string, string[]>;
+  outlookMsgDraftsAvailable: boolean;
   onPickPath: (
     field: keyof Pick<
       ProjectConfig,
@@ -22,21 +24,43 @@ type Props = {
   ) => void;
   setProject: React.Dispatch<React.SetStateAction<ProjectConfig>>;
   worksheetOptions: string[];
+  workbookRows: WorkbookPreviewRow[];
 };
 
 export function ProjectSetupPanel({
   activePicker,
+  columnValues,
   generationOptions,
+  outlookMsgDraftsAvailable,
   onPickPath,
   onSaveStarterTemplate,
   project,
   setGenerationOption,
   setProject,
   worksheetOptions,
+  workbookRows,
 }: Props) {
   const { copy } = useI18n();
   const wantsDocumentOutput = generationOptions.generateDocx || generationOptions.generatePdf;
   const wantsEmailOutput = generationOptions.generateEmailDrafts;
+  const emailOutputModes = [
+    { label: copy.projectSetup.emailOutputModeCombinedDocx, value: 'combined_docx' },
+    { label: copy.projectSetup.emailOutputModeSeparateDocx, value: 'separate_docx' },
+    { label: copy.projectSetup.emailOutputModeSeparateEml, value: 'separate_eml' },
+    ...(outlookMsgDraftsAvailable
+      ? [{ label: copy.projectSetup.emailOutputModeSeparateMsg, value: 'separate_msg' }]
+      : []),
+  ];
+  const rejectionColumnOptions = workbookRows.map((row) => ({
+    label: `${row.columnLetter} - ${row.header}`,
+    value: row.columnLetter,
+  }));
+  const rejectionValueOptions = project.rejectionColumn
+    ? (columnValues[project.rejectionColumn] ?? []).filter((value) => value.length > 0).map((value) => ({
+        label: value || '(blank)',
+        value,
+      }))
+    : [];
 
   return (
     <Paper className="panel-card" p="lg" radius="lg">
@@ -81,12 +105,12 @@ export function ProjectSetupPanel({
             </Group>
             {generationOptions.generateEmailDrafts ? (
               <Select
-                data={[
-                  { label: copy.projectSetup.emailOutputModeCombinedDocx, value: 'combined_docx' },
-                  { label: copy.projectSetup.emailOutputModeSeparateDocx, value: 'separate_docx' },
-                  { label: copy.projectSetup.emailOutputModeSeparateEml, value: 'separate_eml' },
-                ]}
-                description={copy.projectSetup.emailOutputModeDesc}
+                data={emailOutputModes}
+                description={
+                  outlookMsgDraftsAvailable
+                    ? copy.projectSetup.emailOutputModeDesc
+                    : copy.projectSetup.emailOutputModeDescNoMsg
+                }
                 label={copy.projectSetup.emailOutputModeLabel}
                 onChange={(value) =>
                   setGenerationOption(
@@ -165,6 +189,37 @@ export function ProjectSetupPanel({
             value={project.headerRow}
           />
           <NumberInput description={copy.projectSetup.dataStartRowDesc} label={copy.projectSetup.dataStartRow} min={1} onChange={(value) => setProject((current) => ({ ...current, dataStartRow: Number(value) || 1 }))} value={project.dataStartRow} />
+        </SimpleGrid>
+
+        <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
+          <Select
+            clearable
+            data={rejectionColumnOptions}
+            description={copy.projectSetup.rejectionColumnDesc}
+            label={copy.projectSetup.rejectionColumn}
+            onChange={(value) => setProject((current) => ({
+              ...current,
+              rejectionColumn: value ?? '',
+              rejectionValue: current.rejectionColumn === value ? current.rejectionValue : '',
+            }))}
+            placeholder={copy.projectSetup.rejectionColumnPlaceholder}
+            searchable
+            value={project.rejectionColumn || null}
+          />
+          <Select
+            clearable
+            data={rejectionValueOptions}
+            description={copy.projectSetup.rejectionValueDesc}
+            disabled={!project.rejectionColumn}
+            label={copy.projectSetup.rejectionValue}
+            onChange={(value) => setProject((current) => ({
+              ...current,
+              rejectionValue: value ?? '',
+            }))}
+            placeholder={copy.projectSetup.rejectionValuePlaceholder}
+            searchable
+            value={project.rejectionValue || null}
+          />
         </SimpleGrid>
       </Stack>
     </Paper>

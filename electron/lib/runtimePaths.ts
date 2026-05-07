@@ -104,7 +104,7 @@ function getEntrypointEnvVar(name: RuntimeEntrypointName) {
 function getDevEntrypointPath(name: RuntimeEntrypointName) {
   return {
     emailGenerator: join(getWorkspaceRoot(), 'app', 'scripts', 'generate_email_drafts.py'),
-    generator: join(getWorkspaceRoot(), 'generate_contracts.py'),
+    generator: join(getWorkspaceRoot(), 'app', 'scripts', 'generate_contracts.py'),
     inspectProject: join(getWorkspaceRoot(), 'app', 'scripts', 'inspect_project.py'),
   }[name];
 }

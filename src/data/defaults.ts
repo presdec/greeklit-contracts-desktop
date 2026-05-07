@@ -29,6 +29,8 @@ export const initialProject: ProjectConfig = {
   contractTemplatePath: '',
   emailTemplatePath: '',
   outputFilenamePattern: '{{APPLICATION_CODE}} - {{TITLE}} - {{LANGUAGE}}',
+  rejectionColumn: '',
+  rejectionValue: '',
   useOptionalEmailSource: false,
   outputFolderPath: '',
   worksheetName: '',

@@ -71,9 +71,11 @@ type Translation = {
     emailDrafts: string;
     emailOutputModeCombinedDocx: string;
     emailOutputModeDesc: string;
+    emailOutputModeDescNoMsg: string;
     emailOutputModeLabel: string;
     emailOutputModeSeparateDocx: string;
     emailOutputModeSeparateEml: string;
+    emailOutputModeSeparateMsg: string;
     emailFileDesc: string;
     emailFileLabel: string;
     emailFilePlaceholder: string;
@@ -91,6 +93,12 @@ type Translation = {
     outputFilenamePatternLabel: string;
     outputFilenamePatternPlaceholder: string;
     pdfFiles: string;
+    rejectionColumn: string;
+    rejectionColumnDesc: string;
+    rejectionColumnPlaceholder: string;
+    rejectionValue: string;
+    rejectionValueDesc: string;
+    rejectionValuePlaceholder: string;
     title: string;
     subtitle: string;
     whatGenerate: string;
@@ -347,12 +355,14 @@ const translations: Record<Language, Translation> = {
       badge: 'Foundation',
       dataStartRow: 'Data Start Row',
       dataStartRowDesc: 'First row containing actual data records.',
-      emailDrafts: 'Email drafts (.docx)',
+      emailDrafts: 'Email drafts',
       emailOutputModeCombinedDocx: 'One combined DOCX file',
-      emailOutputModeDesc: 'Choose whether email drafts are exported as one DOCX file, separate DOCX files, or separate EML files.',
+      emailOutputModeDesc: 'Choose whether email drafts are exported as DOCX, EML, or Outlook MSG files.',
+      emailOutputModeDescNoMsg: 'Choose whether email drafts are exported as DOCX or EML files. Outlook MSG output is not available on this system.',
       emailOutputModeLabel: 'Email draft output mode',
       emailOutputModeSeparateDocx: 'Separate DOCX files',
       emailOutputModeSeparateEml: 'Separate EML files',
+      emailOutputModeSeparateMsg: 'Separate Outlook MSG files',
       emailFileDesc: 'Choose a text file used as the email template source.',
       emailFileLabel: 'Email Template File',
       emailFilePlaceholder: 'Select template file (.txt)',
@@ -373,6 +383,12 @@ const translations: Record<Language, Translation> = {
       outputFilenamePatternLabel: 'Output Filename Pattern',
       outputFilenamePatternPlaceholder: '{{APPLICATION_CODE}} - {{TITLE}}',
       pdfFiles: 'PDF files',
+      rejectionColumn: 'Reject Rows By',
+      rejectionColumnDesc: 'Optional column used to skip rows before generation.',
+      rejectionColumnPlaceholder: 'No rejection rule',
+      rejectionValue: 'Reject Value',
+      rejectionValueDesc: 'Rows where the selected column exactly equals this value will be skipped.',
+      rejectionValuePlaceholder: 'Choose value to reject',
       title: 'Project Setup',
       subtitle:
         'Connect the files you already use in daily work - Excel, Word, and output folder - in one guided setup.',
@@ -639,12 +655,14 @@ const translations: Record<Language, Translation> = {
       badge: 'Βάση',
       dataStartRow: 'Γραμμή Έναρξης Δεδομένων',
       dataStartRowDesc: 'Πρώτη γραμμή με πραγματικές εγγραφές δεδομένων.',
-      emailDrafts: 'Προσχέδια email (.docx)',
+      emailDrafts: 'Προσχέδια email',
       emailOutputModeCombinedDocx: 'Ένα ενιαίο αρχείο DOCX',
-      emailOutputModeDesc: 'Επιλέξτε αν τα προσχέδια email θα εξαχθούν ως ένα DOCX, ως ξεχωριστά DOCX ή ως ξεχωριστά EML.',
+      emailOutputModeDesc: 'Επιλέξτε αν τα προσχέδια email θα εξαχθούν ως DOCX, EML ή Outlook MSG.',
+      emailOutputModeDescNoMsg: 'Επιλέξτε αν τα προσχέδια email θα εξαχθούν ως DOCX ή EML. Η έξοδος Outlook MSG δεν είναι διαθέσιμη σε αυτό το σύστημα.',
       emailOutputModeLabel: 'Τρόπος εξαγωγής προσχεδίων email',
       emailOutputModeSeparateDocx: 'Ξεχωριστά αρχεία DOCX',
       emailOutputModeSeparateEml: 'Ξεχωριστά αρχεία EML',
+      emailOutputModeSeparateMsg: 'Ξεχωριστά αρχεία Outlook MSG',
       emailFileDesc: 'Επιλέξτε αρχείο κειμένου ως πηγή προτύπου email.',
       emailFileLabel: 'Αρχείο Προτύπου Email',
       emailFilePlaceholder: 'Επιλέξτε αρχείο προτύπου (.txt)',
@@ -665,6 +683,12 @@ const translations: Record<Language, Translation> = {
       outputFilenamePatternLabel: 'Μοτίβο Ονόματος Αρχείου Εξόδου',
       outputFilenamePatternPlaceholder: '{{APPLICATION_CODE}} - {{TITLE}}',
       pdfFiles: 'Αρχεία PDF',
+      rejectionColumn: 'Απόρριψη γραμμών με βάση',
+      rejectionColumnDesc: 'Προαιρετική στήλη για παράλειψη γραμμών πριν τη δημιουργία.',
+      rejectionColumnPlaceholder: 'Χωρίς κανόνα απόρριψης',
+      rejectionValue: 'Τιμή απόρριψης',
+      rejectionValueDesc: 'Οι γραμμές όπου η επιλεγμένη στήλη ισούται ακριβώς με αυτή την τιμή θα παραλείπονται.',
+      rejectionValuePlaceholder: 'Επιλέξτε τιμή απόρριψης',
       title: 'Ρύθμιση Έργου',
       subtitle:
         'Συνδέστε τα αρχεία που χρησιμοποιείτε καθημερινά - Excel, Word και φάκελο εξόδου - σε μία καθοδηγούμενη ρύθμιση.',

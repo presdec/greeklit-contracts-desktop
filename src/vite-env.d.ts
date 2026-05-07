@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
 
 import type {
+  DesktopCapabilities,
   FileDialogRequest,
   GenerateProjectProgress,
   GenerateProjectRequest,
@@ -21,6 +22,7 @@ declare global {
   interface Window {
     desktopApp: {
       generateProject: (request: GenerateProjectRequest) => Promise<GenerateProjectResult>;
+      getCapabilities: () => Promise<DesktopCapabilities>;
       onGenerationProgress: (
         listener: (progress: GenerateProjectProgress) => void,
       ) => () => void;

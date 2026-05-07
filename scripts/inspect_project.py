@@ -229,6 +229,16 @@ def inspect_workbook(payload):
             }
         )
 
+    column_values = {column["columnLetter"]: [] for column in columns}
+    seen_column_values = {column["columnLetter"]: set() for column in columns}
+    for row_number in range(data_start_row, worksheet.max_row + 1):
+        for column in columns:
+            value = normalize_cell_value(worksheet[f'{column["columnLetter"]}{row_number}'].value)
+            if value in seen_column_values[column["columnLetter"]]:
+                continue
+            seen_column_values[column["columnLetter"]].add(value)
+            column_values[column["columnLetter"]].append(value)
+
     sample_rows = []
     for row_number in range(data_start_row, data_start_row + 3):
         row_values = {}
@@ -247,6 +257,7 @@ def inspect_workbook(payload):
     contract_info = extract_contract_tokens(payload.get("contractTemplatePath"))
 
     return {
+        "columnValues": column_values,
         "columns": columns,
         "contractTokenContexts": contract_info["contexts"],
         "contractTokens": contract_info["tokens"],

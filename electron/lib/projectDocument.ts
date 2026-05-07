@@ -7,6 +7,8 @@ const defaultProjectConfig = {
   headerRow: 1,
   outputFilenamePattern: '{{APPLICATION_CODE}} - {{TITLE}} - {{LANGUAGE}}',
   outputFolderPath: '',
+  rejectionColumn: '',
+  rejectionValue: '',
   useOptionalEmailSource: false,
   workbookPath: '',
   worksheetName: '',
@@ -61,7 +63,10 @@ export function normalizeProjectDocument(value: unknown): SavedProjectDocument {
       ...defaultGenerationOptions,
       ...Object.fromEntries(Object.entries(generationOptionsRecord).filter(([key, item]) => {
         if (key === 'emailOutputMode') {
-          return item === 'combined_docx' || item === 'separate_docx' || item === 'separate_eml';
+          return item === 'combined_docx'
+            || item === 'separate_docx'
+            || item === 'separate_eml'
+            || item === 'separate_msg';
         }
 
         return typeof item === 'boolean';

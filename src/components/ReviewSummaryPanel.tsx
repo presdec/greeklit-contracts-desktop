@@ -15,6 +15,7 @@ type Props = {
   preflightLoading: boolean;
   rows: WorkbookPreviewRow[];
   totalRows: number;
+  skippedRows: number;
   onGoToStep: (step: WizardStepId) => void;
 };
 
@@ -136,6 +137,7 @@ export function ReviewSummaryPanel({
   preflight,
   preflightLoading,
   rows,
+  skippedRows,
   totalRows,
   onGoToStep,
 }: Props) {
@@ -191,6 +193,10 @@ export function ReviewSummaryPanel({
           <Paper className="mini-stat" p="md" radius="lg">
             <Text c="dimmed" size="sm">{copy.review.rowsFound}</Text>
             <Title order={2}>{totalRows}</Title>
+          </Paper>
+          <Paper className="mini-stat" p="md" radius="lg">
+            <Text c="dimmed" size="sm">{copy.review.skippedRows}</Text>
+            <Title c={skippedRows > 0 ? 'orange' : undefined} order={2}>{skippedRows}</Title>
           </Paper>
           <Paper className="mini-stat" p="md" radius="lg">
             <Text c="dimmed" size="sm">{copy.review.mappedColumns}</Text>

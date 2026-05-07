@@ -8,6 +8,19 @@ import { variableColumnsAtom } from '../state/workspace';
 import type { WorkbookPreviewRow } from '../types/template';
 import type { ProjectConfig } from '../../shared/desktop';
 
+const NUMERIC_INPUT_DEBOUNCE_MS = 400;
+
+function useDebounced<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState<T>(value);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setDebounced(value), delay);
+    return () => window.clearTimeout(id);
+  }, [value, delay]);
+
+  return debounced;
+}
+
 export function useWorkbookPreview(
   desktopApp: Window['desktopApp'],
   project: ProjectConfig,
@@ -27,9 +40,17 @@ export function useWorkbookPreview(
   const [sampleRows, setSampleRows] = useState<WorkbookPreviewSampleRow[]>([]);
   const [templateStatus, setTemplateStatus] = useState<TemplateStatusResult | null>(null);
   const [totalRows, setTotalRows] = useState(0);
+  const [skippedRows, setSkippedRows] = useState(0);
   const [worksheetNames, setWorksheetNames] = useState<string[]>([]);
   const [refreshTick, setRefreshTick] = useState(0);
   const previewRequestId = useRef(0);
+  // Track the last contract template path used so we can skip DOCX re-parsing
+  // when only workbook row numbers or the worksheet changed.
+  const lastContractTemplatePathRef = useRef<string | undefined>(undefined);
+
+  // Debounce numeric row inputs so rapid changes don't fire a Python IPC call on every keystroke
+  const debouncedHeaderRow = useDebounced(project.headerRow, NUMERIC_INPUT_DEBOUNCE_MS);
+  const debouncedDataStartRow = useDebounced(project.dataStartRow, NUMERIC_INPUT_DEBOUNCE_MS);
 
   const refreshPreview = useCallback(() => {
     setRefreshTick((current) => current + 1);
@@ -44,6 +65,7 @@ export function useWorkbookPreview(
     setSampleRows([]);
     setTemplateStatus(null);
     setTotalRows(0);
+    setSkippedRows(0);
     setWorksheetNames([]);
   }, []);
 
@@ -69,22 +91,32 @@ export function useWorkbookPreview(
       return;
     }
 
-    const headerRow = Number.isFinite(project.headerRow) && project.headerRow > 0
-      ? Math.floor(project.headerRow)
+    const headerRow = Number.isFinite(debouncedHeaderRow) && debouncedHeaderRow > 0
+      ? Math.floor(debouncedHeaderRow)
       : 1;
-    const dataStartRow = Number.isFinite(project.dataStartRow) && project.dataStartRow > 0
-      ? Math.floor(project.dataStartRow)
+    const dataStartRow = Number.isFinite(debouncedDataStartRow) && debouncedDataStartRow > 0
+      ? Math.floor(debouncedDataStartRow)
       : Math.max(2, headerRow + 1);
     const worksheetName = (project.worksheetName ?? '').trim();
 
     setIsLoading(true);
     setLoadError(null);
 
+    // Only send contractTemplatePath to Python when it has changed since the
+    // last successful call — avoids re-parsing the DOCX on every row change.
+    const contractPathChanged =
+      project.contractTemplatePath !== lastContractTemplatePathRef.current;
+    const contractTemplatePathForRequest = contractPathChanged
+      ? project.contractTemplatePath
+      : undefined;
+
     try {
       const result = await desktopApp.inspectProject({
-        contractTemplatePath: project.contractTemplatePath,
+        contractTemplatePath: contractTemplatePathForRequest,
         dataStartRow,
         headerRow,
+        rejectionColumn: project.rejectionColumn,
+        rejectionValue: project.rejectionValue,
         workbookPath: project.workbookPath,
         worksheetName,
       });
@@ -95,15 +127,21 @@ export function useWorkbookPreview(
 
       setRawColumns(result.columns);
       setColumnValues(result.columnValues ?? {});
-      setContractTokenContexts(result.contractTokenContexts ?? {});
-      setContractVariables(result.contractTokens);
+      if (contractPathChanged) {
+        // Only update contract tokens when the template actually changed.
+        setContractTokenContexts(result.contractTokenContexts ?? {});
+        setContractVariables(result.contractTokens);
+        lastContractTemplatePathRef.current = project.contractTemplatePath;
+      }
       setSampleRows(result.sampleRows);
       setTotalRows(result.totalRows);
+      setSkippedRows(result.skippedRows ?? 0);
       setWorksheetNames(result.worksheetNames ?? []);
       if (!worksheetName && result.worksheetName) {
         onResolvedWorksheetName?.(result.worksheetName);
       }
-      await loadTemplateStatus();
+      // loadTemplateStatus is handled by its own useEffect (on path change)
+      // and 3-second polling — no need to call it here.
     } catch (error) {
       if (previewRequestId.current === requestId) {
         setLoadError(error instanceof Error ? error.message : 'Could not inspect workbook.');
@@ -116,10 +154,11 @@ export function useWorkbookPreview(
   }, [
     desktopApp,
     clearPreview,
-    loadTemplateStatus,
     project.contractTemplatePath,
-    project.dataStartRow,
-    project.headerRow,
+    debouncedDataStartRow,
+    debouncedHeaderRow,
+    project.rejectionColumn,
+    project.rejectionValue,
     project.workbookPath,
     project.worksheetName,
     onResolvedWorksheetName,
@@ -258,6 +297,7 @@ export function useWorkbookPreview(
     setFieldAssignment,
     templateStatus,
     totalRows,
+    skippedRows,
     worksheetNames,
   };
 }

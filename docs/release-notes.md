@@ -1,5 +1,20 @@
 # Release Notes
 
+## v0.2.13 (2026-05-08)
+
+### Added
+- **Rejected row count on Review page**: the workbook inspection call now counts rows excluded by the rejection filter and shows the count as a "Rejected rows" stat tile before generation — no extra Python call, computed in the same scan pass.
+
+### Improved
+- **Navigation UX**: clicking Continue or Back now instantly scrolls to the top of the page.
+- **Step 1 validation**: Continue is blocked until an Excel workbook, output folder, and (when DOCX/PDF is enabled) a Word template have all been selected. Validation warnings appear inline just above the navigation buttons, not mid-page.
+- **Compact sidebar**: step cards are tighter (smaller icon, less padding, no description text). Step titles shortened to Setup, Template & Mapping, Email Builder, Review & Generate.
+- **Outlook MSG recipient robustness**: `undefined` tokens and empty values are stripped from To/Cc strings before being written to MSG drafts, preventing COM errors on missing placeholders.
+
+### Fixed
+- Navigation warning alert was showing "Word template required" as its title even when the message was about the output folder or Excel workbook — alert now has no hardcoded title.
+- Navigation warning was rendered mid-page (far from the Continue button); it now renders directly above the navigation buttons.
+
 ## v0.2.12 (2026-05-07)
 
 ### Added

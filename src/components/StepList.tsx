@@ -15,7 +15,7 @@ export function StepList({ activeStep, visibleSteps }: Props) {
   }));
 
   return (
-    <Stack gap="md">
+    <Stack gap="xs">
       {displayedSteps.map((step) => {
         const isCurrent = step.id === activeStep;
         const isComplete = step.id < activeStep;
@@ -24,39 +24,32 @@ export function StepList({ activeStep, visibleSteps }: Props) {
           <Paper
             key={step.id}
             className={isCurrent ? 'step-card step-card--active' : 'step-card'}
-            p="md"
+            p="xs"
             radius="md"
           >
             <Group
-              align="flex-start"
+              align="center"
               wrap="nowrap"
             >
               <ThemeIcon
                 color={isCurrent ? 'teal' : isComplete ? 'lime' : 'gray'}
                 radius="xl"
-                size="lg"
+                size="md"
                 variant={isCurrent ? 'filled' : 'light'}
               >
                 {step.id}
               </ThemeIcon>
-              <Stack gap={4}>
-                <Group gap="xs">
-                  <Text fw={700}>{step.title}</Text>
-                  {isComplete ? (
-                    <Badge color="lime" variant="light">
-                      {copy.stepList.ready}
-                    </Badge>
-                  ) : null}
-                  {isCurrent ? (
-                    <Badge color="teal" variant="light">
-                      {copy.stepList.current}
-                    </Badge>
-                  ) : null}
-                </Group>
-                <Text c="dimmed" size="sm">
-                  {step.description}
-                </Text>
-              </Stack>
+              <Text fw={isCurrent ? 700 : 500} size="sm">{step.title}</Text>
+              {isComplete ? (
+                <Badge color="lime" ml="auto" size="xs" variant="light">
+                  {copy.stepList.ready}
+                </Badge>
+              ) : null}
+              {isCurrent ? (
+                <Badge color="teal" ml="auto" size="xs" variant="light">
+                  {copy.stepList.current}
+                </Badge>
+              ) : null}
             </Group>
           </Paper>
         );

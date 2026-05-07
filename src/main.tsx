@@ -24,6 +24,9 @@ function Root() {
         forceColorScheme={colorScheme}
         theme={{
           primaryColor: 'teal',
+          primaryShade: { light: 6, dark: 7 },
+          white: '#ffffff',
+          black: '#111111',
           fontFamily: 'Ubuntu, Noto Sans, DejaVu Sans, Liberation Sans, system-ui, sans-serif',
         }}
       >

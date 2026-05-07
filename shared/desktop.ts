@@ -46,7 +46,7 @@ export type DesktopCapabilities = {
 };
 
 export type GenerationOptionsInput = {
-  emailOutputMode: 'combined_docx' | 'separate_docx' | 'separate_eml' | 'separate_msg';
+  emailOutputMode: 'combined_docx' | 'separate_docx' | 'separate_eml' | 'separate_msg' | 'separate_msg_with_docx' | 'separate_msg_with_pdf';
   generateDocx: boolean;
   generateEmailDrafts: boolean;
   generatePdf: boolean;
@@ -141,6 +141,8 @@ export type InspectProjectRequest = {
   contractTemplatePath?: string;
   dataStartRow: number;
   headerRow: number;
+  rejectionColumn?: string;
+  rejectionValue?: string;
   workbookPath: string;
   worksheetName: string;
 };
@@ -176,6 +178,7 @@ export type InspectProjectResult = {
   dataStartRow: number;
   headerRow: number;
   sampleRows: WorkbookPreviewSampleRow[];
+  skippedRows: number;
   totalRows: number;
   worksheetName: string;
   worksheetNames: string[];

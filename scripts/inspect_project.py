@@ -211,6 +211,10 @@ def inspect_workbook(payload):
     data_start_row = parse_positive_int(payload.get("data_start_row"), max(2, header_row + 1))
 
     columns = []
+    rejection_column = (payload.get("rejectionColumn") or "").strip().upper()
+    rejection_value = (payload.get("rejectionValue") or "").strip()
+
+    columns = []
     for cell in worksheet[header_row]:
         if cell.value is None:
             continue
@@ -229,26 +233,41 @@ def inspect_workbook(payload):
             }
         )
 
-    column_values = {column["columnLetter"]: [] for column in columns}
-    seen_column_values = {column["columnLetter"]: set() for column in columns}
-    for row_number in range(data_start_row, worksheet.max_row + 1):
-        for column in columns:
-            value = normalize_cell_value(worksheet[f'{column["columnLetter"]}{row_number}'].value)
-            if value in seen_column_values[column["columnLetter"]]:
+    # Build a letter->index map so we can pick the right cell from each row cheaply
+    col_letter_to_idx = {column["columnLetter"]: i for i, column in enumerate(columns)}
+    column_letters = [column["columnLetter"] for column in columns]
+    column_values = {letter: [] for letter in column_letters}
+    seen_column_values = {letter: set() for letter in column_letters}
+    MAX_UNIQUE_VALUES = 200
+    rejection_col_idx = col_letter_to_idx.get(rejection_column)
+    skipped_rows = 0
+    for row in worksheet.iter_rows(min_row=data_start_row, values_only=True):
+        if rejection_col_idx is not None and rejection_value:
+            cell_val = normalize_cell_value(row[rejection_col_idx] if rejection_col_idx < len(row) else None)
+            if cell_val == rejection_value:
+                skipped_rows += 1
                 continue
-            seen_column_values[column["columnLetter"]].add(value)
-            column_values[column["columnLetter"]].append(value)
+        for letter in column_letters:
+            idx = col_letter_to_idx[letter]
+            if idx >= len(row):
+                continue
+            if len(column_values[letter]) >= MAX_UNIQUE_VALUES:
+                continue
+            value = normalize_cell_value(row[idx])
+            if value in seen_column_values[letter]:
+                continue
+            seen_column_values[letter].add(value)
+            column_values[letter].append(value)
 
     sample_rows = []
-    for row_number in range(data_start_row, data_start_row + 3):
+    for row_idx, row in enumerate(worksheet.iter_rows(min_row=data_start_row, max_row=data_start_row + 2, values_only=True)):
         row_values = {}
         for column in columns[:6]:
-            row_values[column["header"]] = normalize_cell_value(
-                worksheet[f'{column["columnLetter"]}{row_number}'].value
-            )
+            idx = col_letter_to_idx[column["columnLetter"]]
+            row_values[column["header"]] = normalize_cell_value(row[idx] if idx < len(row) else None)
         sample_rows.append(
             {
-                "rowNumber": row_number,
+                "rowNumber": data_start_row + row_idx,
                 "values": row_values,
             }
         )
@@ -265,6 +284,7 @@ def inspect_workbook(payload):
         "headerRow": header_row,
         "sampleRows": sample_rows,
         "totalRows": max(0, worksheet.max_row - data_start_row + 1),
+        "skippedRows": skipped_rows,
         "worksheetName": worksheet.title,
         "worksheetNames": worksheet_names,
     }
@@ -278,5 +298,7 @@ if __name__ == "__main__":
         "header_row": raw_payload["headerRow"],
         "workbook_path": raw_payload["workbookPath"],
         "worksheet_name": raw_payload.get("worksheetName"),
+        "rejectionColumn": raw_payload.get("rejectionColumn"),
+        "rejectionValue": raw_payload.get("rejectionValue"),
     }
     print(json.dumps(inspect_workbook(payload)))

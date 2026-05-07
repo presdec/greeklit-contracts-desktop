@@ -1,4 +1,4 @@
-import { Badge, Checkbox, Group, NumberInput, Paper, Select, SimpleGrid, Stack, Text, Title } from '@mantine/core';
+import { Badge, Checkbox, Group, Loader, NumberInput, Paper, Select, SimpleGrid, Stack, Text, Title } from '@mantine/core';
 import type { StarterTemplateKind } from '../../shared/desktop';
 import type { ProjectConfig } from '../../shared/desktop';
 import type { GenerationOptions, WorkbookPreviewRow } from '../types/template';
@@ -9,6 +9,7 @@ type Props = {
   activePicker: keyof ProjectConfig | null;
   generationOptions: GenerationOptions;
   columnValues: Record<string, string[]>;
+  isLoading: boolean;
   outlookMsgDraftsAvailable: boolean;
   onPickPath: (
     field: keyof Pick<
@@ -31,6 +32,7 @@ export function ProjectSetupPanel({
   activePicker,
   columnValues,
   generationOptions,
+  isLoading,
   outlookMsgDraftsAvailable,
   onPickPath,
   onSaveStarterTemplate,
@@ -48,7 +50,11 @@ export function ProjectSetupPanel({
     { label: copy.projectSetup.emailOutputModeSeparateDocx, value: 'separate_docx' },
     { label: copy.projectSetup.emailOutputModeSeparateEml, value: 'separate_eml' },
     ...(outlookMsgDraftsAvailable
-      ? [{ label: copy.projectSetup.emailOutputModeSeparateMsg, value: 'separate_msg' }]
+      ? [
+          { label: copy.projectSetup.emailOutputModeSeparateMsg, value: 'separate_msg' },
+          { label: copy.projectSetup.emailOutputModeSeparateMsgWithDocx, value: 'separate_msg_with_docx' },
+          { label: copy.projectSetup.emailOutputModeSeparateMsgWithPdf, value: 'separate_msg_with_pdf' },
+        ]
       : []),
   ];
   const rejectionColumnOptions = workbookRows.map((row) => ({
@@ -175,7 +181,12 @@ export function ProjectSetupPanel({
           />
           <NumberInput
             description={copy.projectSetup.headerRowDesc}
-            label={copy.projectSetup.headerRow}
+            label={
+              <Group gap={6}>
+                {copy.projectSetup.headerRow}
+                {isLoading ? <Loader size={12} /> : null}
+              </Group>
+            }
             min={1}
             onChange={(value) => setProject((current) => {
               const headerRow = Number(value) || 1;

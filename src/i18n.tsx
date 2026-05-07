@@ -37,6 +37,9 @@ type Translation = {
     continueTo: string;
     wordTemplateRequiredTitle: string;
     wordTemplateRequiredBody: string;
+    workbookRequiredBody: string;
+    outputFolderRequiredTitle: string;
+    outputFolderRequiredBody: string;
   };
   generationProgress: {
     docxFiles: string;
@@ -76,6 +79,8 @@ type Translation = {
     emailOutputModeSeparateDocx: string;
     emailOutputModeSeparateEml: string;
     emailOutputModeSeparateMsg: string;
+    emailOutputModeSeparateMsgWithDocx: string;
+    emailOutputModeSeparateMsgWithPdf: string;
     emailFileDesc: string;
     emailFileLabel: string;
     emailFilePlaceholder: string;
@@ -212,6 +217,7 @@ type Translation = {
     selectedOutput: string;
     setupCheck: string;
     showDetails: string;
+    skippedRows: string;
     subtitle: string;
     statusFail: string;
     statusPass: string;
@@ -277,27 +283,24 @@ const translations: Record<Language, Translation> = {
     },
     steps: {
       1: {
-        title: 'Project Setup',
-        description:
-          'Tell DocGen Studio which Excel file holds your data, which Word template to fill, and where to write the output. Verify everything loads before you commit to a full run.',
+        title: 'Setup',
+        description: 'Pick your Excel source, Word template, and output folder.',
         nextHint: 'Next step adapts to the output types you selected.',
       },
       2: {
-        title: 'Field & Filename Mapping',
-        description:
-          'Connect each placeholder in your Word template to the matching Excel column, and define the DOCX/PDF output filename pattern.',
-        nextHint: 'Next: build or review the email template with live field tokens.',
+        title: 'Template & Mapping',
+        description: 'Map Word placeholders to Excel columns and set the filename pattern.',
+        nextHint: 'Next: build or review the email template.',
       },
       3: {
         title: 'Email Builder',
-        description: 'Compose your email subject, body, and recipients using click-to-insert fields from your workbook. A live preview shows exactly what each recipient will receive.',
-        nextHint: 'Next: run a final preflight check before bulk generation.',
+        description: 'Write the email template and preview it per recipient.',
+        nextHint: 'Next: run a preflight check before generating.',
       },
       4: {
-        title: 'Review And Generate',
-        description:
-          'Run preflight checks on your files, mappings, and output folder, then generate all Word documents, PDFs, and email drafts in a single run. Save the project to reuse the same setup next time.',
-        nextHint: 'Tip: save this project file to reuse the same setup for future batches.',
+        title: 'Review & Generate',
+        description: 'Run preflight checks then generate all files in one run.',
+        nextHint: 'Tip: save the project file to reuse this setup.',
       },
     },
     app: {
@@ -324,6 +327,9 @@ const translations: Record<Language, Translation> = {
       wordTemplateRequiredTitle: 'Word template required',
       wordTemplateRequiredBody:
         'Select a Word template before continuing to Field & Filename Mapping when DOCX or PDF output is enabled.',
+      outputFolderRequiredTitle: 'Output folder required',
+      outputFolderRequiredBody: 'Select an output folder before continuing.',
+      workbookRequiredBody: 'Select an Excel workbook before continuing.',
     },
     generationProgress: {
       docxFiles: 'DOCX files',
@@ -363,6 +369,8 @@ const translations: Record<Language, Translation> = {
       emailOutputModeSeparateDocx: 'Separate DOCX files',
       emailOutputModeSeparateEml: 'Separate EML files',
       emailOutputModeSeparateMsg: 'Separate Outlook MSG files',
+      emailOutputModeSeparateMsgWithDocx: 'Separate Outlook MSG files (with DOCX attachment)',
+      emailOutputModeSeparateMsgWithPdf: 'Separate Outlook MSG files (with PDF attachment)',
       emailFileDesc: 'Choose a text file used as the email template source.',
       emailFileLabel: 'Email Template File',
       emailFilePlaceholder: 'Select template file (.txt)',
@@ -498,7 +506,7 @@ const translations: Record<Language, Translation> = {
       goodToGenerateTitle: 'Good to generate',
       hideDetails: 'Hide details',
       issuesFound: (count) => `${count} issue${count === 1 ? '' : 's'} need attention`,
-      mappedColumns: 'Mapped workbook columns',
+      mappedColumns: 'Mapped email fields',
       mappedWordFields: 'Mapped Word fields',
       needsAttentionBody: 'Resolve failed checks before running this batch.',
       needsAttentionTitle: 'Needs attention',
@@ -511,6 +519,7 @@ const translations: Record<Language, Translation> = {
       selectedOutput: 'Selected output',
       setupCheck: 'Setup Check',
       showDetails: 'Show details',
+      skippedRows: 'Rejected rows',
       subtitle: 'Final review of template coverage, mapped fields, and output settings before generation.',
       statusFail: 'FAIL',
       statusPass: 'PASS',
@@ -577,27 +586,24 @@ const translations: Record<Language, Translation> = {
     },
     steps: {
       1: {
-        title: 'Ρύθμιση Έργου',
-        description:
-          'Πείτε στο DocGen Studio ποιο αρχείο Excel περιέχει τα δεδομένα σας, ποιο πρότυπο Word να συμπληρώσει και πού να γράψει τα αποτελέσματα. Επιβεβαιώστε ότι όλα φορτώνουν πριν ξεκινήσετε.',
-        nextHint: 'Το επόμενο βήμα προσαρμόζεται στους τύπους εξόδου που επιλέξατε.',
+        title: 'Ρύθμιση',
+        description: 'Επιλέξτε Excel, πρότυπο Word και φάκελο εξόδου.',
+        nextHint: 'Το επόμενο βήμα προσαρμόζεται στους τύπους εξόδου.',
       },
       2: {
-        title: 'Αντιστοίχιση Πεδίων & Ονόματος Αρχείου',
-        description:
-          'Συνδέστε κάθε placeholder του προτύπου Word με την αντίστοιχη στήλη Excel και ορίστε το μοτίβο ονόματος αρχείου για DOCX/PDF.',
-        nextHint: 'Επόμενο: δημιουργήστε ή ελέγξτε το πρότυπο email με ζωντανά πεδία.',
+        title: 'Πρότυπο & Αντιστοίχιση',
+        description: 'Αντιστοιχίστε placeholders σε στήλες Excel και ορίστε το μοτίβο ονόματος.',
+        nextHint: 'Επόμενο: δημιουργήστε το πρότυπο email.',
       },
       3: {
         title: 'Συντάκτης Email',
-        description: 'Συντάξτε θέμα, σώμα και παραλήπτες χρησιμοποιώντας πεδία από το workbook με ένα κλικ. Η ζωντανή προεπισκόπηση δείχνει τι θα λάβει κάθε παραλήπτης.',
-        nextHint: 'Επόμενο: εκτελέστε τελικό έλεγχο πριν τη μαζική δημιουργία.',
+        description: 'Γράψτε το πρότυπο email και προεπισκοπήστε ανά παραλήπτη.',
+        nextHint: 'Επόμενο: έλεγχος πριν τη δημιουργία.',
       },
       4: {
-        title: 'Έλεγχος και Δημιουργία',
-        description:
-          'Εκτελέστε προκαταρκτικούς ελέγχους σε αρχεία, αντιστοιχίσεις και φάκελο εξόδου, μετά δημιουργήστε όλα τα Word, PDF και προσχέδια email σε ένα μόνο βήμα. Αποθηκεύστε το έργο για επαναχρησιμοποίηση.',
-        nextHint: 'Συμβουλή: αποθηκεύστε το αρχείο έργου για να επαναχρησιμοποιήσετε την ίδια ρύθμιση στο μέλλον.',
+        title: 'Έλεγχος & Δημιουργία',
+        description: 'Εκτελέστε προελέγχους και δημιουργήστε όλα τα αρχεία.',
+        nextHint: 'Αποθηκεύστε το αρχείο έργου για επαναχρησιμοποίηση.',
       },
     },
     app: {
@@ -624,6 +630,9 @@ const translations: Record<Language, Translation> = {
       wordTemplateRequiredTitle: 'Απαιτείται πρότυπο Word',
       wordTemplateRequiredBody:
         'Επιλέξτε πρότυπο Word πριν συνεχίσετε στη Χαρτογράφηση Πεδίων & Ονόματος Αρχείου όταν είναι ενεργό DOCX ή PDF.',
+      outputFolderRequiredTitle: 'Απαιτείται φάκελος εξόδου',
+      outputFolderRequiredBody: 'Επιλέξτε φάκελο εξόδου πριν συνεχίσετε.',
+      workbookRequiredBody: 'Επιλέξτε αρχείο Excel πριν συνεχίσετε.',
     },
     generationProgress: {
       docxFiles: 'Αρχεία DOCX',
@@ -663,6 +672,8 @@ const translations: Record<Language, Translation> = {
       emailOutputModeSeparateDocx: 'Ξεχωριστά αρχεία DOCX',
       emailOutputModeSeparateEml: 'Ξεχωριστά αρχεία EML',
       emailOutputModeSeparateMsg: 'Ξεχωριστά αρχεία Outlook MSG',
+      emailOutputModeSeparateMsgWithDocx: 'Ξεχωριστά αρχεία Outlook MSG (με συνημμένο DOCX)',
+      emailOutputModeSeparateMsgWithPdf: 'Ξεχωριστά αρχεία Outlook MSG (με συνημμένο PDF)',
       emailFileDesc: 'Επιλέξτε αρχείο κειμένου ως πηγή προτύπου email.',
       emailFileLabel: 'Αρχείο Προτύπου Email',
       emailFilePlaceholder: 'Επιλέξτε αρχείο προτύπου (.txt)',
@@ -798,7 +809,7 @@ const translations: Record<Language, Translation> = {
       goodToGenerateTitle: 'Έτοιμο για δημιουργία',
       hideDetails: 'Απόκρυψη λεπτομερειών',
       issuesFound: (count) => `${count} θέματα χρειάζονται έλεγχο`,
-      mappedColumns: 'Αντιστοιχισμένες στήλες workbook',
+      mappedColumns: 'Αντιστοιχισμένα πεδία email',
       mappedWordFields: 'Αντιστοιχισμένα πεδία Word',
       needsAttentionBody: 'Διορθώστε τους αποτυχημένους ελέγχους πριν εκτελέσετε τη δημιουργία.',
       needsAttentionTitle: 'Χρειάζεται έλεγχο',
@@ -811,6 +822,7 @@ const translations: Record<Language, Translation> = {
       selectedOutput: 'Επιλεγμένη έξοδος',
       setupCheck: 'Έλεγχος Ρύθμισης',
       showDetails: 'Προβολή λεπτομερειών',
+      skippedRows: 'Απορριφθείσες γραμμές',
       subtitle: 'Τελικός έλεγχος κάλυψης προτύπων, αντιστοιχίσεων και ρυθμίσεων εξόδου πριν τη δημιουργία.',
       statusFail: 'ΑΠΟΤΥΧΙΑ',
       statusPass: 'OK',

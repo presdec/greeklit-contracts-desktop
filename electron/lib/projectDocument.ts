@@ -66,7 +66,9 @@ export function normalizeProjectDocument(value: unknown): SavedProjectDocument {
           return item === 'combined_docx'
             || item === 'separate_docx'
             || item === 'separate_eml'
-            || item === 'separate_msg';
+            || item === 'separate_msg'
+            || item === 'separate_msg_with_docx'
+            || item === 'separate_msg_with_pdf';
         }
 
         return typeof item === 'boolean';

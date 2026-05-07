@@ -34,6 +34,10 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
 
   const controller = useWorkspaceController(desktopApp);
   const [navigationWarning, setNavigationWarning] = useState<string | null>(null);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  };
   const currentStep = copy.steps[controller.activeStep];
   const wantsDocumentOutput =
     controller.contractSettings.generationOptions.generateDocx
@@ -51,15 +55,19 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
     }
 
     const hasWordTemplate = Boolean(controller.projectSetup.project.contractTemplatePath.trim());
+    const hasOutputFolder = Boolean(controller.projectSetup.project.outputFolderPath?.trim());
+    const hasWorkbook = Boolean(controller.projectSetup.project.workbookPath?.trim());
     const mustHaveWordTemplateForStep2 = controller.activeStep === 1 && controller.nextStep === 2 && wantsDocumentOutput;
 
-    if (!mustHaveWordTemplateForStep2 || hasWordTemplate) {
+    if ((!mustHaveWordTemplateForStep2 || hasWordTemplate) && hasOutputFolder && hasWorkbook) {
       setNavigationWarning(null);
     }
   }, [
     controller.activeStep,
     controller.nextStep,
     controller.projectSetup.project.contractTemplatePath,
+    controller.projectSetup.project.outputFolderPath,
+    controller.projectSetup.project.workbookPath,
     navigationWarning,
     wantsDocumentOutput,
   ]);
@@ -198,12 +206,6 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
               </Alert>
             ) : null}
 
-            {navigationWarning ? (
-              <Alert color="yellow" radius="lg" title={copy.app.wordTemplateRequiredTitle} variant="light">
-                {navigationWarning}
-              </Alert>
-            ) : null}
-
             {controller.activeStep === 4 && controller.generationResult ? (
               <Alert color="teal" radius="lg" title={copy.app.generationCompleteTitle} variant="light">
                 {copy.app.generationCompleteSummary(
@@ -249,6 +251,7 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
                   activePicker={controller.projectSetup.activePicker}
                   columnValues={controller.workbookPreview.columnValues}
                   generationOptions={controller.contractSettings.generationOptions}
+                  isLoading={controller.workbookPreview.isLoading}
                   outlookMsgDraftsAvailable={controller.desktopCapabilities.outlookMsgDrafts}
                   onPickPath={controller.handlePickPath}
                   onSaveStarterTemplate={(kind) => void controller.handleSaveStarterTemplate(kind)}
@@ -349,6 +352,7 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
                   preflight={controller.preflight.result}
                   preflightLoading={controller.preflight.isLoading}
                   rows={controller.workbookPreview.rows}
+                  skippedRows={controller.workbookPreview.skippedRows}
                   totalContractFields={controller.workbookPreview.contractVariables.length}
                   totalRows={controller.workbookPreview.totalRows}
                 />
@@ -356,6 +360,12 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
             ) : null}
 
             <Divider />
+
+            {navigationWarning ? (
+              <Alert color="yellow" radius="lg" variant="light">
+                {navigationWarning}
+              </Alert>
+            ) : null}
 
             <Group justify="space-between">
               <Stack gap={2}>
@@ -372,6 +382,7 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
                     onClick={() => {
                       if (controller.previousStep) {
                         controller.setActiveStep(controller.previousStep);
+                        scrollToTop();
                       }
                     }}
                     size="md"
@@ -405,8 +416,21 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
                         return;
                       }
 
+                      const hasWorkbook = Boolean(controller.projectSetup.project.workbookPath?.trim());
+                      if (controller.activeStep === 1 && !hasWorkbook) {
+                        setNavigationWarning(copy.app.workbookRequiredBody);
+                        return;
+                      }
+
+                      const hasOutputFolder = Boolean(controller.projectSetup.project.outputFolderPath?.trim());
+                      if (controller.activeStep === 1 && !hasOutputFolder) {
+                        setNavigationWarning(copy.app.outputFolderRequiredBody);
+                        return;
+                      }
+
                       setNavigationWarning(null);
                       controller.setActiveStep(controller.nextStep);
+                      scrollToTop();
                     }}
                     size="md"
                   >

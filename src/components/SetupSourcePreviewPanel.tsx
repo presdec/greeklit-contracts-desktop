@@ -1,5 +1,5 @@
 import { memo, useMemo } from 'react';
-import { Alert, Badge, Group, Paper, ScrollArea, SimpleGrid, Stack, Table, Text, Title } from '@mantine/core';
+import { Alert, Badge, Group, Paper, ScrollArea, SimpleGrid, Skeleton, Stack, Table, Text, Title } from '@mantine/core';
 import type { WorkbookPreviewSampleRow } from '../../shared/desktop';
 import { useI18n } from '../i18n';
 
@@ -82,6 +82,14 @@ function SetupSourcePreviewPanelComponent({
         </SimpleGrid>
 
         <ScrollArea>
+          {isLoading ? (
+            <Stack gap="xs">
+              <Skeleton height={36} radius="sm" />
+              <Skeleton height={32} radius="sm" />
+              <Skeleton height={32} radius="sm" />
+              <Skeleton height={32} radius="sm" />
+            </Stack>
+          ) : (
           <Table highlightOnHover striped withColumnBorders>
             <Table.Thead>
               <Table.Tr>
@@ -102,13 +110,8 @@ function SetupSourcePreviewPanelComponent({
               ))}
             </Table.Tbody>
           </Table>
+          )}
         </ScrollArea>
-
-        {isLoading ? (
-          <Text c="dimmed" size="sm">
-            {copy.setupPreview.refreshing}
-          </Text>
-        ) : null}
       </Stack>
     </Paper>
   );

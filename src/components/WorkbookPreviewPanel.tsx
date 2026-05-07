@@ -1,7 +1,8 @@
 import { memo } from 'react';
-import { Alert, Badge, Group, Paper, ScrollArea, Select, Stack, Table, Text, Title } from '@mantine/core';
+import { Alert, Badge, Group, Paper, ScrollArea, Stack, Table, Text, Title } from '@mantine/core';
 import type { WorkbookPreviewRow } from '../types/template';
 import { useI18n } from '../i18n';
+import { CreatableSelect } from './CreatableSelect';
 
 type Props = {
   availableVariables: string[];
@@ -57,11 +58,10 @@ function WorkbookPreviewPanelComponent({
                   <Table.Td>{row.header}</Table.Td>
                   <Table.Td>{row.sampleValue || '-'}</Table.Td>
                   <Table.Td>
-                    <Select
+                    <CreatableSelect
                       data={availableVariables}
                       onChange={(value) => onAssignmentChange(row.columnLetter, value)}
                       placeholder={copy.workbookPreview.chooseVariable}
-                      searchable
                       value={row.selectedVariable || null}
                     />
                   </Table.Td>

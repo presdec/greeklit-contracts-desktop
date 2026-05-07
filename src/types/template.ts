@@ -21,7 +21,6 @@ export type WorkbookPreviewRow = {
   header: string;
   sampleValue: string;
   selectedVariable: string;
-  suggestedVariable: string | null;
   usedBy: VariableUsage;
 };
 

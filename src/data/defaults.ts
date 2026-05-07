@@ -28,7 +28,7 @@ export const initialProject: ProjectConfig = {
   workbookPath: '',
   contractTemplatePath: '',
   emailTemplatePath: '',
-  outputFilenamePattern: '{{APPLICATION_CODE}} - {{TITLE}} - {{LANGUAGE}}',
+  outputFilenamePattern: '',
   rejectionColumn: '',
   rejectionValue: '',
   useOptionalEmailSource: false,
@@ -39,25 +39,11 @@ export const initialProject: ProjectConfig = {
 };
 
 export const initialEmailTemplate: EmailTemplateState = {
-  subject:
-    'Document Batch | {{APPLICATION_CODE}} | {{TITLE}} | {{AUTHOR}}',
-  to: '{{EMAIL_TO}}',
-  cc: '{{EMAIL_CC}}',
-  body: `<p>Dear {{PUBLISHER}},</p><p>Please find your generated document attached.</p><p>Please review the details and reply if you need any corrections.</p><p>For faster support, keep this subject line in your reply.</p><p>Reference amount: {{FIRST_INSTALLMENT}} EUR.</p><p>Best regards,</p><p>Operations Team</p>`,
+  subject: '',
+  to: '',
+  cc: '',
+  body: '',
 };
-
-export const canonicalVariables = [
-  'APPLICATION_CODE',
-  'ID',
-  'TITLE',
-  'AUTHOR',
-  'LANGUAGE',
-  'EMAIL_TO',
-  'EMAIL_CC',
-  'PUBLISHER',
-  'AMOUNT',
-  'FIRST_INSTALLMENT',
-];
 
 export const defaultGenerationOptions: GenerationOptions = {
   emailOutputMode: 'combined_docx',

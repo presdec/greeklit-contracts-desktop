@@ -2,7 +2,6 @@ import { useAtom } from 'jotai/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { WorkbookPreviewSampleRow } from '../../shared/desktop';
 import type { TemplateStatusResult } from '../../shared/desktop';
-import { canonicalVariables } from '../data/defaults';
 import { usageForVariable } from '../lib/template';
 import { variableColumnsAtom } from '../state/workspace';
 import type { WorkbookPreviewRow } from '../types/template';
@@ -35,7 +34,7 @@ export function useWorkbookPreview(
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [rawColumns, setRawColumns] = useState<
-    Array<{ columnLetter: string; header: string; sampleValue: string; suggestedVariable: string | null }>
+    Array<{ columnLetter: string; header: string; sampleValue: string }>
   >([]);
   const [sampleRows, setSampleRows] = useState<WorkbookPreviewSampleRow[]>([]);
   const [templateStatus, setTemplateStatus] = useState<TemplateStatusResult | null>(null);
@@ -192,48 +191,19 @@ export function useWorkbookPreview(
     () =>
       Array.from(
         new Set([
-          ...canonicalVariables,
           ...contractVariables,
           ...emailVariables,
           ...filenameVariables,
-          ...rawColumns.map((column) => column.suggestedVariable).filter(Boolean),
+          ...Object.values(fieldAssignments).filter(Boolean),
         ]),
-      ) as string[],
-    [contractVariables, emailVariables, filenameVariables, rawColumns],
+      ),
+    [contractVariables, emailVariables, filenameVariables, fieldAssignments],
   );
 
   const contractAndFilenameVariables = useMemo(
     () => Array.from(new Set([...contractVariables, ...filenameVariables])),
     [contractVariables, filenameVariables],
   );
-
-  useEffect(() => {
-    setFieldAssignments((current) => {
-      const nextAssignments = { ...current };
-      let hasChanges = false;
-      const usedVariables = new Set(
-        Object.values(current).filter((value) => value),
-      );
-
-      for (const column of rawColumns) {
-        if (nextAssignments[column.columnLetter]) {
-          continue;
-        }
-
-        const suggestedVariable = column.suggestedVariable ?? '';
-
-        if (!suggestedVariable || usedVariables.has(suggestedVariable)) {
-          continue;
-        }
-
-        nextAssignments[column.columnLetter] = suggestedVariable;
-        usedVariables.add(suggestedVariable);
-        hasChanges = true;
-      }
-
-      return hasChanges ? nextAssignments : current;
-    });
-  }, [rawColumns, setFieldAssignments]);
 
   const rows: WorkbookPreviewRow[] = useMemo(
     () =>

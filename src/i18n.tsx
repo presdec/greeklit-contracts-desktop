@@ -455,7 +455,7 @@ const translations: Record<Language, Translation> = {
       outputFilenamePatternPreviewLabel: 'Preview with first data row',
       outputFilenamePatternMissingTitle: 'Pattern token not mapped to a selected variable',
       outputFilenamePatternMissingBody: 'Assign workbook variables for:',
-      filenameTokensHint: 'Click a column to insert it into the pattern:',
+      filenameTokensHint: 'Click a variable to insert it into the pattern:',
     },
     emailBuilder: {
       activeTarget: (target) => `Active target: ${target}`,
@@ -758,7 +758,7 @@ const translations: Record<Language, Translation> = {
       outputFilenamePatternPreviewLabel: 'Προεπισκόπηση με την πρώτη γραμμή δεδομένων',
       outputFilenamePatternMissingTitle: 'Token ονόματος χωρίς αντιστοίχιση σε επιλεγμένη μεταβλητή',
       outputFilenamePatternMissingBody: 'Ορίστε μεταβλητές workbook για:',
-      filenameTokensHint: 'Κάντε κλικ σε στήλη για εισαγωγή στο μοτίβο:',
+      filenameTokensHint: 'Κάντε κλικ σε μεταβλητή για εισαγωγή στο μοτίβο:',
     },
     emailBuilder: {
       activeTarget: (target) => `Ενεργό πεδίο: ${target}`,

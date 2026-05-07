@@ -1,5 +1,18 @@
 # Release Notes
 
+## v0.2.14 (2026-05-08)
+
+### Added
+- Searchable + creatable variable selectors in workbook and contract mapping tables. You can now type to find variables or create a new one directly from the mapping control.
+
+### Improved
+- Mapping model is now variable-first and template-driven: fields come from Word/email/filename tokens plus user-created mapping values.
+- DOCX/PDF filename token chips now show variable names (not column headers), and newly created variables appear in the chip list.
+
+### Changed
+- Removed automatic pre-population of mappings from hardcoded workbook-header aliases.
+- Default project setup now starts with an empty filename pattern and an empty email template to avoid implied placeholder assumptions.
+
 ## v0.2.13 (2026-05-08)
 
 ### Added

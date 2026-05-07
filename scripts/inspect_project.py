@@ -3,7 +3,6 @@ import html
 import re
 import string
 import sys
-import unicodedata
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -19,113 +18,11 @@ XML_PART_PREFIXES = (
     "word/endnotes.xml",
 )
 
-VARIABLE_ALIASES = {
-    "APPLICATION_CODE": [
-        "#",
-        "application",
-        "application code",
-        "application id",
-        "code",
-        "id",
-        "project id",
-        "reference",
-        "reference number",
-        "serial",
-        "αα",
-        "α  α",
-        "αριθμος",
-        "αριθμος αιτησης",
-        "κωδικος",
-        "κωδικος αιτησης",
-    ],
-    "TITLE": [
-        "book title",
-        "title",
-        "τιτλος",
-    ],
-    "AUTHOR": [
-        "author",
-        "name of author",
-        "συγγραφεας",
-        "συγγραφεως",
-    ],
-    "LANGUAGE": [
-        "language",
-        "γλωσσα",
-    ],
-    "EMAIL_TO": [
-        "email",
-        "email to",
-        "main email",
-        "recipient email",
-        "to",
-        "e mail",
-        "email εκδοτη",
-        "ηλεκτρονικη διευθυνση",
-    ],
-    "EMAIL_CC": [
-        "cc",
-        "copy email",
-        "email cc",
-        "secondary email",
-        "κοινοποιηση",
-    ],
-    "PUBLISHER": [
-        "publisher",
-        "publishing house",
-        "εκδοτης",
-        "εκδοτικος οικος",
-    ],
-    "AMOUNT": [
-        "amount",
-        "approved amount",
-        "grant amount",
-        "ποσο",
-        "εγκεκριμενο ποσο",
-    ],
-    "FIRST_INSTALLMENT": [
-        "first installment",
-        "first instalment",
-        "installment 1",
-        "instalment 1",
-        "πρωτη δοση",
-    ],
-    "ID": [
-        "#",
-        "id",
-        "identifier",
-    ],
-}
-
-
 def normalize_cell_value(value):
     if value is None:
         return ""
     return str(value).strip()
 
-
-def normalize_header_to_variable(header):
-    normalized = normalize_header_for_matching(header)
-
-    for variable, aliases in VARIABLE_ALIASES.items():
-        if normalized == variable.lower():
-            return variable
-        if normalized in aliases:
-            return variable
-        if any(alias in normalized for alias in aliases if len(alias) > 2):
-            return variable
-
-    token = re.sub(r"[^A-Z0-9]+", "_", header.upper()).strip("_")
-    return token or None
-
-
-def normalize_header_for_matching(value):
-    normalized = unicodedata.normalize("NFKD", value)
-    normalized = "".join(character for character in normalized if not unicodedata.combining(character))
-    normalized = normalized.lower()
-    normalized = normalized.replace("/", " ").replace("-", " ")
-    normalized = re.sub(r"\s+", " ", normalized).strip()
-    return normalized
 
 
 def get_column_letter(index):
@@ -199,20 +96,20 @@ def parse_positive_int(value, fallback):
         return fallback
 
 
-def inspect_workbook(payload):
-    workbook = load_workbook(payload["workbook_path"], data_only=True, read_only=True)
+def inspect_workbook(request_payload):
+    workbook = load_workbook(request_payload["workbook_path"], data_only=True, read_only=True)
     worksheet_names = list(workbook.sheetnames)
-    worksheet_name = (payload.get("worksheet_name") or "").strip()
+    worksheet_name = (request_payload.get("worksheet_name") or "").strip()
     if worksheet_name and worksheet_name in worksheet_names:
         worksheet = workbook[worksheet_name]
     else:
         worksheet = workbook[worksheet_names[0]]
-    header_row = parse_positive_int(payload.get("header_row"), 1)
-    data_start_row = parse_positive_int(payload.get("data_start_row"), max(2, header_row + 1))
+    header_row = parse_positive_int(request_payload.get("header_row"), 1)
+    data_start_row = parse_positive_int(request_payload.get("data_start_row"), max(2, header_row + 1))
 
     columns = []
-    rejection_column = (payload.get("rejectionColumn") or "").strip().upper()
-    rejection_value = (payload.get("rejectionValue") or "").strip()
+    rejection_column = (request_payload.get("rejectionColumn") or "").strip().upper()
+    rejection_value = (request_payload.get("rejectionValue") or "").strip()
 
     columns = []
     for cell in worksheet[header_row]:
@@ -229,7 +126,6 @@ def inspect_workbook(payload):
                 "columnLetter": get_column_letter(cell.column),
                 "header": header,
                 "sampleValue": sample_value,
-                "suggestedVariable": normalize_header_to_variable(header),
             }
         )
 
@@ -273,7 +169,7 @@ def inspect_workbook(payload):
         )
 
     workbook.close()
-    contract_info = extract_contract_tokens(payload.get("contractTemplatePath"))
+    contract_info = extract_contract_tokens(request_payload.get("contractTemplatePath"))
 
     return {
         "columnValues": column_values,

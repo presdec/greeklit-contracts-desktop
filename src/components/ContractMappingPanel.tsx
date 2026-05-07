@@ -1,9 +1,10 @@
 import { memo, useMemo, useRef, useState } from 'react';
-import { Alert, Badge, Button, Divider, Group, Modal, Paper, Select, Stack, Table, Text, TextInput, Title } from '@mantine/core';
+import { Alert, Badge, Button, Divider, Group, Modal, Paper, Stack, Table, Text, TextInput, Title } from '@mantine/core';
 import type { TemplateStatusResult } from '../../shared/desktop';
 import { extractTokens, renderTemplate, tokenName } from '../lib/template';
 import type { WorkbookPreviewRow } from '../types/template';
 import { useI18n } from '../i18n';
+import { CreatableSelect } from './CreatableSelect';
 
 type Props = {
   availableVariables: string[];
@@ -47,24 +48,8 @@ function ContractMappingPanelComponent({
   const filenameSelectionStart = useRef<number>(outputFilenamePattern.length);
 
   const filenameTokens = useMemo(
-    () => {
-      const seen = new Set<string>();
-
-      return workbookRows
-        .map((row) => ({
-          header: row.header,
-          variable: row.selectedVariable || row.suggestedVariable || '',
-        }))
-        .filter((token) => {
-          if (!token.variable || seen.has(token.variable)) {
-            return false;
-          }
-
-          seen.add(token.variable);
-          return true;
-        });
-    },
-    [workbookRows],
+    () => Array.from(new Set(availableVariables.filter((name) => name.trim().length > 0))),
+    [availableVariables],
   );
 
   const filenameSampleValues = useMemo(
@@ -238,16 +223,16 @@ function ContractMappingPanelComponent({
               <>
                 <Text c="dimmed" size="xs">{copy.contractMapping.filenameTokensHint}</Text>
                 <Group gap="xs">
-                  {filenameTokens.map(({ header, variable }) => (
+                  {filenameTokens.map((variable) => (
                     <Button
-                      key={`${variable}:${header}`}
+                      key={variable}
                       className="field-chip"
                       onClick={() => insertFilenameToken(variable)}
                       radius="xl"
                       size="xs"
                       variant="light"
                     >
-                      {header}
+                      {variable}
                     </Button>
                   ))}
                 </Group>
@@ -310,11 +295,10 @@ function ContractMappingPanelComponent({
                   <Table.Tr key={token}>
                     <Table.Td>{token}</Table.Td>
                     <Table.Td>
-                      <Select
+                    <CreatableSelect
                         data={availableVariables}
                         onChange={(value) => setTokenMapping(token, value)}
                         placeholder={copy.contractMapping.chooseVariable}
-                        searchable
                         value={variable || null}
                       />
                     </Table.Td>

@@ -364,6 +364,10 @@ test('Workbook mapping dock exposes sizing, filters, usage, and required coverag
     });
 
     await expect(window.getByRole('heading', { name: 'Workbook Mapping Preview' })).toBeVisible();
+    // Wait for the workbook backend to return actual column data before checking
+    // header-match and suggestion state (zero-count text renders before the
+    // Python inspect call completes, so these badges alone are not a reliable guard).
+    await expect(window.getByTestId('workbook-column-letter').first()).toBeVisible({ timeout: 15000 });
     await expect(window.getByText(/required mapped/)).toBeVisible();
     await expect(window.getByText(/header matches assigned/)).toBeVisible();
     await expect(window.getByRole('button', { name: 'Use suggested variable APPLICATION_CODE' }).first()).toBeVisible();

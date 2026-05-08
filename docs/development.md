@@ -113,6 +113,7 @@ The release workflow:
 3. Builds the Electron app.
 4. Packages platform-specific installers.
 5. Publishes assets to GitHub Releases.
+6. Updates the GitHub release body from the matching section in [release-notes.md](./release-notes.md).
 
 ## Packaging Notes
 

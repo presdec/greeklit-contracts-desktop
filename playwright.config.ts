@@ -5,6 +5,7 @@ export default defineConfig({
   reporter: 'list',
   testDir: './e2e',
   timeout: 60_000,
+  workers: 1,
   use: {
     trace: 'on-first-retry',
   },

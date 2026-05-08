@@ -3,6 +3,7 @@ import html
 import re
 import string
 import sys
+import unicodedata
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -25,16 +26,71 @@ def normalize_cell_value(value):
 
 
 HEADER_VARIABLE_ALIASES = [
-    ("APPLICATION_CODE", ["#", "application code", "application", "code"]),
-    ("EMAIL_TO", ["email to", "to", "email"]),
-    ("EMAIL_CC", ["cc"]),
-    ("AUTHOR", ["author"]),
-    ("PUBLISHER", ["publisher"]),
-    ("AMOUNT", ["amount"]),
-    ("FIRST_INSTALLMENT", ["first installment", "installment"]),
-    ("LANGUAGE", ["language"]),
-    ("TITLE", ["title"]),
+    ("APPLICATION_CODE", ["#", "application code", "application", "code", "κωδικός αίτησης", "κωδικος αιτησης", "κωδικός", "κωδικος", "kodikos aitisis", "kodikos"]),
+    ("EMAIL_TO", ["email to", "to", "email", "προς", "email προς", "paraliptis", "pros"]),
+    ("EMAIL_CC", ["cc", "κοινοποίηση", "κοινοποιηση", "cc email", "koinopoiisi"]),
+    ("AUTHOR", ["author", "συγγραφέας", "συγγραφεας", "syggrafeas", "singrafeas"]),
+    ("PUBLISHER", ["publisher", "εκδότης", "εκδοτης", "ekdotis"]),
+    ("AMOUNT", ["amount", "ποσό", "ποσο", "poso"]),
+    ("FIRST_INSTALLMENT", ["first installment", "installment", "πρώτη δόση", "πρωτη δοση", "dosi", "proti dosi"]),
+    ("LANGUAGE", ["language", "γλώσσα", "γλωσσα", "glossa", "glwssa"]),
+    ("TITLE", ["title", "τίτλος", "τιτλος", "titlos"]),
 ]
+
+MAX_SUGGESTED_VARIABLE_LENGTH = 24
+
+GREEK_TO_LATIN = str.maketrans({
+    "α": "a", "β": "v", "γ": "g", "δ": "d", "ε": "e", "ζ": "z", "η": "i", "θ": "th",
+    "ι": "i", "κ": "k", "λ": "l", "μ": "m", "ν": "n", "ξ": "x", "ο": "o", "π": "p",
+    "ρ": "r", "σ": "s", "ς": "s", "τ": "t", "υ": "y", "φ": "f", "χ": "ch", "ψ": "ps", "ω": "o",
+    "Α": "A", "Β": "V", "Γ": "G", "Δ": "D", "Ε": "E", "Ζ": "Z", "Η": "I", "Θ": "TH",
+    "Ι": "I", "Κ": "K", "Λ": "L", "Μ": "M", "Ν": "N", "Ξ": "X", "Ο": "O", "Π": "P",
+    "Ρ": "R", "Σ": "S", "Τ": "T", "Υ": "Y", "Φ": "F", "Χ": "CH", "Ψ": "PS", "Ω": "O",
+})
+
+
+def strip_accents(value):
+    decomposed = unicodedata.normalize("NFD", value)
+    return "".join(char for char in decomposed if unicodedata.category(char) != "Mn")
+
+
+def normalize_header_text(value):
+    without_accents = strip_accents(value)
+    return re.sub(r"\s+", " ", without_accents).strip().lower()
+
+
+def greek_to_latin(value):
+    return strip_accents(value).translate(GREEK_TO_LATIN)
+
+
+def alias_matches(value, alias):
+    normalized_alias = normalize_header_text(alias)
+    if not normalized_alias:
+        return False
+    if value == normalized_alias:
+        return True
+    if len(normalized_alias) < 4:
+        return False
+    return re.search(rf"(?<![a-z0-9]){re.escape(normalized_alias)}(?![a-z0-9])", value) is not None
+
+
+def compact_variable_name(value, max_length=MAX_SUGGESTED_VARIABLE_LENGTH):
+    parts = [part for part in re.split(r"[^A-Za-z0-9]+", value) if part]
+    selected = []
+    current_length = 0
+
+    for part in parts:
+        next_length = current_length + len(part) + (1 if selected else 0)
+        if selected and next_length > max_length:
+            break
+        if not selected and len(part) > max_length:
+            selected.append(part[:max_length])
+            break
+
+        selected.append(part)
+        current_length = next_length
+
+    return "_".join(selected).upper() or None
 
 
 def normalize_header_to_variable(header):
@@ -42,21 +98,21 @@ def normalize_header_to_variable(header):
     if not header_value:
         return None
 
-    normalized = re.sub(r"\s+", " ", header_value).strip().lower()
+    normalized = normalize_header_text(header_value)
+    normalized_latin = normalize_header_text(greek_to_latin(header_value))
 
     for variable, aliases in HEADER_VARIABLE_ALIASES:
-        if normalized in aliases:
+        normalized_aliases = {normalize_header_text(alias) for alias in aliases}
+        if normalized in normalized_aliases or normalized_latin in normalized_aliases:
             return variable
 
-    # Preserve historical fuzzy behavior where broad aliases (for example
-    # "email") can match before more specific buckets like EMAIL_CC.
     for variable, aliases in HEADER_VARIABLE_ALIASES:
         for alias in aliases:
-            if alias and alias in normalized:
+            if alias_matches(normalized, alias) or alias_matches(normalized_latin, alias):
                 return variable
 
-    fallback = re.sub(r"[^A-Za-z0-9]+", "_", header_value).strip("_").upper()
-    return fallback or None
+    fallback_source = greek_to_latin(header_value)
+    return compact_variable_name(fallback_source)
 
 
 

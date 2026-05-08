@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ActionIcon, Alert, Badge, Box, Button, Card, Divider, Group, Progress, SegmentedControl, SimpleGrid, Stack, Text, Title } from '@mantine/core';
 import { ContractMappingPanel } from './components/ContractMappingPanel';
 import { EmailTemplateEditor } from './components/EmailTemplateEditor';
+import { ExternalEmailTemplatePanel } from './components/ExternalEmailTemplatePanel';
 import { GenerationProgressPanel } from './components/GenerationProgressPanel';
 import { GenerationSuccessPanel } from './components/GenerationSuccessPanel';
 import { ProjectSetupPanel } from './components/ProjectSetupPanel';
@@ -39,9 +40,6 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
     window.scrollTo({ top: 0, behavior: 'instant' });
   };
   const currentStep = copy.steps[controller.activeStep];
-  const wantsDocumentOutput =
-    controller.contractSettings.generationOptions.generateDocx
-    || controller.contractSettings.generationOptions.generatePdf;
   const selectedOutputs = [
     controller.contractSettings.generationOptions.generateDocx ? copy.outputLabels.word : null,
     controller.contractSettings.generationOptions.generatePdf ? copy.outputLabels.pdf : null,
@@ -54,32 +52,35 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
       return;
     }
 
-    const hasWordTemplate = Boolean(controller.projectSetup.project.contractTemplatePath.trim());
-    const hasOutputFolder = Boolean(controller.projectSetup.project.outputFolderPath?.trim());
-    const hasWorkbook = Boolean(controller.projectSetup.project.workbookPath?.trim());
-    const mustHaveWordTemplateForStep2 = controller.activeStep === 1 && controller.nextStep === 2 && wantsDocumentOutput;
-
-    if ((!mustHaveWordTemplateForStep2 || hasWordTemplate) && hasOutputFolder && hasWorkbook) {
+    if (!controller.nextStepIssue) {
       setNavigationWarning(null);
     }
   }, [
-    controller.activeStep,
-    controller.nextStep,
-    controller.projectSetup.project.contractTemplatePath,
-    controller.projectSetup.project.outputFolderPath,
-    controller.projectSetup.project.workbookPath,
+    controller.nextStepIssue,
     navigationWarning,
-    wantsDocumentOutput,
   ]);
 
   useEffect(() => {
     return desktopApp.onMenuAction((action) => {
+      if (typeof action !== 'string') {
+        if (action.type === 'open-recent-project') {
+          void controller.handleOpenRecentProject(action.filePath);
+        }
+        return;
+      }
+
       switch (action) {
         case 'open-project':
           void controller.handleOpenProject();
           break;
+        case 'open-last-project':
+          void controller.handleOpenLastProject();
+          break;
         case 'save-project':
           void controller.handleSaveProject();
+          break;
+        case 'save-project-as':
+          void controller.handleSaveProject({ saveAs: true });
           break;
         case 'open-contract-template':
           void controller.handleOpenContractTemplate();
@@ -223,13 +224,7 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
 
             {controller.activeStep === 3 && !controller.canContinueFromStep3 ? (
               <Alert color="red" radius="lg" title={copy.app.mapAllFieldsTitle} variant="light">
-                {controller.unmappedContractTokens.length > 0
-                  ? copy.app.missingWordMappings(controller.unmappedContractTokens.join(', '))
-                  : ''}
-                {controller.contractSettings.generationOptions.generateEmailDrafts
-                  && controller.unmappedEmailVariables.length > 0
-                  ? copy.app.missingEmailMappings(controller.unmappedEmailVariables.join(', '))
-                  : ''}
+                {controller.validation.step3Issues.map((issue) => issue.detail).join(' ')}
               </Alert>
             ) : null}
 
@@ -274,63 +269,86 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
 
             {controller.activeStep === 2 ? (
               <Stack gap="xl">
-                <ContractMappingPanel
-                  availableVariables={controller.workbookPreview.availableVariables}
-                  contractTemplatePath={controller.projectSetup.project.contractTemplatePath}
-                  isOpeningTemplate={controller.isOpeningTemplate}
-                  isReloadingTemplate={
-                    controller.isReloadingTemplate || controller.workbookPreview.isLoading
-                  }
-                  mappedContractFields={controller.contractSettings.mappedContractFields}
-                  onOpenTemplate={() => void controller.handleOpenContractTemplate()}
-                  onReloadTemplate={() => void controller.handleReloadTemplateFields()}
-                  outputFilenamePattern={controller.projectSetup.project.outputFilenamePattern}
-                  setTokenMapping={controller.contractSettings.setTokenMapping}
-                  setOutputFilenamePattern={(value) =>
-                    controller.projectSetup.setProject((current) => ({
-                      ...current,
-                      outputFilenamePattern: value,
-                    }))}
-                  templateStatus={controller.workbookPreview.templateStatus}
-                  tokenContexts={controller.workbookPreview.contractTokenContexts}
-                  tokenMappings={controller.contractSettings.tokenMappings}
-                  tokens={controller.workbookPreview.contractVariables}
-                  variableSources={controller.contractSettings.variableSources}
-                  workbookRows={controller.workbookPreview.rows}
-                />
-                <WorkbookPreviewPanel
-                  availableVariables={controller.workbookPreview.availableVariables}
-                  isLoading={controller.workbookPreview.isLoading}
-                  loadError={controller.workbookPreview.loadError}
-                  onAssignmentChange={controller.workbookPreview.setFieldAssignment}
-                  rows={controller.workbookPreview.rows}
-                />
+                <SimpleGrid cols={{ base: 1, xl: 2 }} spacing="xl" verticalSpacing="xl">
+                  <ContractMappingPanel
+                    availableVariables={controller.workbookPreview.availableVariables}
+                    contractTemplatePath={controller.projectSetup.project.contractTemplatePath}
+                    isOpeningTemplate={controller.isOpeningTemplate}
+                    isReloadingTemplate={
+                      controller.isReloadingTemplate || controller.workbookPreview.isLoading
+                    }
+                    mappedContractFields={controller.contractSettings.mappedContractFields}
+                    onOpenTemplate={() => void controller.handleOpenContractTemplate()}
+                    onReloadTemplate={() => void controller.handleReloadTemplateFields()}
+                    outputFilenamePattern={controller.projectSetup.project.outputFilenamePattern}
+                    setTokenMapping={controller.contractSettings.setTokenMapping}
+                    setOutputFilenamePattern={(value) =>
+                      controller.projectSetup.setProject((current) => ({
+                        ...current,
+                        outputFilenamePattern: value,
+                      }))}
+                    templateStatus={controller.workbookPreview.templateStatus}
+                    tokenContexts={controller.workbookPreview.contractTokenContexts}
+                    tokenMappings={controller.contractSettings.tokenMappings}
+                    tokens={controller.workbookPreview.contractVariables}
+                    variableSources={controller.contractSettings.variableSources}
+                    workbookRows={controller.workbookPreview.rows}
+                  />
+                  <WorkbookPreviewPanel
+                    availableVariables={controller.workbookPreview.availableVariables}
+                    defaultMode="half"
+                    headerMatchedMappings={controller.workbookMapping.headerMatchedMappings}
+                    isLoading={controller.workbookPreview.isLoading}
+                    loadError={controller.workbookPreview.loadError}
+                    missingVariables={controller.workbookMapping.missingVariables}
+                    onAssignmentChange={controller.workbookPreview.setFieldAssignment}
+                    requiredVariables={controller.workbookMapping.requiredVariables}
+                    rows={controller.workbookPreview.rows}
+                    usageByVariable={controller.workbookMapping.usage}
+                  />
+                </SimpleGrid>
               </Stack>
             ) : null}
 
             {controller.activeStep === 3 ? (
               <Stack gap="xl">
-                <SimpleGrid cols={{ base: 1, xl: 2 }} spacing="xl" verticalSpacing="xl">
-                  <EmailTemplateEditor
-                    activeEditor={controller.templateBuilder.activeEditor}
-                    availableVariables={controller.workbookPreview.availableVariables}
-                    editorRefs={controller.templateBuilder.editorRefs}
-                    emailTemplate={controller.templateBuilder.emailTemplate}
-                    insertFieldToken={controller.templateBuilder.insertFieldToken}
-                    setActiveEditor={controller.templateBuilder.setActiveEditor}
-                    updateEmailField={controller.templateBuilder.updateEmailField}
-                  />
-                  <TemplatePreviewPanel
-                    emailTemplate={controller.templateBuilder.emailTemplate}
+                {controller.projectSetup.project.useOptionalEmailSource ? (
+                  <ExternalEmailTemplatePanel
+                    content={controller.externalEmailTemplate.content}
+                    isLoading={controller.externalEmailTemplate.isLoading}
+                    loadError={controller.externalEmailTemplate.loadError}
+                    resolvedPath={controller.externalEmailTemplate.resolvedPath}
                     sampleValues={controller.workbookPreview.sampleValues}
+                    variables={controller.externalEmailTemplate.variables}
                   />
-                </SimpleGrid>
+                ) : (
+                  <SimpleGrid cols={{ base: 1, xl: 2 }} spacing="xl" verticalSpacing="xl">
+                    <EmailTemplateEditor
+                      activeEditor={controller.templateBuilder.activeEditor}
+                      availableVariables={controller.workbookPreview.availableVariables}
+                      editorRefs={controller.templateBuilder.editorRefs}
+                      emailTemplate={controller.templateBuilder.emailTemplate}
+                      insertFieldToken={controller.templateBuilder.insertFieldToken}
+                      setActiveEditor={controller.templateBuilder.setActiveEditor}
+                      updateEmailField={controller.templateBuilder.updateEmailField}
+                    />
+                    <TemplatePreviewPanel
+                      emailTemplate={controller.templateBuilder.emailTemplate}
+                      sampleValues={controller.workbookPreview.sampleValues}
+                    />
+                  </SimpleGrid>
+                )}
                 <WorkbookPreviewPanel
                   availableVariables={controller.workbookPreview.availableVariables}
+                  defaultMode="compact"
+                  headerMatchedMappings={controller.workbookMapping.headerMatchedMappings}
                   isLoading={controller.workbookPreview.isLoading}
                   loadError={controller.workbookPreview.loadError}
+                  missingVariables={controller.workbookMapping.missingVariables}
                   onAssignmentChange={controller.workbookPreview.setFieldAssignment}
+                  requiredVariables={controller.workbookMapping.requiredVariables}
                   rows={controller.workbookPreview.rows}
+                  usageByVariable={controller.workbookMapping.usage}
                 />
               </Stack>
             ) : null}
@@ -347,14 +365,17 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
                 <ReviewSummaryPanel
                   generationOptions={controller.contractSettings.generationOptions}
                   mappedContractFields={controller.contractSettings.mappedContractFields}
-                  emailTemplate={controller.templateBuilder.emailTemplate}
+                  emailTemplate={controller.activeEmailTemplate}
+                  missingWorkbookVariables={controller.workbookMapping.missingVariables}
                   onGoToStep={controller.setActiveStep}
                   preflight={controller.preflight.result}
                   preflightLoading={controller.preflight.isLoading}
+                  requiredWorkbookVariables={controller.workbookMapping.requiredVariables}
                   rows={controller.workbookPreview.rows}
                   skippedRows={controller.workbookPreview.skippedRows}
                   totalContractFields={controller.workbookPreview.contractVariables.length}
                   totalRows={controller.workbookPreview.totalRows}
+                  usageByVariable={controller.workbookMapping.usage}
                 />
               )
             ) : null}
@@ -401,30 +422,14 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
                 </Button>
                 {controller.nextStep ? (
                   <Button
-                    disabled={controller.activeStep === 3 && !controller.canContinueFromStep3}
                     onClick={() => {
                       if (!controller.nextStep) {
                         return;
                       }
 
-                      const hasWordTemplate = Boolean(controller.projectSetup.project.contractTemplatePath.trim());
-                      const mustHaveWordTemplateForStep2 =
-                        controller.activeStep === 1 && controller.nextStep === 2 && wantsDocumentOutput;
-
-                      if (mustHaveWordTemplateForStep2 && !hasWordTemplate) {
-                        setNavigationWarning(copy.app.wordTemplateRequiredBody);
-                        return;
-                      }
-
-                      const hasWorkbook = Boolean(controller.projectSetup.project.workbookPath?.trim());
-                      if (controller.activeStep === 1 && !hasWorkbook) {
-                        setNavigationWarning(copy.app.workbookRequiredBody);
-                        return;
-                      }
-
-                      const hasOutputFolder = Boolean(controller.projectSetup.project.outputFolderPath?.trim());
-                      if (controller.activeStep === 1 && !hasOutputFolder) {
-                        setNavigationWarning(copy.app.outputFolderRequiredBody);
+                      const nextIssue = controller.validation.firstIssueForStepBefore(controller.nextStep);
+                      if (nextIssue) {
+                        setNavigationWarning(nextIssue.detail);
                         return;
                       }
 

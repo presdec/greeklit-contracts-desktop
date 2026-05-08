@@ -1,15 +1,18 @@
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import type * as ElectronModule from 'electron';
 import type {
   DesktopCapabilities,
+  EmailTemplateInspectionRequest,
   FileDialogRequest,
   GenerateProjectProgress,
   GenerateProjectRequest,
   InspectProjectRequest,
   MenuAction,
   OpenPathRequest,
+  RecentProjectEntry,
   SavedProjectDocument,
   SaveStarterTemplateRequest,
   TemplateStatusRequest,
@@ -25,6 +28,7 @@ import {
 import {
   openProjectDocument,
   pickPath,
+  inspectEmailTemplate,
   saveProjectDocument,
   saveStarterTemplate,
 } from './services/projectFiles';
@@ -39,6 +43,7 @@ const { app, BrowserWindow, Menu, dialog, ipcMain, shell } = electron;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 let mainWindow: InstanceType<typeof BrowserWindow> | null = null;
+const maxRecentProjects = 8;
 
 if (process.platform === 'linux') {
   app.commandLine.appendSwitch('ozone-platform-hint', 'auto');
@@ -64,6 +69,74 @@ function getRuntimeEnvironment(): RuntimeEnvironment {
 function sendMenuAction(action: MenuAction) {
   const targetWindow = mainWindow ?? BrowserWindow.getFocusedWindow();
   targetWindow?.webContents.send('desktop-app:menu-action', action);
+}
+
+function recentProjectsPath() {
+  return join(app.getPath('userData'), 'recent-projects.json');
+}
+
+function readRecentProjectPaths() {
+  try {
+    const parsed = JSON.parse(readFileSync(recentProjectsPath(), 'utf8')) as unknown;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
+  } catch {
+    return [];
+  }
+}
+
+function recentProjectEntries(): RecentProjectEntry[] {
+  return readRecentProjectPaths().map((filePath) => ({
+    filePath,
+    label: basename(filePath),
+  }));
+}
+
+function writeRecentProjectPaths(filePaths: string[]) {
+  mkdirSync(app.getPath('userData'), { recursive: true });
+  writeFileSync(recentProjectsPath(), JSON.stringify(filePaths.slice(0, maxRecentProjects), null, 2), 'utf8');
+}
+
+function rememberRecentProject(filePath: string) {
+  const normalizedPath = filePath.trim();
+  if (!normalizedPath) {
+    return;
+  }
+
+  const nextPaths = [
+    normalizedPath,
+    ...readRecentProjectPaths().filter((currentPath) => currentPath !== normalizedPath),
+  ];
+  writeRecentProjectPaths(nextPaths);
+  buildApplicationMenu();
+}
+
+function clearRecentProjects() {
+  writeRecentProjectPaths([]);
+  buildApplicationMenu();
+}
+
+function buildRecentProjectsMenu(): ElectronModule.MenuItemConstructorOptions[] {
+  const recentProjects = recentProjectEntries();
+  if (recentProjects.length === 0) {
+    return [{ enabled: false, label: 'No Recent Projects' }];
+  }
+
+  return [
+    ...recentProjects.map((project) => ({
+      click: () => sendMenuAction({ filePath: project.filePath, type: 'open-recent-project' }),
+      label: project.label,
+      toolTip: project.filePath,
+    })),
+    { type: 'separator' as const },
+    {
+      click: clearRecentProjects,
+      label: 'Clear Recent Projects',
+    },
+  ];
 }
 
 function buildApplicationMenu() {
@@ -95,9 +168,32 @@ function buildApplicationMenu() {
           label: 'Open Project',
         },
         {
-          accelerator: 'CmdOrCtrl+S',
+          accelerator: 'F9',
+          click: () => {
+            const [filePath] = readRecentProjectPaths();
+            if (filePath) {
+              sendMenuAction({ filePath, type: 'open-recent-project' });
+              return;
+            }
+
+            sendMenuAction('open-last-project');
+          },
+          label: 'Open Last Project',
+        },
+        {
+          label: 'Open Recent',
+          submenu: buildRecentProjectsMenu(),
+        },
+        { type: 'separator' },
+        {
+          accelerator: 'F5',
           click: () => sendMenuAction('save-project'),
-          label: 'Save Draft Setup',
+          label: 'Save Project',
+        },
+        {
+          accelerator: 'CmdOrCtrl+Shift+S',
+          click: () => sendMenuAction('save-project-as'),
+          label: 'Save Project As',
         },
         { type: 'separator' },
         isMac ? { role: 'close' as const } : { role: 'quit' as const },
@@ -251,16 +347,40 @@ function registerIpcHandlers() {
     pickPath(dialogDeps, request),
   );
 
-  ipcMain.handle('desktop-app:save-project', async (_event, project: SavedProjectDocument) =>
-    saveProjectDocument(dialogDeps, project),
-  );
+  ipcMain.handle('desktop-app:save-project', async (
+    _event,
+    project: SavedProjectDocument,
+    filePath?: string | null,
+  ) => {
+    const savedPath = await saveProjectDocument(dialogDeps, project, filePath);
+    if (savedPath) {
+      rememberRecentProject(savedPath);
+    }
+    return savedPath;
+  });
 
   ipcMain.handle(
     'desktop-app:save-starter-template',
     async (_event, request: SaveStarterTemplateRequest) => saveStarterTemplate(dialogDeps, request),
   );
 
-  ipcMain.handle('desktop-app:open-project', async () => openProjectDocument(dialogDeps));
+  ipcMain.handle('desktop-app:open-project', async (_event, filePath?: string | null) => {
+    const result = await openProjectDocument(dialogDeps, filePath);
+    if (result) {
+      rememberRecentProject(result.filePath);
+    }
+    return result;
+  });
+
+  ipcMain.handle('desktop-app:get-recent-projects', async () => recentProjectEntries());
+
+  ipcMain.handle(
+    'desktop-app:inspect-email-template',
+    async (_event, request: EmailTemplateInspectionRequest) => inspectEmailTemplate(
+      getRuntimeEnvironment(),
+      request,
+    ),
+  );
 
   ipcMain.handle('desktop-app:get-capabilities', async (): Promise<DesktopCapabilities> => {
     const runtime = await resolveRuntime(getRuntimeEnvironment());

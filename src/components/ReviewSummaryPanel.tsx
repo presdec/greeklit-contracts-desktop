@@ -1,51 +1,27 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Badge, Button, Collapse, Group, Paper, SimpleGrid, Stack, Text, ThemeIcon, Title } from '@mantine/core';
 import type { ProjectPreflightCheck } from '../../shared/desktop';
 import type { ProjectPreflightResult } from '../../shared/desktop';
 import type { EmailTemplateState, GenerationOptions, WorkbookPreviewRow } from '../types/template';
 import type { WizardStepId } from '../types/template';
 import { useI18n } from '../i18n';
+import { stepForPreflightCheck } from '../features/workspace/workflowValidation';
 
 type Props = {
   generationOptions: GenerationOptions;
   mappedContractFields: number;
   totalContractFields: number;
   emailTemplate: EmailTemplateState;
+  missingWorkbookVariables: string[];
   preflight: ProjectPreflightResult | null;
   preflightLoading: boolean;
+  requiredWorkbookVariables: string[];
   rows: WorkbookPreviewRow[];
   totalRows: number;
   skippedRows: number;
+  usageByVariable: Record<string, { email: boolean; filename: boolean; word: boolean }>;
   onGoToStep: (step: WizardStepId) => void;
 };
-
-function stepForCheck(checkId: string, generationOptions: GenerationOptions): WizardStepId | null {
-  if ([
-    'outputs',
-    'workbook',
-    'output-directory',
-    'worksheet',
-    'pdf-backend',
-    'python-runtime',
-    'runtime-services',
-  ].includes(checkId)) {
-    return 1;
-  }
-
-  if (checkId === 'contract-template') {
-    return 1;
-  }
-
-  if (['mappings', 'required-placeholders'].includes(checkId)) {
-    return generationOptions.generateDocx || generationOptions.generatePdf ? 2 : 3;
-  }
-
-  if (checkId === 'email-template-file') {
-    return 3;
-  }
-
-  return null;
-}
 
 function formatPdfBackend(value: ProjectPreflightResult['pdfBackend'] | undefined) {
   if (value === 'libreoffice') {
@@ -134,11 +110,14 @@ export function ReviewSummaryPanel({
   mappedContractFields,
   totalContractFields,
   emailTemplate,
+  missingWorkbookVariables,
   preflight,
   preflightLoading,
+  requiredWorkbookVariables,
   rows,
   skippedRows,
   totalRows,
+  usageByVariable,
   onGoToStep,
 }: Props) {
   const { copy, language } = useI18n();
@@ -155,6 +134,19 @@ export function ReviewSummaryPanel({
   const totalChecks = preflight?.checks.length ?? 0;
   const issueCount = failedChecks.length + warningChecks.length;
   const readyToGenerate = Boolean(preflight?.canGenerate);
+  const isCheckingPreflight = preflightLoading || !preflight;
+  const mappedRequiredVariables = requiredWorkbookVariables.length - missingWorkbookVariables.length;
+  const emailVariables = requiredWorkbookVariables.filter((variable) => usageByVariable[variable]?.email);
+  const filenameVariables = requiredWorkbookVariables.filter((variable) => usageByVariable[variable]?.filename);
+  const wordVariables = requiredWorkbookVariables.filter((variable) => usageByVariable[variable]?.word);
+  const mappedVariableSet = new Set(mappedRows.map((row) => row.selectedVariable));
+  const countMapped = (variables: string[]) => variables.filter((variable) => mappedVariableSet.has(variable)).length;
+
+  useEffect(() => {
+    if (!preflightLoading && issueCount > 0) {
+      setShowSetupCheckDetails(true);
+    }
+  }, [issueCount, preflightLoading]);
 
   return (
     <Paper className="panel-card" p="lg" radius="lg">
@@ -172,11 +164,11 @@ export function ReviewSummaryPanel({
         </Group>
 
         <Alert
-          color={readyToGenerate ? 'teal' : preflightLoading ? 'blue' : 'red'}
+          color={readyToGenerate ? 'teal' : isCheckingPreflight ? 'blue' : 'red'}
           title={
             readyToGenerate
               ? copy.review.goodToGenerateTitle
-              : preflightLoading
+              : isCheckingPreflight
                 ? copy.review.preflightLoadingTitle
                 : copy.review.needsAttentionTitle
           }
@@ -184,7 +176,7 @@ export function ReviewSummaryPanel({
         >
           {readyToGenerate
             ? copy.review.goodToGenerateBody
-            : preflightLoading
+            : isCheckingPreflight
               ? copy.review.preflightLoadingBody
               : `${copy.review.needsAttentionBody} ${copy.review.issuesFound(issueCount)}.`}
         </Alert>
@@ -216,19 +208,71 @@ export function ReviewSummaryPanel({
           </Paper>
         </SimpleGrid>
 
-        <Paper p="md" radius="md" withBorder>
-          <Group justify="space-between" wrap="nowrap">
-            <div>
-              <Text fw={700} size="sm">{copy.review.outputPlan}</Text>
+        <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="md">
+          <Paper p="md" radius="md" withBorder>
+            <Stack gap="xs">
+              <Group justify="space-between">
+                <Text fw={700} size="sm">{copy.review.outputPlan}</Text>
+                <Badge color={readyToGenerate ? 'teal' : 'gray'} variant="light">
+                  {outputLabel || copy.outputLabels.none}
+                </Badge>
+              </Group>
               <Text c="dimmed" size="sm">
                 {copy.review.selectedOutput}: {outputLabel || copy.outputLabels.none}
               </Text>
-            </div>
-            <Badge color={readyToGenerate ? 'teal' : 'gray'} variant="light">
-              {copy.review.emailBodyLength}: {emailTemplate.body.length}
-            </Badge>
-          </Group>
-        </Paper>
+              <Text c="dimmed" size="sm">
+                {copy.review.pdfBackend}: {formatPdfBackend(preflight?.pdfBackend)}
+              </Text>
+            </Stack>
+          </Paper>
+
+          <Paper p="md" radius="md" withBorder>
+            <Stack gap="xs">
+              <Group justify="space-between">
+                <Text fw={700} size="sm">{copy.review.mappingCoverage}</Text>
+                <Badge color={missingWorkbookVariables.length > 0 ? 'red' : 'teal'} variant="light">
+                  {copy.review.requiredMappedSummary(mappedRequiredVariables, requiredWorkbookVariables.length)}
+                </Badge>
+              </Group>
+              <Group gap="xs">
+                <Badge color="grape" variant="light">
+                  {copy.review.wordCoverage(countMapped(wordVariables), wordVariables.length)}
+                </Badge>
+                <Badge color="blue" variant="light">
+                  {copy.review.emailCoverage(countMapped(emailVariables), emailVariables.length)}
+                </Badge>
+                <Badge color="orange" variant="light">
+                  {copy.review.filenameCoverage(countMapped(filenameVariables), filenameVariables.length)}
+                </Badge>
+              </Group>
+              {missingWorkbookVariables.length > 0 ? (
+                <Text c="red" size="sm">
+                  {copy.review.missingRequiredVariables}: {missingWorkbookVariables.join(', ')}
+                </Text>
+              ) : (
+                <Text c="dimmed" size="sm">{copy.review.noMissingRequiredVariables}</Text>
+              )}
+            </Stack>
+          </Paper>
+
+          <Paper p="md" radius="md" withBorder>
+            <Stack gap="xs">
+              <Text fw={700} size="sm">{copy.review.workbookSource}</Text>
+              <Text c="dimmed" size="sm">{copy.review.rowsFound}: {totalRows}</Text>
+              <Text c="dimmed" size="sm">{copy.review.skippedRows}: {skippedRows}</Text>
+            </Stack>
+          </Paper>
+
+          <Paper p="md" radius="md" withBorder>
+            <Stack gap="xs">
+              <Text fw={700} size="sm">{copy.review.emailSource}</Text>
+              <Text c="dimmed" size="sm">{copy.review.emailBodyLength}: {emailTemplate.body.length}</Text>
+              <Text c="dimmed" size="sm">
+                {generationOptions.generateEmailDrafts ? copy.outputLabels.email : copy.outputLabels.none}
+              </Text>
+            </Stack>
+          </Paper>
+        </SimpleGrid>
 
         {preflight ? (
           <Stack gap="sm">
@@ -252,7 +296,7 @@ export function ReviewSummaryPanel({
               <Stack gap="sm">
                 {preflight.checks.map((check) => {
                   const localizedCheck = localizePreflightCheck(check, language);
-                  const targetStep = stepForCheck(check.id, generationOptions);
+                  const targetStep = stepForPreflightCheck(check.id, generationOptions);
 
                   return (
                     <Paper key={check.id} p="sm" radius="md" withBorder>

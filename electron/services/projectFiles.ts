@@ -1,8 +1,14 @@
 import { copyFile, readFile, writeFile } from 'node:fs/promises';
 import type * as ElectronModule from 'electron';
-import type { SavedProjectDocument, SaveStarterTemplateRequest } from '../../shared/desktop';
+import type {
+  EmailTemplateInspectionRequest,
+  EmailTemplateInspectionResult,
+  SavedProjectDocument,
+  SaveStarterTemplateRequest,
+} from '../../shared/desktop';
 import { normalizeProjectDocument } from '../lib/projectDocument';
-import { getStarterTemplatePath, type RuntimeEnvironment } from '../lib/runtimePaths';
+import { getStarterTemplatePath, resolveProjectPath, type RuntimeEnvironment } from '../lib/runtimePaths';
+import { extractEmailTemplateVariables, readEmailTemplateContent } from '../lib/emailTemplate';
 
 type DialogDeps = {
   BrowserWindow: typeof ElectronModule.BrowserWindow;
@@ -47,7 +53,16 @@ export async function pickPath(
   return result.filePaths[0];
 }
 
-export async function saveProjectDocument(deps: DialogDeps, project: SavedProjectDocument) {
+export async function saveProjectDocument(
+  deps: DialogDeps,
+  project: SavedProjectDocument,
+  filePath?: string | null,
+) {
+  if (filePath) {
+    await writeFile(filePath, JSON.stringify(project, null, 2), 'utf8');
+    return filePath;
+  }
+
   const activeWindow = getActiveWindow(deps);
   const options = {
     defaultPath: 'greeklit-project.json',
@@ -66,7 +81,15 @@ export async function saveProjectDocument(deps: DialogDeps, project: SavedProjec
   return result.filePath;
 }
 
-export async function openProjectDocument(deps: DialogDeps) {
+export async function openProjectDocument(deps: DialogDeps, requestedFilePath?: string | null) {
+  if (requestedFilePath) {
+    const contents = await readFile(requestedFilePath, 'utf8');
+    return {
+      filePath: requestedFilePath,
+      projectDocument: normalizeProjectDocument(JSON.parse(contents)),
+    };
+  }
+
   const activeWindow = getActiveWindow(deps);
   const options: Electron.OpenDialogOptions = {
     filters: [{ extensions: ['json'], name: 'Greeklit Project' }],
@@ -81,14 +104,14 @@ export async function openProjectDocument(deps: DialogDeps) {
     return null;
   }
 
-  const filePath = result.filePaths[0];
-  if (!filePath) {
+  const selectedFilePath = result.filePaths[0];
+  if (!selectedFilePath) {
     return null;
   }
 
-  const contents = await readFile(filePath, 'utf8');
+  const contents = await readFile(selectedFilePath, 'utf8');
   return {
-    filePath,
+    filePath: selectedFilePath,
     projectDocument: normalizeProjectDocument(JSON.parse(contents)),
   };
 }
@@ -122,4 +145,29 @@ export async function saveStarterTemplate(
 
   await copyFile(sourcePath, result.filePath);
   return result.filePath;
+}
+
+export async function inspectEmailTemplate(
+  environment: RuntimeEnvironment,
+  request: EmailTemplateInspectionRequest,
+): Promise<EmailTemplateInspectionResult> {
+  const templatePath = resolveProjectPath(request.templatePath, environment) ?? '';
+
+  if (!templatePath) {
+    return {
+      content: '',
+      exists: false,
+      templatePath,
+      variables: [],
+    };
+  }
+
+  const content = await readEmailTemplateContent(templatePath);
+
+  return {
+    content,
+    exists: true,
+    templatePath,
+    variables: extractEmailTemplateVariables(content),
+  };
 }

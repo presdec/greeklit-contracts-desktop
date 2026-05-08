@@ -1,6 +1,6 @@
 {
   "name": "docgen-studio",
-  "version": "0.2.14",
+  "version": "0.2.15",
   "description": "Turn your Excel data and Word template into hundreds of personalised documents, PDFs, and email drafts — locally, with no cloud and no subscription.",
   "author": "Philip Prescott-Decie",
   "license": "MIT",
@@ -33,6 +33,7 @@
     "dist:linux:ubuntu": "pnpm build:release-ready && pnpm runtime:assert:linux-x64 && electron-builder --linux deb",
     "dist": "pnpm dist:win",
     "preview": "electron-vite preview",
+    "test:unit": "node scripts/tests/workflowValidation.test.mjs",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",

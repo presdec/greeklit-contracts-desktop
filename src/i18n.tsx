@@ -29,6 +29,7 @@ type Translation = {
     missingEmailMappings: (fields: string) => string;
     missingWordMappings: (fields: string) => string;
     openRecentProject: string;
+    outputsRequiredBody: string;
     saveDraftSetup: string;
     couldNotSaveExampleTemplate: string;
     couldNotLoadWorkbookPreview: string;
@@ -37,6 +38,7 @@ type Translation = {
     continueTo: string;
     wordTemplateRequiredTitle: string;
     wordTemplateRequiredBody: string;
+    emailTemplateRequiredBody: string;
     workbookRequiredBody: string;
     outputFolderRequiredTitle: string;
     outputFolderRequiredBody: string;
@@ -171,6 +173,17 @@ type Translation = {
     to: string;
     toDesc: string;
   };
+  externalEmailTemplate: {
+    badge: string;
+    file: string;
+    loadErrorTitle: string;
+    loading: string;
+    noVariables: string;
+    preview: string;
+    subtitle: string;
+    title: string;
+    variables: string;
+  };
   templatePreview: {
     badge: string;
     cc: string;
@@ -181,38 +194,57 @@ type Translation = {
   };
   workbookPreview: {
     badgeColumns: (count: number) => string;
+    chooseVariable: string;
     column: string;
+    filterAll: string;
+    filterMissing: string;
+    filterRequired: string;
     firstRowValue: string;
+    headerMatched: (count: number) => string;
     header: string;
+    modeCompact: string;
+    modeFull: string;
+    modeHalf: string;
     previewUnavailable: string;
     refreshing: string;
+    requiredSummary: (mapped: number, total: number) => string;
     selectedVariable: string;
     subtitle: string;
+    suggestedVariable: string;
     title: string;
     usedBy: string;
     usedByBoth: string;
     usedByContract: string;
     usedByEmail: string;
+    usedByFilename: string;
     usedByNone: string;
-    chooseVariable: string;
+    usedByWord: string;
+    useSuggestedVariable: (variable: string) => string;
   };
   review: {
     badge: string;
     checksPassSummary: (passed: number, total: number) => string;
     emailBodyLength: string;
+    emailCoverage: (mapped: number, total: number) => string;
+    emailSource: string;
+    filenameCoverage: (mapped: number, total: number) => string;
     fixIssue: string;
     goodToGenerateBody: string;
     goodToGenerateTitle: string;
     hideDetails: string;
     issuesFound: (count: number) => string;
+    mappingCoverage: string;
     mappedColumns: string;
     mappedWordFields: string;
+    missingRequiredVariables: string;
     needsAttentionBody: string;
     needsAttentionTitle: string;
+    noMissingRequiredVariables: string;
     outputPlan: string;
     pdfBackend: string;
     preflightLoadingBody: string;
     preflightLoadingTitle: string;
+    requiredMappedSummary: (mapped: number, total: number) => string;
     rowsFound: string;
     selectedOutput: string;
     setupCheck: string;
@@ -223,6 +255,8 @@ type Translation = {
     statusPass: string;
     statusWarn: string;
     title: string;
+    workbookSource: string;
+    wordCoverage: (mapped: number, total: number) => string;
   };
   setupPreview: {
     badge: string;
@@ -317,7 +351,8 @@ const translations: Record<Language, Translation> = {
       mapAllFieldsTitle: 'Map all fields before review',
       missingEmailMappings: (fields) => `Email fields missing workbook assignment: ${fields}.`,
       missingWordMappings: (fields) => `Word fields missing mapping: ${fields}. `,
-      openRecentProject: 'Open Recent Project',
+      openRecentProject: 'Open Project Setup',
+      outputsRequiredBody: 'Choose at least one output type before continuing.',
       saveDraftSetup: 'Save Draft Setup',
       couldNotSaveExampleTemplate: 'Could not save example template',
       couldNotLoadWorkbookPreview: 'Could not load workbook preview',
@@ -327,6 +362,8 @@ const translations: Record<Language, Translation> = {
       wordTemplateRequiredTitle: 'Word template required',
       wordTemplateRequiredBody:
         'Select a Word template before continuing to Field & Filename Mapping when DOCX or PDF output is enabled.',
+      emailTemplateRequiredBody:
+        'Select an email template file before continuing when external email template source is enabled.',
       outputFolderRequiredTitle: 'Output folder required',
       outputFolderRequiredBody: 'Select an output folder before continuing.',
       workbookRequiredBody: 'Select an Excel workbook before continuing.',
@@ -371,9 +408,9 @@ const translations: Record<Language, Translation> = {
       emailOutputModeSeparateMsg: 'Separate Outlook MSG files',
       emailOutputModeSeparateMsgWithDocx: 'Separate Outlook MSG files (with DOCX attachment)',
       emailOutputModeSeparateMsgWithPdf: 'Separate Outlook MSG files (with PDF attachment)',
-      emailFileDesc: 'Choose a text file used as the email template source.',
+      emailFileDesc: 'Choose a text or Word file used as the email template source.',
       emailFileLabel: 'Email Template File',
-      emailFilePlaceholder: 'Select template file (.txt)',
+      emailFilePlaceholder: 'Select template file (.txt, .docx)',
       excelDesc: 'Choose the Excel file with the values you want to use.',
       excelLabel: 'Excel File',
       excelPlaceholder: 'Select Excel file (.xlsx)',
@@ -470,6 +507,18 @@ const translations: Record<Language, Translation> = {
       to: 'To',
       toDesc: 'Primary recipient field.',
     },
+    externalEmailTemplate: {
+      badge: 'External File',
+      file: 'Template file',
+      loadErrorTitle: 'Could not load external email template',
+      loading: 'Loading',
+      noVariables: 'No placeholders found in this file.',
+      preview: 'Preview with sample row',
+      subtitle:
+        'This file will be used during generation. Review detected placeholders and map them to workbook columns below.',
+      title: 'External Email Template',
+      variables: 'Detected placeholders',
+    },
     templatePreview: {
       badge: 'Live Render',
       cc: 'Cc',
@@ -480,41 +529,60 @@ const translations: Record<Language, Translation> = {
     },
     workbookPreview: {
       badgeColumns: (count) => `${count} columns`,
+      chooseVariable: 'Choose variable',
       column: 'Column',
+      filterAll: 'All',
+      filterMissing: 'Missing',
+      filterRequired: 'Required',
       firstRowValue: 'First row value',
+      headerMatched: (count) => `${count} header matches assigned`,
       header: 'Header',
+      modeCompact: 'Compact',
+      modeFull: 'Full',
+      modeHalf: 'Half',
       previewUnavailable: 'Preview unavailable',
       refreshing: 'Refreshing workbook mapping preview...',
+      requiredSummary: (mapped, total) => `${mapped}/${total} required mapped`,
       selectedVariable: 'Selected variable',
       subtitle:
         'Review workbook columns, sample values, and field assignments used by Word and email templates.',
+      suggestedVariable: 'Suggested',
       title: 'Workbook Mapping Preview',
       usedBy: 'Used by',
       usedByBoth: '[WORD Field] + Email',
       usedByContract: '[WORD Field]',
       usedByEmail: 'Email',
+      usedByFilename: 'Filename',
       usedByNone: 'None',
-      chooseVariable: 'Choose variable',
+      usedByWord: 'Word',
+      useSuggestedVariable: (variable) => `Use suggested variable ${variable}`,
     },
     review: {
       badge: 'Review',
       checksPassSummary: (passed, total) => `${passed}/${total} Checks Pass`,
       emailBodyLength: 'Email body length',
+      emailCoverage: (mapped, total) => `Email ${mapped}/${total}`,
+      emailSource: 'Email source',
+      filenameCoverage: (mapped, total) => `Filename ${mapped}/${total}`,
       fixIssue: 'Fix',
       goodToGenerateBody:
         'Files, mappings, output folder, and selected generation options passed preflight.',
       goodToGenerateTitle: 'Good to generate',
       hideDetails: 'Hide details',
       issuesFound: (count) => `${count} issue${count === 1 ? '' : 's'} need attention`,
+      mappingCoverage: 'Mapping coverage',
       mappedColumns: 'Mapped email fields',
       mappedWordFields: 'Mapped Word fields',
+      missingRequiredVariables: 'Missing required variables',
       needsAttentionBody: 'Resolve failed checks before running this batch.',
       needsAttentionTitle: 'Needs attention',
+      noMissingRequiredVariables: 'All required workbook variables are mapped.',
       outputPlan: 'Output plan',
       pdfBackend: 'PDF backend',
       preflightLoadingBody:
         'Checking files, mappings, workbook access, output folder access, and PDF capability.',
       preflightLoadingTitle: 'Running preflight checks',
+      requiredMappedSummary: (mapped, total) => `${mapped}/${total} required mapped`,
       rowsFound: 'Rows found',
       selectedOutput: 'Selected output',
       setupCheck: 'Setup Check',
@@ -525,6 +593,8 @@ const translations: Record<Language, Translation> = {
       statusPass: 'PASS',
       statusWarn: 'WARN',
       title: 'Ready To Generate',
+      workbookSource: 'Workbook source',
+      wordCoverage: (mapped, total) => `Word ${mapped}/${total}`,
     },
     setupPreview: {
       badge: 'Setup preview',
@@ -620,7 +690,8 @@ const translations: Record<Language, Translation> = {
       mapAllFieldsTitle: 'Αντιστοιχίστε όλα τα πεδία πριν τον έλεγχο',
       missingEmailMappings: (fields) => `Πεδία email χωρίς αντιστοίχιση workbook: ${fields}.`,
       missingWordMappings: (fields) => `Πεδία Word χωρίς αντιστοίχιση: ${fields}. `,
-      openRecentProject: 'Άνοιγμα πρόσφατου έργου',
+      openRecentProject: 'Άνοιγμα ρύθμισης έργου',
+      outputsRequiredBody: 'Επιλέξτε τουλάχιστον έναν τύπο εξόδου πριν συνεχίσετε.',
       saveDraftSetup: 'Αποθήκευση πρόχειρης ρύθμισης',
       couldNotSaveExampleTemplate: 'Αδυναμία αποθήκευσης πρότυπου παραδείγματος',
       couldNotLoadWorkbookPreview: 'Αδυναμία φόρτωσης προεπισκόπησης workbook',
@@ -630,6 +701,8 @@ const translations: Record<Language, Translation> = {
       wordTemplateRequiredTitle: 'Απαιτείται πρότυπο Word',
       wordTemplateRequiredBody:
         'Επιλέξτε πρότυπο Word πριν συνεχίσετε στη Χαρτογράφηση Πεδίων & Ονόματος Αρχείου όταν είναι ενεργό DOCX ή PDF.',
+      emailTemplateRequiredBody:
+        'Επιλέξτε αρχείο προτύπου email πριν συνεχίσετε όταν είναι ενεργή η εξωτερική πηγή email.',
       outputFolderRequiredTitle: 'Απαιτείται φάκελος εξόδου',
       outputFolderRequiredBody: 'Επιλέξτε φάκελο εξόδου πριν συνεχίσετε.',
       workbookRequiredBody: 'Επιλέξτε αρχείο Excel πριν συνεχίσετε.',
@@ -674,9 +747,9 @@ const translations: Record<Language, Translation> = {
       emailOutputModeSeparateMsg: 'Ξεχωριστά αρχεία Outlook MSG',
       emailOutputModeSeparateMsgWithDocx: 'Ξεχωριστά αρχεία Outlook MSG (με συνημμένο DOCX)',
       emailOutputModeSeparateMsgWithPdf: 'Ξεχωριστά αρχεία Outlook MSG (με συνημμένο PDF)',
-      emailFileDesc: 'Επιλέξτε αρχείο κειμένου ως πηγή προτύπου email.',
+      emailFileDesc: 'Επιλέξτε αρχείο κειμένου ή Word ως πηγή προτύπου email.',
       emailFileLabel: 'Αρχείο Προτύπου Email',
-      emailFilePlaceholder: 'Επιλέξτε αρχείο προτύπου (.txt)',
+      emailFilePlaceholder: 'Επιλέξτε αρχείο προτύπου (.txt, .docx)',
       excelDesc: 'Επιλέξτε το αρχείο Excel με τις τιμές που θέλετε να χρησιμοποιήσετε.',
       excelLabel: 'Αρχείο Excel',
       excelPlaceholder: 'Επιλέξτε αρχείο Excel (.xlsx)',
@@ -773,6 +846,18 @@ const translations: Record<Language, Translation> = {
       to: 'Προς',
       toDesc: 'Κύριος παραλήπτης.',
     },
+    externalEmailTemplate: {
+      badge: 'Εξωτερικό αρχείο',
+      file: 'Αρχείο προτύπου',
+      loadErrorTitle: 'Αδυναμία φόρτωσης εξωτερικού προτύπου email',
+      loading: 'Φόρτωση',
+      noVariables: 'Δεν βρέθηκαν placeholders σε αυτό το αρχείο.',
+      preview: 'Προεπισκόπηση με γραμμή δείγματος',
+      subtitle:
+        'Αυτό το αρχείο θα χρησιμοποιηθεί στη δημιουργία. Ελέγξτε τα placeholders και αντιστοιχίστε τα με στήλες workbook παρακάτω.',
+      title: 'Εξωτερικό Πρότυπο Email',
+      variables: 'Placeholders που βρέθηκαν',
+    },
     templatePreview: {
       badge: 'Ζωντανή Απόδοση',
       cc: 'Κοινοποίηση',
@@ -783,41 +868,60 @@ const translations: Record<Language, Translation> = {
     },
     workbookPreview: {
       badgeColumns: (count) => `${count} στήλες`,
+      chooseVariable: 'Επιλέξτε μεταβλητή',
       column: 'Στήλη',
+      filterAll: 'Όλα',
+      filterMissing: 'Λείπουν',
+      filterRequired: 'Απαιτούμενα',
       firstRowValue: 'Τιμή πρώτης γραμμής',
+      headerMatched: (count) => `${count} αντιστοιχίσεις από επικεφαλίδες`,
       header: 'Επικεφαλίδα',
+      modeCompact: 'Συμπαγές',
+      modeFull: 'Πλήρες',
+      modeHalf: 'Μισό',
       previewUnavailable: 'Η προεπισκόπηση δεν είναι διαθέσιμη',
       refreshing: 'Ανανέωση προεπισκόπησης αντιστοίχισης workbook...',
+      requiredSummary: (mapped, total) => `${mapped}/${total} απαιτούμενα αντιστοιχισμένα`,
       selectedVariable: 'Επιλεγμένη μεταβλητή',
       subtitle:
         'Ελέγξτε στήλες workbook, τιμές δείγματος και αντιστοιχίσεις πεδίων για Word και email.',
+      suggestedVariable: 'Πρόταση',
       title: 'Προεπισκόπηση Αντιστοίχισης Workbook',
       usedBy: 'Χρησιμοποιείται από',
       usedByBoth: '[WORD Field] + Email',
       usedByContract: '[WORD Field]',
       usedByEmail: 'Email',
+      usedByFilename: 'Όνομα αρχείου',
       usedByNone: 'Κανένα',
-      chooseVariable: 'Επιλέξτε μεταβλητή',
+      usedByWord: 'Word',
+      useSuggestedVariable: (variable) => `Χρήση προτεινόμενης μεταβλητής ${variable}`,
     },
     review: {
       badge: 'Έλεγχος',
       checksPassSummary: (passed, total) => `${passed}/${total} Έλεγχοι OK`,
       emailBodyLength: 'Μήκος κειμένου email',
+      emailCoverage: (mapped, total) => `Email ${mapped}/${total}`,
+      emailSource: 'Πηγή email',
+      filenameCoverage: (mapped, total) => `Όνομα αρχείου ${mapped}/${total}`,
       fixIssue: 'Διόρθωση',
       goodToGenerateBody:
         'Τα αρχεία, οι αντιστοιχίσεις, ο φάκελος εξόδου και οι επιλογές δημιουργίας πέρασαν τον προέλεγχο.',
       goodToGenerateTitle: 'Έτοιμο για δημιουργία',
       hideDetails: 'Απόκρυψη λεπτομερειών',
       issuesFound: (count) => `${count} θέματα χρειάζονται έλεγχο`,
+      mappingCoverage: 'Κάλυψη αντιστοιχίσεων',
       mappedColumns: 'Αντιστοιχισμένα πεδία email',
       mappedWordFields: 'Αντιστοιχισμένα πεδία Word',
+      missingRequiredVariables: 'Απαιτούμενες μεταβλητές που λείπουν',
       needsAttentionBody: 'Διορθώστε τους αποτυχημένους ελέγχους πριν εκτελέσετε τη δημιουργία.',
       needsAttentionTitle: 'Χρειάζεται έλεγχο',
+      noMissingRequiredVariables: 'Όλες οι απαιτούμενες μεταβλητές workbook είναι αντιστοιχισμένες.',
       outputPlan: 'Πλάνο εξόδου',
       pdfBackend: 'Backend PDF',
       preflightLoadingBody:
         'Έλεγχος αρχείων, αντιστοιχίσεων, πρόσβασης workbook, φακέλου εξόδου και δυνατότητας PDF.',
       preflightLoadingTitle: 'Εκτέλεση προελέγχων',
+      requiredMappedSummary: (mapped, total) => `${mapped}/${total} απαιτούμενα αντιστοιχισμένα`,
       rowsFound: 'Γραμμές που βρέθηκαν',
       selectedOutput: 'Επιλεγμένη έξοδος',
       setupCheck: 'Έλεγχος Ρύθμισης',
@@ -828,6 +932,8 @@ const translations: Record<Language, Translation> = {
       statusPass: 'OK',
       statusWarn: 'ΠΡΟΣΟΧΗ',
       title: 'Έτοιμο για Δημιουργία',
+      workbookSource: 'Πηγή workbook',
+      wordCoverage: (mapped, total) => `Word ${mapped}/${total}`,
     },
     setupPreview: {
       badge: 'Προεπισκόπηση ρύθμισης',

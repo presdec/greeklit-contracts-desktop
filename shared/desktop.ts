@@ -14,11 +14,14 @@ export type SaveStarterTemplateRequest = {
 };
 
 export type MenuAction =
+  | { filePath: string; type: 'open-recent-project' }
   | 'generate-project'
+  | 'open-last-project'
   | 'open-contract-template'
   | 'open-project'
   | 'reload-template-fields'
-  | 'save-project';
+  | 'save-project'
+  | 'save-project-as';
 
 export type ProjectConfig = {
   workbookPath: string;
@@ -39,6 +42,11 @@ export type ProjectOpenResult = {
   projectDocument: SavedProjectDocument;
 };
 
+export type RecentProjectEntry = {
+  filePath: string;
+  label: string;
+};
+
 export type DesktopCapabilities = {
   outlookMsgDrafts: boolean;
   pdfBackend: 'libreoffice' | 'none' | 'word';
@@ -57,6 +65,17 @@ export type EmailTemplateInput = {
   cc: string;
   subject: string;
   to: string;
+};
+
+export type EmailTemplateInspectionRequest = {
+  templatePath?: string;
+};
+
+export type EmailTemplateInspectionResult = {
+  content: string;
+  exists: boolean;
+  templatePath: string;
+  variables: string[];
 };
 
 export type SavedProjectDocument = {

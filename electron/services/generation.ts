@@ -13,6 +13,7 @@ import type {
   ProjectPreflightResult,
 } from '../../shared/desktop';
 import { collectOutputTree } from '../lib/outputTree';
+import { readEmailTemplateContent } from '../lib/emailTemplate';
 import {
   buildRuntimeCommand,
   describePythonRuntime,
@@ -450,7 +451,7 @@ async function buildGenerationContext(
     : undefined;
   const emailTemplateText = request.project.useOptionalEmailSource
     ? optionalEmailTemplatePath
-      ? normalizeOptionalEmailTemplateHtml(await readFile(optionalEmailTemplatePath, 'utf8'))
+      ? normalizeOptionalEmailTemplateHtml(await readEmailTemplateContent(optionalEmailTemplatePath))
       : ''
     : buildEmailTemplateHtml(request);
   const filenamePattern = wantsDocumentOutput
@@ -614,7 +615,7 @@ export async function runProjectPreflight(
     && !request.generationOptions.generatePdf
     && !request.generationOptions.generateEmailDrafts
   ) {
-    addCheck('outputs', 'Output selection', 'fail', 'Choose at least one output type before generation.');
+    addCheck('outputs', 'Output selection', 'fail', 'Choose at least one output type before continuing.');
   } else {
     addCheck('outputs', 'Output selection', 'pass', 'At least one output type is enabled.');
   }
@@ -680,7 +681,7 @@ export async function runProjectPreflight(
       context.workbookPath && existsSync(context.workbookPath) ? 'pass' : 'fail',
       context.workbookPath && existsSync(context.workbookPath)
         ? `Workbook found at ${context.workbookPath}.`
-        : 'Choose an Excel workbook that exists on disk.',
+        : 'Select an Excel workbook that exists on disk before continuing.',
     );
 
     if (context.wantsDocumentOutput) {
@@ -690,7 +691,7 @@ export async function runProjectPreflight(
         context.contractTemplatePath && existsSync(context.contractTemplatePath) ? 'pass' : 'fail',
         context.contractTemplatePath && existsSync(context.contractTemplatePath)
           ? `Word template found at ${context.contractTemplatePath}.`
-          : 'Choose a Word template before generating DOCX or PDF files.',
+          : 'Select a Word template before continuing when DOCX or PDF output is enabled.',
       );
     }
 
@@ -705,14 +706,14 @@ export async function runProjectPreflight(
         emailTemplatePath && existsSync(emailTemplatePath) ? 'pass' : 'fail',
         emailTemplatePath && existsSync(emailTemplatePath)
           ? `Email template file found at ${emailTemplatePath}.`
-          : 'Turn off "Use an existing email template file" or choose a valid template file.',
+          : 'Select an email template file before continuing, or turn off the external email template source.',
       );
     }
 
     try {
       const outputReady = await ensureOutputDirectory(context.outputDir);
       if (!outputReady) {
-        throw new Error('Choose an output folder before generation.');
+        throw new Error('Select an output folder before continuing.');
       }
 
       addCheck(
@@ -774,7 +775,7 @@ export async function runProjectPreflight(
         'required-placeholders',
         'Required placeholder coverage',
         'fail',
-        `Missing mappings for placeholders: ${context.missingPlaceholders.join(', ')}.`,
+        `Map every required Word, email, and filename field before review: ${context.missingPlaceholders.join(', ')}.`,
       );
     } else {
       addCheck(

@@ -1,5 +1,37 @@
 # Release Notes
 
+## v0.2.15 (2026-05-08)
+
+### Added
+- Quick project save and reload workflow:
+  - `F5` saves the current project setup.
+  - `F9` opens the most recent project.
+  - File menu now includes Open Project, Open Last Project, Open Recent, Save Project, and Save Project As.
+- Real persisted recent-projects list in the native File menu, including Clear Recent Projects.
+- External email template files now support both `.txt` and `.docx`.
+- External email template placeholders are inspected and included in workbook mapping/preflight checks.
+- Focused regression coverage for quick save, recent projects, external `.txt`/`.docx` email templates, mapping UI, review summary, and centralized workflow validation.
+- GitHub Actions now runs the direct workflow-validation unit tests.
+
+### Improved
+- Workbook mapping now uses a docked mapping panel with Compact, Half, and Full modes.
+- Workbook mapping table has internal scrolling, sticky headers, usage filters, required/missing filters, and usage badges for Word, Email, and Filename.
+- Suggested workbook variables can be applied directly from the table.
+- Required mapping coverage is shown directly in the mapping dock and review page.
+- Final review page is grouped into Output plan, Mapping coverage, Workbook source, and Email source.
+- Navigation validation and review/preflight step targeting now share centralized validation logic.
+- Word template field reload now forces DOCX re-inspection.
+- Conservative auto-mapping now fills matching required fields from workbook header suggestions without overwriting manual choices.
+- Greek workbook headers are recognized locally for common contract fields, and unknown Greek headers produce shorter Greeklish field suggestions.
+- Suggested fallback field names are capped to field-sized values instead of long sentence-sized identifiers.
+
+### Fixed
+- Workbook mapping column order now follows Excel order (`A, B, C ... Z, AA`) instead of string ordering.
+- Prevented broad aliases like `to` from incorrectly suggesting `EMAIL_TO` for unrelated Greek headers.
+- Review no longer flashes a red "Needs attention" state while preflight is still pending.
+- Release workflow now writes the matching `docs/release-notes.md` section into the GitHub release body, so release pages show descriptions.
+- PowerShell/VS Code workspace settings now avoid double Python environment activation in the integrated terminal.
+
 ## v0.2.14 (2026-05-08)
 
 ### Added

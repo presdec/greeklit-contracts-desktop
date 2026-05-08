@@ -1,8 +1,7 @@
 import { useAtom } from 'jotai/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { WorkbookPreviewSampleRow } from '../../shared/desktop';
+import type { WorkbookPreviewColumn, WorkbookPreviewSampleRow } from '../../shared/desktop';
 import type { TemplateStatusResult } from '../../shared/desktop';
-import { usageForVariable } from '../lib/template';
 import { variableColumnsAtom } from '../state/workspace';
 import type { WorkbookPreviewRow } from '../types/template';
 import type { ProjectConfig } from '../../shared/desktop';
@@ -33,9 +32,7 @@ export function useWorkbookPreview(
   const [fieldAssignments, setFieldAssignments] = useAtom(variableColumnsAtom);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [rawColumns, setRawColumns] = useState<
-    Array<{ columnLetter: string; header: string; sampleValue: string }>
-  >([]);
+  const [rawColumns, setRawColumns] = useState<WorkbookPreviewColumn[]>([]);
   const [sampleRows, setSampleRows] = useState<WorkbookPreviewSampleRow[]>([]);
   const [templateStatus, setTemplateStatus] = useState<TemplateStatusResult | null>(null);
   const [totalRows, setTotalRows] = useState(0);
@@ -43,15 +40,16 @@ export function useWorkbookPreview(
   const [worksheetNames, setWorksheetNames] = useState<string[]>([]);
   const [refreshTick, setRefreshTick] = useState(0);
   const previewRequestId = useRef(0);
-  // Track the last contract template path used so we can skip DOCX re-parsing
-  // when only workbook row numbers or the worksheet changed.
   const lastContractTemplatePathRef = useRef<string | undefined>(undefined);
 
-  // Debounce numeric row inputs so rapid changes don't fire a Python IPC call on every keystroke
   const debouncedHeaderRow = useDebounced(project.headerRow, NUMERIC_INPUT_DEBOUNCE_MS);
   const debouncedDataStartRow = useDebounced(project.dataStartRow, NUMERIC_INPUT_DEBOUNCE_MS);
 
-  const refreshPreview = useCallback(() => {
+  const refreshPreview = useCallback((options?: { forceTemplateReload?: boolean }) => {
+    if (options?.forceTemplateReload) {
+      lastContractTemplatePathRef.current = undefined;
+    }
+
     setRefreshTick((current) => current + 1);
   }, []);
 
@@ -101,8 +99,6 @@ export function useWorkbookPreview(
     setIsLoading(true);
     setLoadError(null);
 
-    // Only send contractTemplatePath to Python when it has changed since the
-    // last successful call — avoids re-parsing the DOCX on every row change.
     const contractPathChanged =
       project.contractTemplatePath !== lastContractTemplatePathRef.current;
     const contractTemplatePathForRequest = contractPathChanged
@@ -127,7 +123,6 @@ export function useWorkbookPreview(
       setRawColumns(result.columns);
       setColumnValues(result.columnValues ?? {});
       if (contractPathChanged) {
-        // Only update contract tokens when the template actually changed.
         setContractTokenContexts(result.contractTokenContexts ?? {});
         setContractVariables(result.contractTokens);
         lastContractTemplatePathRef.current = project.contractTemplatePath;
@@ -139,8 +134,6 @@ export function useWorkbookPreview(
       if (!worksheetName && result.worksheetName) {
         onResolvedWorksheetName?.(result.worksheetName);
       }
-      // loadTemplateStatus is handled by its own useEffect (on path change)
-      // and 3-second polling — no need to call it here.
     } catch (error) {
       if (previewRequestId.current === requestId) {
         setLoadError(error instanceof Error ? error.message : 'Could not inspect workbook.');
@@ -172,6 +165,42 @@ export function useWorkbookPreview(
   }, [loadPreview, refreshTick]);
 
   useEffect(() => {
+    const requiredVariables = new Set([
+      ...contractVariables,
+      ...emailVariables,
+      ...filenameVariables,
+    ]);
+
+    if (requiredVariables.size === 0 || rawColumns.length === 0) {
+      return;
+    }
+
+    setFieldAssignments((current) => {
+      const usedVariables = new Set(Object.values(current).filter(Boolean));
+      let changed = false;
+      const nextAssignments = { ...current };
+
+      for (const column of rawColumns) {
+        const suggestedVariable = column.suggestedVariable;
+        if (
+          !suggestedVariable
+          || !requiredVariables.has(suggestedVariable)
+          || nextAssignments[column.columnLetter]
+          || usedVariables.has(suggestedVariable)
+        ) {
+          continue;
+        }
+
+        nextAssignments[column.columnLetter] = suggestedVariable;
+        usedVariables.add(suggestedVariable);
+        changed = true;
+      }
+
+      return changed ? nextAssignments : current;
+    });
+  }, [contractVariables, emailVariables, filenameVariables, rawColumns, setFieldAssignments]);
+
+  useEffect(() => {
     if (!project.contractTemplatePath) {
       return undefined;
     }
@@ -200,11 +229,6 @@ export function useWorkbookPreview(
     [contractVariables, emailVariables, filenameVariables, fieldAssignments],
   );
 
-  const contractAndFilenameVariables = useMemo(
-    () => Array.from(new Set([...contractVariables, ...filenameVariables])),
-    [contractVariables, filenameVariables],
-  );
-
   const rows: WorkbookPreviewRow[] = useMemo(
     () =>
       rawColumns.map((column) => {
@@ -212,10 +236,10 @@ export function useWorkbookPreview(
         return {
           ...column,
           selectedVariable,
-          usedBy: usageForVariable(selectedVariable, emailVariables, contractAndFilenameVariables),
+          usedBy: 'unused',
         };
       }),
-    [contractAndFilenameVariables, emailVariables, fieldAssignments, rawColumns],
+    [fieldAssignments, rawColumns],
   );
 
   const sampleValues = useMemo(

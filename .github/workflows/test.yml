@@ -50,6 +50,9 @@ jobs:
       - name: Build app
         run: pnpm build
 
+      - name: Run unit tests
+        run: pnpm test:unit
+
       - name: Install Playwright dependencies
         run: pnpm exec playwright install --with-deps
 

@@ -14,13 +14,14 @@ export type GenerationOptions = {
   generatePdf: boolean;
 };
 
-export type VariableUsage = 'both' | 'contract' | 'email' | 'unused';
+export type VariableUsage = 'both' | 'contract' | 'email' | 'filename' | 'multiple' | 'unused';
 
 export type WorkbookPreviewRow = {
   columnLetter: string;
   header: string;
   sampleValue: string;
   selectedVariable: string;
+  suggestedVariable: string | null;
   usedBy: VariableUsage;
 };
 

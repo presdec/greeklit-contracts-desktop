@@ -7,8 +7,10 @@ import { useEmailTemplateBuilder } from '../../hooks/useEmailTemplateBuilder';
 import { useContractTemplateSettings } from '../../hooks/useContractTemplateSettings';
 import { useProjectSetup } from '../../hooks/useProjectSetup';
 import { useWorkbookPreview } from '../../hooks/useWorkbookPreview';
+import { useExternalEmailTemplate } from '../../hooks/useExternalEmailTemplate';
 import { useI18n } from '../../i18n';
 import { extractTokens, tokenName } from '../../lib/template';
+import { buildWorkflowValidation } from './workflowValidation';
 import type { WizardStepId } from '../../types/template';
 import type {
   DesktopCapabilities,
@@ -16,6 +18,12 @@ import type {
   GenerateProjectResult,
   StarterTemplateKind,
 } from '../../../shared/desktop';
+
+type WorkbookMappingUsage = {
+  email: boolean;
+  filename: boolean;
+  word: boolean;
+};
 
 export const stepCopy = {
   1: {
@@ -81,6 +89,36 @@ export function useWorkspaceController(desktopApp: Window['desktopApp']) {
       ),
     [projectSetup.project.outputFilenamePattern],
   );
+  const externalEmailTemplate = useExternalEmailTemplate(
+    desktopApp,
+    projectSetup.project.useOptionalEmailSource,
+    projectSetup.project.emailTemplatePath,
+  );
+  const activeEmailVariables = useMemo(
+    () => projectSetup.project.useOptionalEmailSource
+      ? externalEmailTemplate.variables
+      : templateBuilder.emailVariables,
+    [
+      externalEmailTemplate.variables,
+      projectSetup.project.useOptionalEmailSource,
+      templateBuilder.emailVariables,
+    ],
+  );
+  const activeEmailTemplate = useMemo(
+    () => projectSetup.project.useOptionalEmailSource
+      ? {
+        body: externalEmailTemplate.content,
+        cc: '',
+        subject: '',
+        to: '',
+      }
+      : templateBuilder.emailTemplate,
+    [
+      externalEmailTemplate.content,
+      projectSetup.project.useOptionalEmailSource,
+      templateBuilder.emailTemplate,
+    ],
+  );
 
   const handleResolvedWorksheetName = useCallback((worksheetName: string) => {
     projectSetup.setProject((current) => {
@@ -98,7 +136,7 @@ export function useWorkspaceController(desktopApp: Window['desktopApp']) {
   const workbookPreview = useWorkbookPreview(
     desktopApp,
     projectSetup.project,
-    generationOptions.generateEmailDrafts ? templateBuilder.emailVariables : [],
+    generationOptions.generateEmailDrafts ? activeEmailVariables : [],
     filenameVariables,
     handleResolvedWorksheetName,
   );
@@ -182,7 +220,7 @@ export function useWorkspaceController(desktopApp: Window['desktopApp']) {
       },
       emailTemplatePath: {
         defaultPath: projectSetup.project.emailTemplatePath || undefined,
-        filters: [{ extensions: ['txt'], name: 'Text Templates' }],
+        filters: [{ extensions: ['txt', 'docx'], name: 'Email Templates' }],
         mode: 'file' as const,
         title: language === 'el' ? 'Επιλέξτε Πρότυπο Email' : 'Select Email Template',
       },
@@ -229,15 +267,14 @@ export function useWorkspaceController(desktopApp: Window['desktopApp']) {
     activeStep === 4 && !generationResult,
   );
 
-  const handleSaveProject = useCallback(async () => {
-    const savedPath = await projectPersistence.saveProject();
+  const handleSaveProject = useCallback(async (options?: { saveAs?: boolean }) => {
+    const savedPath = await projectPersistence.saveProject(options);
     return savedPath
       ? (language === 'el' ? `Το έργο αποθηκεύτηκε στο ${savedPath}.` : `Saved project to ${savedPath}.`)
       : null;
   }, [language, projectPersistence]);
 
-  const handleOpenProject = useCallback(async () => {
-    const filePath = await projectPersistence.openProject();
+  const finishOpenProject = useCallback((filePath: string | null) => {
     if (filePath) {
       setGenerationElapsedSeconds(0);
       setGenerationError(null);
@@ -249,10 +286,26 @@ export function useWorkspaceController(desktopApp: Window['desktopApp']) {
       setGenerationStage(null);
       setTemplateActionError(null);
     }
+
     return filePath
       ? (language === 'el' ? `Το έργο φορτώθηκε από ${filePath}.` : `Loaded project from ${filePath}.`)
       : null;
-  }, [language, projectPersistence]);
+  }, [language]);
+
+  const handleOpenProject = useCallback(async () => {
+    const filePath = await projectPersistence.openProject();
+    return finishOpenProject(filePath);
+  }, [finishOpenProject, projectPersistence]);
+
+  const handleOpenLastProject = useCallback(async () => {
+    const filePath = await projectPersistence.openLastProject();
+    return finishOpenProject(filePath);
+  }, [finishOpenProject, projectPersistence]);
+
+  const handleOpenRecentProject = useCallback(async (filePath: string) => {
+    const openedPath = await projectPersistence.openProjectPath(filePath);
+    return finishOpenProject(openedPath);
+  }, [finishOpenProject, projectPersistence]);
 
   const handleSaveStarterTemplate = useCallback(async (kind: StarterTemplateKind) => {
     setTemplateActionError(null);
@@ -343,7 +396,7 @@ export function useWorkspaceController(desktopApp: Window['desktopApp']) {
     setIsReloadingTemplate(true);
 
     try {
-      workbookPreview.refreshPreview();
+      workbookPreview.refreshPreview({ forceTemplateReload: true });
     } catch (error) {
       setTemplateActionError(
         error instanceof Error
@@ -402,23 +455,87 @@ export function useWorkspaceController(desktopApp: Window['desktopApp']) {
   );
   const unmappedEmailVariables = useMemo(
     () =>
-      Array.from(new Set(templateBuilder.emailVariables)).filter(
+      Array.from(new Set(activeEmailVariables)).filter(
         (variable) => !selectedWorkbookVariables.has(variable),
       ),
-    [selectedWorkbookVariables, templateBuilder.emailVariables],
+    [activeEmailVariables, selectedWorkbookVariables],
   );
-  const canContinueFromStep3 =
-    unmappedContractTokens.length === 0
-    && (!contractSettings.generationOptions.generateEmailDrafts || unmappedEmailVariables.length === 0);
+  const workbookMappingUsage = useMemo(() => {
+    const usage: Record<string, WorkbookMappingUsage> = {};
+    const ensureUsage = (variable: string) => {
+      usage[variable] ??= { email: false, filename: false, word: false };
+      return usage[variable];
+    };
+
+    for (const variable of workbookPreview.contractVariables) {
+      ensureUsage(variable).word = true;
+    }
+    for (const variable of activeEmailVariables) {
+      ensureUsage(variable).email = true;
+    }
+    for (const variable of filenameVariables) {
+      ensureUsage(variable).filename = true;
+    }
+
+    return usage;
+  }, [activeEmailVariables, filenameVariables, workbookPreview.contractVariables]);
+  const requiredWorkbookVariables = useMemo(
+    () => Array.from(new Set([
+      ...workbookPreview.contractVariables,
+      ...activeEmailVariables,
+      ...filenameVariables,
+    ])),
+    [activeEmailVariables, filenameVariables, workbookPreview.contractVariables],
+  );
+  const missingWorkbookVariables = useMemo(
+    () => requiredWorkbookVariables.filter((variable) => !selectedWorkbookVariables.has(variable)),
+    [requiredWorkbookVariables, selectedWorkbookVariables],
+  );
+  const headerMatchedMappings = useMemo(
+    () => workbookPreview.rows.filter((row) =>
+      row.selectedVariable && row.suggestedVariable === row.selectedVariable).length,
+    [workbookPreview.rows],
+  );
+  const validation = useMemo(
+    () => buildWorkflowValidation({
+      copy: {
+        emailTemplateLoadError: (error) => error,
+        emailTemplateRequired: copy.app.emailTemplateRequiredBody,
+        mapRequiredFields: (wordFields, emailFields) => [
+          wordFields.length > 0 ? copy.app.missingWordMappings(wordFields.join(', ')) : '',
+          emailFields.length > 0 ? copy.app.missingEmailMappings(emailFields.join(', ')) : '',
+        ].filter(Boolean).join(' '),
+        outputRequired: copy.app.outputFolderRequiredBody,
+        outputsRequired: copy.app.outputsRequiredBody,
+        wordTemplateRequired: copy.app.wordTemplateRequiredBody,
+        workbookRequired: copy.app.workbookRequiredBody,
+      },
+      externalEmailTemplateLoadError: externalEmailTemplate.loadError,
+      generationOptions: contractSettings.generationOptions,
+      project: projectSetup.project,
+      unmappedContractTokens,
+      unmappedEmailVariables,
+    }),
+    [
+      contractSettings.generationOptions,
+      copy.app,
+      externalEmailTemplate.loadError,
+      projectSetup.project,
+      unmappedContractTokens,
+      unmappedEmailVariables,
+    ],
+  );
+  const canContinueFromStep3 = validation.step3Issues.length === 0;
   const selectedOutputs = [
     contractSettings.generationOptions.generateDocx ? copy.outputLabels.word : null,
     contractSettings.generationOptions.generatePdf ? copy.outputLabels.pdf : null,
     contractSettings.generationOptions.generateEmailDrafts ? copy.outputLabels.email : null,
   ].filter(Boolean) as string[];
   const canGenerateNow =
-    canContinueFromStep3
+    validation.canReview
     && !isGenerating
     && (preflight.result?.canGenerate ?? false);
+  const nextStepIssue = nextStep ? validation.firstIssueForStepBefore(nextStep) : null;
 
   return {
     activeStep,
@@ -426,6 +543,7 @@ export function useWorkspaceController(desktopApp: Window['desktopApp']) {
     canGenerateNow,
     contractSettings,
     desktopCapabilities,
+    activeEmailTemplate,
     currentStep: copy.steps[activeStep],
     currentStepIndex,
     generationElapsedSeconds,
@@ -439,6 +557,8 @@ export function useWorkspaceController(desktopApp: Window['desktopApp']) {
     generationResult,
     generationStage,
     handleGenerateProject,
+    handleOpenLastProject,
+    handleOpenRecentProject,
     handleOpenContractTemplate,
     handleOpenPath,
     handleOpenProject,
@@ -452,6 +572,7 @@ export function useWorkspaceController(desktopApp: Window['desktopApp']) {
     isOpeningTemplate,
     isReloadingTemplate,
     nextStep,
+    nextStepIssue,
     nextStepHint: copy.steps[activeStep].nextHint,
     preflight,
     previousStep,
@@ -461,9 +582,17 @@ export function useWorkspaceController(desktopApp: Window['desktopApp']) {
     setActiveStep,
     templateActionError,
     templateBuilder,
+    externalEmailTemplate,
     unmappedContractTokens,
     unmappedEmailVariables,
+    validation,
     visibleSteps,
+    workbookMapping: {
+      headerMatchedMappings,
+      missingVariables: missingWorkbookVariables,
+      requiredVariables: requiredWorkbookVariables,
+      usage: workbookMappingUsage,
+    },
     workbookPreview,
   };
 }

@@ -102,6 +102,15 @@ body {
   background: var(--app-panel-bg);
 }
 
+.workbook-dock {
+  position: sticky;
+  top: 28px;
+}
+
+.mapping-row--missing td {
+  background: rgba(250, 82, 82, 0.08);
+}
+
 .preview-card {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.08)),

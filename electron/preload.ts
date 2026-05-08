@@ -1,6 +1,8 @@
 import type * as ElectronModule from 'electron';
 import type {
   DesktopCapabilities,
+  EmailTemplateInspectionRequest,
+  EmailTemplateInspectionResult,
   FileDialogRequest,
   GenerateProjectProgress,
   GenerateProjectRequest,
@@ -11,6 +13,7 @@ import type {
   OpenPathRequest,
   ProjectPreflightResult,
   ProjectOpenResult,
+  RecentProjectEntry,
   SavedProjectDocument,
   SaveStarterTemplateRequest,
   TemplateStatusRequest,
@@ -27,6 +30,10 @@ contextBridge.exposeInMainWorld('desktopApp', {
     ipcRenderer.invoke('desktop-app:generate-project', request) as Promise<GenerateProjectResult>,
   getCapabilities: () =>
     ipcRenderer.invoke('desktop-app:get-capabilities') as Promise<DesktopCapabilities>,
+  getRecentProjects: () =>
+    ipcRenderer.invoke('desktop-app:get-recent-projects') as Promise<RecentProjectEntry[]>,
+  inspectEmailTemplate: (request: EmailTemplateInspectionRequest) =>
+    ipcRenderer.invoke('desktop-app:inspect-email-template', request) as Promise<EmailTemplateInspectionResult>,
   onGenerationProgress: (listener: (progress: GenerateProjectProgress) => void) => {
     const handler = (_event: ElectronModule.IpcRendererEvent, progress: GenerateProjectProgress) => {
       listener(progress);
@@ -53,13 +60,13 @@ contextBridge.exposeInMainWorld('desktopApp', {
   },
   openPath: (request: OpenPathRequest) =>
     ipcRenderer.invoke('desktop-app:open-path', request) as Promise<null | string>,
-  openProject: () =>
-    ipcRenderer.invoke('desktop-app:open-project') as Promise<ProjectOpenResult | null>,
+  openProject: (filePath?: string | null) =>
+    ipcRenderer.invoke('desktop-app:open-project', filePath) as Promise<ProjectOpenResult | null>,
   pickPath: (request: FileDialogRequest) =>
     ipcRenderer.invoke('desktop-app:pick-path', request) as Promise<string | null>,
   platform: process.platform,
   saveStarterTemplate: (request: SaveStarterTemplateRequest) =>
     ipcRenderer.invoke('desktop-app:save-starter-template', request) as Promise<string | null>,
-  saveProject: (project: SavedProjectDocument) =>
-    ipcRenderer.invoke('desktop-app:save-project', project) as Promise<string | null>,
+  saveProject: (project: SavedProjectDocument, filePath?: string | null) =>
+    ipcRenderer.invoke('desktop-app:save-project', project, filePath) as Promise<string | null>,
 });

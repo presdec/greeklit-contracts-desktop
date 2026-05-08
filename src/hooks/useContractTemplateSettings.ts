@@ -1,5 +1,5 @@
 import { useAtom } from 'jotai/react';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import type { GenerationOptions, WorkbookPreviewRow } from '../types/template';
 import { generationOptionsAtom, tokenMappingsAtom } from '../state/workspace';
 
@@ -26,6 +26,29 @@ export function useContractTemplateSettings(
     () => contractVariables.filter((token) => tokenMappings[token]).length,
     [contractVariables, tokenMappings],
   );
+
+  const selectedVariables = useMemo(
+    () => new Set(rows.filter((row) => row.selectedVariable).map((row) => row.selectedVariable)),
+    [rows],
+  );
+
+  useEffect(() => {
+    setTokenMappings((current) => {
+      let changed = false;
+      const nextMappings = { ...current };
+
+      for (const token of contractVariables) {
+        if (nextMappings[token] !== undefined || !selectedVariables.has(token)) {
+          continue;
+        }
+
+        nextMappings[token] = token;
+        changed = true;
+      }
+
+      return changed ? nextMappings : current;
+    });
+  }, [contractVariables, selectedVariables, setTokenMappings]);
 
   const setGenerationOption = useCallback(<K extends keyof GenerationOptions>(key: K, value: GenerationOptions[K]) =>
     setGenerationOptions((current) => {

@@ -1,50 +1,97 @@
 import { useAtomValue, useSetAtom } from 'jotai/react';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { hydrateWorkspaceAtom, workspaceDocumentAtom } from '../state/workspace';
+import type { RecentProjectEntry } from '../../shared/desktop';
+
+const lastProjectPathStorageKey = 'greeklit.lastProjectPath';
+
+function readLastProjectPath() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  return window.localStorage.getItem(lastProjectPathStorageKey);
+}
+
+function rememberLastProjectPath(filePath: string) {
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem(lastProjectPathStorageKey, filePath);
+  }
+}
 
 export function useProjectPersistence(desktopApp: Window['desktopApp']) {
   const workspaceDocument = useAtomValue(workspaceDocumentAtom);
   const hydrateWorkspace = useSetAtom(hydrateWorkspaceAtom);
   const [isOpeningProject, setIsOpeningProject] = useState(false);
   const [isSavingProject, setIsSavingProject] = useState(false);
-  const [lastProjectPath, setLastProjectPath] = useState<string | null>(null);
+  const [lastProjectPath, setLastProjectPath] = useState<string | null>(() => readLastProjectPath());
+  const [recentProjects, setRecentProjects] = useState<RecentProjectEntry[]>([]);
 
-  const openProject = useCallback(async () => {
+  const refreshRecentProjects = useCallback(async () => {
+    setRecentProjects(await desktopApp.getRecentProjects());
+  }, [desktopApp]);
+
+  useEffect(() => {
+    void refreshRecentProjects();
+  }, [refreshRecentProjects]);
+
+  const openProjectPath = useCallback(async (filePath?: string | null) => {
     setIsOpeningProject(true);
     try {
-      const result = await desktopApp.openProject();
+      const result = await desktopApp.openProject(filePath);
       if (!result) {
         return null;
       }
 
       hydrateWorkspace(result.projectDocument);
       setLastProjectPath(result.filePath);
+      rememberLastProjectPath(result.filePath);
+      await refreshRecentProjects();
       return result.filePath;
     } finally {
       setIsOpeningProject(false);
     }
-  }, [desktopApp, hydrateWorkspace]);
+  }, [desktopApp, hydrateWorkspace, refreshRecentProjects]);
 
-  const saveProject = useCallback(async () => {
+  const openProject = useCallback(async () => openProjectPath(), [openProjectPath]);
+
+  const openLastProject = useCallback(async () => {
+    const filePath = recentProjects[0]?.filePath ?? lastProjectPath;
+    if (!filePath) {
+      return null;
+    }
+
+    return openProjectPath(filePath);
+  }, [lastProjectPath, openProjectPath, recentProjects]);
+
+  const saveProject = useCallback(async (options?: { saveAs?: boolean }) => {
     setIsSavingProject(true);
     try {
-      const savedPath = await desktopApp.saveProject(workspaceDocument);
+      const savedPath = await desktopApp.saveProject(
+        workspaceDocument,
+        options?.saveAs ? null : lastProjectPath,
+      );
       if (!savedPath) {
         return null;
       }
 
       setLastProjectPath(savedPath);
+      rememberLastProjectPath(savedPath);
+      await refreshRecentProjects();
       return savedPath;
     } finally {
       setIsSavingProject(false);
     }
-  }, [desktopApp, workspaceDocument]);
+  }, [desktopApp, lastProjectPath, refreshRecentProjects, workspaceDocument]);
 
   return {
     isOpeningProject,
     isSavingProject,
     lastProjectPath,
+    openProjectPath,
+    openLastProject,
     openProject,
+    recentProjects,
     saveProject,
   };
 }

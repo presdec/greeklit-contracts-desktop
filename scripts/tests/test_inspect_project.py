@@ -67,6 +67,27 @@ def test_inspect_workbook_returns_expected_structure():
     assert result["contractTokenContexts"]["TITLE"]
 
 
+def test_starter_workbook_suggestions_cover_contract_tokens():
+    """Starter fixtures should expose enough suggested variables for UI auto-mapping."""
+    result = ip.inspect_workbook({
+        "workbook_path": str(WORKBOOK),
+        "worksheet_name": "8TH PERIOD",
+        "header_row": 2,
+        "data_start_row": 3,
+        "contractTemplatePath": str(DOCX),
+    })
+
+    suggested_variables = {
+        column["suggestedVariable"]
+        for column in result["columns"]
+        if column["suggestedVariable"]
+    }
+    required_tokens = {"AMOUNT", "APPLICATION_CODE", "AUTHOR", "TITLE"}
+
+    assert required_tokens.issubset(set(result["contractTokens"]))
+    assert required_tokens.issubset(suggested_variables)
+
+
 def test_inspect_workbook_sheet_fallback_uses_first_sheet():
     """Empty worksheet name should silently fall back to the first sheet."""
     result = ip.inspect_workbook({
@@ -152,11 +173,36 @@ def test_parse_positive_int(value, fallback, expected):
     ("First Installment", "FIRST_INSTALLMENT"),
     ("Language", "LANGUAGE"),
     ("Title", "TITLE"),
+    ("Τίτλος", "TITLE"),
+    ("Συγγραφέας", "AUTHOR"),
+    ("Εκδότης", "PUBLISHER"),
+    ("Ποσό", "AMOUNT"),
+    ("Πρώτη Δόση", "FIRST_INSTALLMENT"),
+    ("Γλώσσα", "LANGUAGE"),
+    ("Κοινοποίηση", "EMAIL_CC"),
+    ("Κωδικός Αίτησης", "APPLICATION_CODE"),
+    ("Ημερομηνία Έναρξης", "IMEROMINIA_ENARXIS"),
+    (
+        "ΒΙΟΓΡΑΦΙΚΟ ΣΗΜΕΙΩΜΑ ΜΕΤΑΦΡΑΣΤΗ ΚΑΙ ΚΑΤΑΛΟΓΟΣ ΔΗΜΟΣΙΕΥΜΕΝΩΝ ΜΕΤΑΦΡΑΣΕΩΝ",
+        "VIOGRAFIKO_SIMEIOMA",
+    ),
+    (
+        "ΤΟ ΔΕΙΓΜΑ ΑΠΟ ΤΟ ΠΡΩΤΟΤΥΠΟ ΕΡΓΟ ΣΕ ΗΛΕΚΤΡΟΝΙΚΗ ΜΟΡΦΗ (PDF)",
+        "TO_DEIGMA_APO_TO",
+    ),
     # Unrecognised header → tokenised upper-snake form
     ("Some Unknown Field", "SOME_UNKNOWN_FIELD"),
 ])
 def test_normalize_header_to_variable(header, expected_variable):
     assert ip.normalize_header_to_variable(header) == expected_variable
+
+
+def test_normalize_header_to_variable_keeps_fallback_names_short():
+    suggestion = ip.normalize_header_to_variable(
+        "ΒΙΟΓΡΑΦΙΚΟ ΣΗΜΕΙΩΜΑ ΜΕΤΑΦΡΑΣΤΗ ΚΑΙ ΚΑΤΑΛΟΓΟΣ ΔΗΜΟΣΙΕΥΜΕΝΩΝ ΜΕΤΑΦΡΑΣΕΩΝ"
+    )
+    assert suggestion != "VIOGRAFIKO_SIMEIOMA_METAFRASTI_KAI_KATALOGOS_DIMOSIEYMENON_METAFRASEON"
+    assert len(suggestion) <= ip.MAX_SUGGESTED_VARIABLE_LENGTH
 
 
 # ---------------------------------------------------------------------------

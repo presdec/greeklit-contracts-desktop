@@ -325,6 +325,7 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
                 controller.setActiveStep(step);
                 scrollToTop();
               }}
+              validationIssues={controller.validation.issues}
               visibleSteps={controller.visibleSteps}
             />
           </Stack>
@@ -471,18 +472,6 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
 
             {controller.activeStep === 2 ? (
               <Stack gap="xl">
-                {controller.validation.issues
-                  .filter((issue) => issue.targetStep === 2 && issue.id !== 'output-filename-pattern')
-                  .map((issue) => (
-                    <Alert
-                      key={issue.id}
-                      color="red"
-                      radius="lg"
-                      variant="light"
-                    >
-                      {issue.detail}
-                    </Alert>
-                  ))}
                 <ContractMappingPanel
                   availableVariables={controller.workbookPreview.availableVariables}
                   outputFilenamePattern={controller.projectSetup.project.outputFilenamePattern}
@@ -495,6 +484,7 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
                   tokenContexts={controller.workbookPreview.contractTokenContexts}
                   tokenMappings={controller.contractSettings.tokenMappings}
                   tokens={controller.workbookPreview.contractVariables}
+                  validationIssues={controller.validation.issues.filter((issue) => issue.targetStep === 2)}
                   variableSources={controller.contractSettings.variableSources}
                   workbookRows={controller.workbookPreview.rows}
                 />
@@ -515,11 +505,6 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
 
             {controller.activeStep === 3 ? (
               <Stack gap="xl">
-                {controller.validation.issues.filter((issue) => issue.targetStep === 3).map((issue) => (
-                  <Alert key={issue.id} color="red" radius="lg" variant="light">
-                    {issue.detail}
-                  </Alert>
-                ))}
                 {controller.projectSetup.project.useOptionalEmailSource ? (
                   <ExternalEmailTemplatePanel
                     content={controller.externalEmailTemplate.content}
@@ -539,6 +524,7 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
                       insertFieldToken={controller.templateBuilder.insertFieldToken}
                       setActiveEditor={controller.templateBuilder.setActiveEditor}
                       updateEmailField={controller.templateBuilder.updateEmailField}
+                      validationIssues={controller.validation.issues.filter((issue) => issue.targetStep === 3)}
                     />
                     <TemplatePreviewPanel
                       emailTemplate={controller.templateBuilder.emailTemplate}

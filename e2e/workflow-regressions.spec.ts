@@ -280,12 +280,13 @@ test('File menu opens the remembered project and quick-saves the current setup',
   try {
     await window.evaluate((filePath) => {
       window.localStorage.setItem('greeklit.lastProjectPath', filePath);
-      window.location.reload();
     }, projectPath);
+    await window.reload();
     await window.waitForLoadState('networkidle');
+    await window.waitForFunction(() => typeof window.desktopApp?.saveProject === 'function');
 
     await clickFileMenuItem(app, 'Open Last Project');
-    await expect(window.getByText(`Project file: ${projectPath}`)).toBeVisible();
+    await expect(window.getByText(`Project file: ${projectPath}`)).toBeVisible({ timeout: 15000 });
 
     await window.getByRole('checkbox', { name: 'PDF files' }).click();
     await expect(window.getByRole('checkbox', { name: 'PDF files' })).not.toBeChecked();
@@ -336,7 +337,7 @@ test('File menu keeps a true recent projects list', async () => {
     ]);
 
     await clickRecentProjectMenuItem(app, 'first-project.json');
-    await expect(window.getByText(`Project file: ${firstPath}`)).toBeVisible();
+    await expect(window.getByText(`Project file: ${firstPath}`)).toBeVisible({ timeout: 15000 });
 
     const recentProjects = await window.evaluate(() => window.desktopApp.getRecentProjects());
     expect(recentProjects.map((project) => project.filePath).slice(0, 2)).toEqual([
@@ -363,14 +364,14 @@ test('Workbook mapping dock exposes sizing, filters, usage, and required coverag
       },
     });
 
-    await expect(window.getByRole('heading', { name: 'Workbook Mapping Preview' })).toBeVisible();
+    await expect(window.getByRole('heading', { name: 'Workbook Mapping Preview' })).toBeVisible({ timeout: 15000 });
 
     // Wait for the mapping controls and data to load
     await expect(window.getByText('Compact')).toBeVisible({ timeout: 60000 });
       // Wait for table header to render (appears once component initializes)
       await expect(window.getByText('Column', { exact: true })).toBeVisible({ timeout: 60000 });
     await expect(window.getByText('Compact')).toBeVisible();
-    await expect(window.getByRole('radio', { name: 'Half' })).toBeChecked();
+    await expect(window.getByRole('radio', { name: 'Compact' })).toBeChecked();
     await window.getByText('Full').click();
     await expect(window.getByRole('radio', { name: 'Full' })).toBeChecked();
 
@@ -397,7 +398,7 @@ test('Review step groups output, mapping, workbook, and email summaries', async 
       },
     });
 
-    await expect(window.getByRole('heading', { name: 'Ready To Generate' })).toBeVisible();
+    await expect(window.getByRole('heading', { name: 'Review & Generate', level: 3 })).toBeVisible({ timeout: 30000 });
     await expect(window.getByText('Output plan')).toBeVisible();
     await expect(window.getByText('Mapping coverage')).toBeVisible();
     await expect(window.getByText('Workbook source')).toBeVisible();

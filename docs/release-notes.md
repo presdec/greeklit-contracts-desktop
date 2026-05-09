@@ -1,5 +1,17 @@
 # Release Notes
 
+## v0.4.0 (2026-05-09)
+
+### Improved
+- **Inline validation per component**: `ContractMappingPanel` and `EmailTemplateEditor` now render their own validation feedback inline rather than relying on alerts injected from `App.tsx`. Each component receives only the issues relevant to its step.
+- **Step indicator for validation issues**: the sidebar `StepList` now highlights steps that have unresolved validation issues with a yellow filled badge, so you can see at a glance which steps need attention without navigating to them.
+- **Clearer copy throughout**: setup field descriptions, mapping subtitle, email builder field hints, workbook preview subtitle, and the review panel subtitle have all been rewritten to be more direct and actionable.
+- **Review panel renamed**: "Ready To Generate" heading renamed to "Review & Generate" to match the step label and reduce confusion.
+- **Linux no-sandbox mode**: `--no-sandbox` is now applied unconditionally on Linux (previously only when running as an AppImage), fixing startup crashes in WSL and other non-AppImage Linux environments.
+
+### Fixed
+- E2e test suite now passes on WSL: `localStorage` write and page reload separated to avoid a `SecurityError`; assertion timeouts increased for slower Linux IPC.
+
 ## v0.3.0 (2026-05-09)
 
 ### Added

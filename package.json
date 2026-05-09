@@ -1,6 +1,6 @@
 {
   "name": "docgen-studio",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Turn your Excel data and Word template into hundreds of personalised documents, PDFs, and email drafts — locally, with no cloud and no subscription.",
   "author": "Philip Prescott-Decie",
   "license": "MIT",
@@ -8,10 +8,10 @@
   "private": true,
   "type": "module",
   "main": "dist-electron/main/main.cjs",
-  "packageManager": "pnpm@10.15.1",
+  "packageManager": "pnpm@11.0.9",
   "engines": {
     "node": ">=24.15.0 <25",
-    "pnpm": ">=10.15.1 <11"
+    "pnpm": ">=11.0.9 <12"
   },
   "scripts": {
     "dev": "electron-vite dev",

@@ -4,6 +4,7 @@ import { RichTextEditor } from '@mantine/tiptap';
 import { useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import type { EditorField, EmailTemplateState } from '../types/template';
+import type { WorkflowValidationIssue } from '../features/workspace/workflowValidation';
 import { useI18n } from '../i18n';
 import { normalizeEmailBody } from '../lib/template';
 
@@ -21,6 +22,7 @@ type Props = {
   insertFieldToken: (variable: string) => string;
   setActiveEditor: (field: EditorField) => void;
   updateEmailField: (field: EditorField, value: string) => void;
+  validationIssues: WorkflowValidationIssue[];
 };
 
 export function EmailTemplateEditor({
@@ -31,8 +33,10 @@ export function EmailTemplateEditor({
   insertFieldToken,
   setActiveEditor,
   updateEmailField,
+  validationIssues,
 }: Props) {
   const { copy } = useI18n();
+  const requiredPlaceholderIssue = validationIssues.find((i) => i.id === 'required-placeholders')?.detail;
   const editor = useEditor({
     content: normalizeEmailBody(emailTemplate.body),
     extensions: editorExtensions,
@@ -121,6 +125,11 @@ export function EmailTemplateEditor({
 
               <RichTextEditor.Content />
             </RichTextEditor>
+            {requiredPlaceholderIssue ? (
+              <Text c="yellow.7" fw={600} size="sm">
+                {requiredPlaceholderIssue}
+              </Text>
+            ) : null}
           </Stack>
         </Stack>
       </Stack>

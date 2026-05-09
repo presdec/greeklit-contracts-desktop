@@ -48,12 +48,10 @@ const maxRecentProjects = 8;
 if (process.platform === 'linux') {
   app.commandLine.appendSwitch('ozone-platform-hint', 'auto');
 
-  // AppImage mounts the bundled chrome-sandbox from a temporary filesystem,
-  // so the setuid helper cannot be configured correctly on many Linux systems.
-  // Falling back to Chromium's no-sandbox mode avoids a hard startup crash.
-  if (process.env.APPIMAGE) {
-    app.commandLine.appendSwitch('no-sandbox');
-  }
+  // The chrome-sandbox setuid helper is not available in most Linux environments
+  // (WSL, CI, AppImage on temp-mounted filesystems). Apply no-sandbox unconditionally
+  // on Linux to avoid a hard startup crash.
+  app.commandLine.appendSwitch('no-sandbox');
 }
 
 function getRuntimeEnvironment(): RuntimeEnvironment {

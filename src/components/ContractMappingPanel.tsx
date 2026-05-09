@@ -2,6 +2,7 @@ import { memo, useMemo, useRef, useState } from 'react';
 import { Alert, Button, Group, Modal, Paper, Stack, Table, Text, TextInput } from '@mantine/core';
 import { extractTokens, renderTemplate, tokenName } from '../lib/template';
 import type { WorkbookPreviewRow } from '../types/template';
+import type { WorkflowValidationIssue } from '../features/workspace/workflowValidation';
 import { useI18n } from '../i18n';
 import { CreatableSelect } from './CreatableSelect';
 
@@ -13,6 +14,7 @@ type Props = {
   tokenContexts: Record<string, string>;
   tokenMappings: Record<string, string>;
   tokens: string[];
+  validationIssues: WorkflowValidationIssue[];
   variableSources: Record<string, WorkbookPreviewRow>;
   workbookRows: WorkbookPreviewRow[];
 };
@@ -182,11 +184,14 @@ function ContractMappingPanelComponent({
   tokenContexts,
   tokenMappings,
   tokens,
+  validationIssues,
   variableSources,
   workbookRows,
 }: Props) {
   const { copy } = useI18n();
   const [previewToken, setPreviewToken] = useState<string | null>(null);
+  const issueFor = (id: WorkflowValidationIssue['id']) =>
+    validationIssues.find((issue) => issue.id === id)?.detail;
   const filenameSelectionStart = useRef<number>(outputFilenamePattern.length);
 
   const filenameTokens = useMemo(
@@ -314,6 +319,11 @@ function ContractMappingPanelComponent({
         tokens={tokens}
         variableSources={variableSources}
       />
+      {issueFor('required-placeholders') ? (
+        <Text c="yellow.7" fw={600} size="sm">
+          {issueFor('required-placeholders')}
+        </Text>
+      ) : null}
     </Stack>
   );
 }

@@ -1,5 +1,15 @@
 # Release Notes
 
+## v0.4.1 (2026-05-10)
+
+### Added
+- **Generation cancel**: Cancel button in the progress panel now kills the Python subprocess immediately via `AbortController`. Button is styled as a destructive action and placed outside the progress block for easy access.
+- **Unsaved changes guard**: dirty state is synced to the main process; closing the window while unsaved triggers a native Save / Discard / Cancel dialog.
+- **Skipped rows detail**: per-row rejection reasons are parsed from the generation report and shown in a collapsible section in the success panel.
+- **Keyboard shortcuts modal**: a `?` icon in the sidebar opens a modal listing all shortcuts (F5, F9, Ctrl+O, Ctrl+Shift+S, Ctrl+R, Ctrl+Enter, ?).
+- **Email address validation**: To and Cc fields show an inline error when a value is static text that is not a valid email address (tokens are exempt).
+- **Bilingual**: all new strings translated to Greek (EL).
+
 ## v0.4.0 (2026-05-09)
 
 ### Improved

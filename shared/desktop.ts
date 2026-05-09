@@ -162,8 +162,8 @@ export type InspectProjectRequest = {
   headerRow: number;
   rejectionColumn?: string;
   rejectionValue?: string;
-  workbookPath: string;
-  worksheetName: string;
+  workbookPath?: string;
+  worksheetName?: string;
 };
 
 export type TemplateStatusRequest = {
@@ -189,13 +189,36 @@ export type WorkbookPreviewSampleRow = {
   values: Record<string, string>;
 };
 
+export type WorkbookPreviewRawCell = {
+  columnLetter: string;
+  value: string;
+};
+
+export type WorkbookPreviewRawRow = {
+  cells: WorkbookPreviewRawCell[];
+  hasLeadingGap: boolean;
+  populatedCells: number;
+  role: 'data' | 'rejected-data' | 'selected-header' | 'suggested-header';
+  rowNumber: number;
+};
+
+export type WorkbookHeaderAnalysis = {
+  scannedRows: number;
+  selectedHeaderCount: number;
+  suggestedHeaderCount: number;
+  suggestedHeaderRow: number | null;
+};
+
 export type InspectProjectResult = {
   columnValues: Record<string, string[]>;
   columns: WorkbookPreviewColumn[];
   contractTokenContexts: Record<string, string>;
   contractTokens: string[];
   dataStartRow: number;
+  headerAnalysis: WorkbookHeaderAnalysis;
   headerRow: number;
+  maxColumn: number;
+  previewRows: WorkbookPreviewRawRow[];
   sampleRows: WorkbookPreviewSampleRow[];
   skippedRows: number;
   totalRows: number;

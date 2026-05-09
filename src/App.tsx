@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { ActionIcon, Alert, Badge, Box, Button, Card, Divider, Group, Progress, SegmentedControl, SimpleGrid, Stack, Text, Title } from '@mantine/core';
+import { useEffect, useMemo, useState } from 'react';
+import { ActionIcon, Alert, Badge, Box, Button, Card, Group, Progress, SegmentedControl, SimpleGrid, Stack, Text, Title, Tooltip } from '@mantine/core';
 import { ContractMappingPanel } from './components/ContractMappingPanel';
 import { EmailTemplateEditor } from './components/EmailTemplateEditor';
 import { ExternalEmailTemplatePanel } from './components/ExternalEmailTemplatePanel';
@@ -7,9 +7,10 @@ import { GenerationProgressPanel } from './components/GenerationProgressPanel';
 import { GenerationSuccessPanel } from './components/GenerationSuccessPanel';
 import { ProjectSetupPanel } from './components/ProjectSetupPanel';
 import { ReviewSummaryPanel } from './components/ReviewSummaryPanel';
-import { SetupSourcePreviewPanel } from './components/SetupSourcePreviewPanel';
 import { StepList } from './components/StepList';
 import { TemplatePreviewPanel } from './components/TemplatePreviewPanel';
+import { TemplateInspectionModal } from './components/TemplateInspectionModal';
+import { WorkbookSetupModal } from './components/WorkbookSetupModal';
 import { WorkbookPreviewPanel } from './components/WorkbookPreviewPanel';
 import { useWorkspaceController } from './features/workspace/useWorkspaceController';
 import { useI18n } from './i18n';
@@ -18,6 +19,69 @@ type AppProps = {
   colorScheme: 'dark' | 'light';
   setColorScheme: (scheme: 'dark' | 'light') => void;
 };
+
+function ReloadIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="17"
+      viewBox="0 0 24 24"
+      width="17"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M20 6V11H15M4 18V13H9M18.3 9A7 7 0 0 0 6.4 6.6L4 9M5.7 15A7 7 0 0 0 17.6 17.4L20 15"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+function FolderOpenIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="17"
+      viewBox="0 0 24 24"
+      width="17"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M3 7.5A2.5 2.5 0 0 1 5.5 5H10L12 7H18.5A2.5 2.5 0 0 1 21 9.5V10M3 7.5V18A2 2 0 0 0 5 20H18.2A2 2 0 0 0 20.1 18.6L22 12H6L3.8 18.6"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+function SaveIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="16"
+      viewBox="0 0 24 24"
+      width="16"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M5 3H17L21 7V19A2 2 0 0 1 19 21H5A2 2 0 0 1 3 19V5A2 2 0 0 1 5 3ZM7 3V9H16V3M7 21V15H17V21"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
 
 export function App({ colorScheme, setColorScheme }: AppProps) {
   const desktopApp = globalThis.window.desktopApp;
@@ -35,8 +99,10 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
 
   const controller = useWorkspaceController(desktopApp);
   const [navigationWarning, setNavigationWarning] = useState<string | null>(null);
+  const [setupModal, setSetupModal] = useState<'email' | 'word' | 'workbook' | null>(null);
 
   const scrollToTop = () => {
+    document.querySelector('.content-scroll')?.scrollTo({ top: 0, behavior: 'instant' });
     window.scrollTo({ top: 0, behavior: 'instant' });
   };
   const currentStep = copy.steps[controller.activeStep];
@@ -46,6 +112,72 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
     controller.contractSettings.generationOptions.generateEmailDrafts ? copy.outputLabels.email : null,
   ].filter(Boolean) as string[];
   const selectedOutputLabel = selectedOutputs.length > 0 ? selectedOutputs.join(' + ') : copy.outputLabels.none;
+  const fileSummaries = useMemo(() => ({
+    emailTemplate: controller.projectSetup.project.emailTemplatePath
+      ? copy.projectSetup.emailSummary(controller.externalEmailTemplate.variables.length)
+      : undefined,
+    outputFolder: controller.projectSetup.project.outputFolderPath
+      ? copy.projectSetup.outputSummary
+      : undefined,
+    workbook: controller.projectSetup.project.workbookPath
+      ? copy.projectSetup.workbookSummary(
+        controller.projectSetup.project.headerRow,
+        controller.projectSetup.project.dataStartRow,
+        controller.workbookPreview.totalRows,
+        controller.workbookPreview.rows.length,
+      )
+      : undefined,
+    wordTemplate: controller.projectSetup.project.contractTemplatePath
+      ? copy.projectSetup.wordSummary(controller.workbookPreview.contractVariables.length)
+      : undefined,
+  }), [
+    controller.externalEmailTemplate.variables.length,
+    controller.projectSetup.project.contractTemplatePath,
+    controller.projectSetup.project.dataStartRow,
+    controller.projectSetup.project.emailTemplatePath,
+    controller.projectSetup.project.headerRow,
+    controller.projectSetup.project.outputFolderPath,
+    controller.projectSetup.project.workbookPath,
+    controller.workbookPreview.contractVariables.length,
+    controller.workbookPreview.rows.length,
+    controller.workbookPreview.totalRows,
+    copy.projectSetup,
+  ]);
+
+  const handlePickPath = async (
+    field: 'workbookPath' | 'contractTemplatePath' | 'emailTemplatePath' | 'outputFolderPath',
+  ) => {
+    const selectedPath = await controller.handlePickPath(field);
+    if (!selectedPath) {
+      return null;
+    }
+
+    if (field === 'workbookPath') {
+      setSetupModal('workbook');
+    }
+    if (field === 'contractTemplatePath') {
+      setSetupModal('word');
+    }
+    if (field === 'emailTemplatePath') {
+      setSetupModal('email');
+    }
+
+    return selectedPath;
+  };
+
+  const handleClearPath = (
+    field: 'workbookPath' | 'contractTemplatePath' | 'emailTemplatePath' | 'outputFolderPath',
+  ) => {
+    controller.projectSetup.setProject((current) => {
+      const next = { ...current, [field]: '' };
+      if (field === 'workbookPath') {
+        next.worksheetName = '';
+        next.rejectionColumn = '';
+        next.rejectionValue = '';
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!navigationWarning) {
@@ -105,22 +237,43 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
         <Card className="sidebar-card" padding="xl" radius="xl">
           <Stack gap="xl">
             <Stack gap="xs">
-              <Group justify="space-between">
-                <Badge color="teal" variant="light">{copy.sidebar.desktopMvp}</Badge>
-                <Group gap="xs">
+              <Group justify="space-between" w="100%" wrap="nowrap">
+                <Group gap={6} justify="space-between" w="100%" wrap="nowrap">
+                  <Tooltip label={copy.app.loadProject} withArrow>
+                    <ActionIcon
+                      aria-label={copy.app.loadProject}
+                      loading={controller.projectPersistence.isOpeningProject}
+                      onClick={() => void controller.handleOpenProject()}
+                      size="lg"
+                      variant="subtle"
+                    >
+                      <FolderOpenIcon />
+                    </ActionIcon>
+                  </Tooltip>
+                  <Tooltip label={copy.app.saveDraftSetup} withArrow>
+                    <ActionIcon
+                      aria-label={copy.app.saveDraftSetup}
+                      loading={controller.projectPersistence.isSavingProject}
+                      onClick={() => void controller.handleSaveProject()}
+                      size="lg"
+                      variant="subtle"
+                    >
+                      <SaveIcon />
+                    </ActionIcon>
+                  </Tooltip>
                   <SegmentedControl
                     data={[
                       { label: 'EN', value: 'en' },
                       { label: 'EL', value: 'el' },
                     ]}
                     onChange={(value) => setLanguage(value as 'en' | 'el')}
-                    size="xs"
+                    size="sm"
                     value={language}
                   />
                   <ActionIcon
                     aria-label="Toggle color scheme"
                     onClick={() => setColorScheme(colorScheme === 'dark' ? 'light' : 'dark')}
-                    size="sm"
+                    size="lg"
                     variant="subtle"
                   >
                     {colorScheme === 'dark' ? (
@@ -165,13 +318,48 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
               />
             </Box>
 
-            <StepList activeStep={controller.activeStep} visibleSteps={controller.visibleSteps} />
+            <StepList
+              activeStep={controller.activeStep}
+              onStepChange={(step) => {
+                setNavigationWarning(null);
+                controller.setActiveStep(step);
+                scrollToTop();
+              }}
+              visibleSteps={controller.visibleSteps}
+            />
           </Stack>
         </Card>
 
-        <Card className="content-card" padding="xl" radius="xl">
+        <Card className="content-card" padding={0} radius="xl">
+          <Box className="content-scroll">
           <Stack gap="xl">
-            <Group justify="space-between">
+            <WorkbookSetupModal
+              columnValues={controller.workbookPreview.columnValues}
+              headerAnalysis={controller.workbookPreview.headerAnalysis}
+              isLoading={controller.workbookPreview.isLoading}
+              maxColumn={controller.workbookPreview.maxColumn}
+              onClose={() => setSetupModal(null)}
+              onSaveSettings={() => setSetupModal(null)}
+              opened={setupModal === 'workbook'}
+              previewRows={controller.workbookPreview.previewRows}
+              project={controller.projectSetup.project}
+              setProject={controller.projectSetup.setProject}
+              workbookRows={controller.workbookPreview.rows}
+              worksheetOptions={controller.workbookPreview.worksheetNames}
+            />
+            <TemplateInspectionModal
+              emailContent={controller.externalEmailTemplate.content}
+              emailLoadError={controller.externalEmailTemplate.loadError}
+              emailVariables={controller.externalEmailTemplate.variables}
+              mode={setupModal === 'email' ? 'email' : 'word'}
+              onClose={() => setSetupModal(null)}
+              onSaveSettings={() => setSetupModal(null)}
+              opened={setupModal === 'email' || setupModal === 'word'}
+              tokenContexts={controller.workbookPreview.contractTokenContexts}
+              wordTokens={controller.workbookPreview.contractVariables}
+            />
+
+            <Group align="flex-start" justify="space-between" wrap="nowrap">
               <Stack gap={4}>
                 <Text c="teal.8" fw={700} size="sm" tt="uppercase">
                   {language === 'el' ? `Βήμα ${controller.activeStep}` : `Step ${controller.activeStep}`}
@@ -179,14 +367,39 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
                 <Title order={1}>{currentStep.title}</Title>
                 <Text c="dimmed">{currentStep.description}</Text>
               </Stack>
-              <Button
-                loading={controller.projectPersistence.isOpeningProject}
-                onClick={() => void controller.handleOpenProject()}
-                size="md"
-                variant="default"
-              >
-                {copy.app.openRecentProject}
-              </Button>
+              {controller.activeStep === 2 ? (
+                <Group gap="xs" style={{ flex: '0 0 auto' }} wrap="nowrap">
+                  <Badge color="teal" variant="light">
+                    {copy.contractMapping.badgeMapped(
+                      controller.contractSettings.mappedContractFields,
+                      controller.workbookPreview.contractVariables.length,
+                    )}
+                  </Badge>
+                  <Button
+                    color="teal"
+                    disabled={!controller.projectSetup.project.contractTemplatePath}
+                    loading={controller.isOpeningTemplate}
+                    onClick={() => void controller.handleOpenContractTemplate()}
+                    size="xs"
+                    variant="light"
+                  >
+                    {copy.contractMapping.openTemplate}
+                  </Button>
+                  <Tooltip label={copy.contractMapping.reloadFields} withArrow>
+                    <ActionIcon
+                      aria-label={copy.contractMapping.reloadFields}
+                      color="teal"
+                      disabled={!controller.projectSetup.project.contractTemplatePath}
+                      loading={controller.isReloadingTemplate || controller.workbookPreview.isLoading}
+                      onClick={() => void controller.handleReloadTemplateFields()}
+                      size="lg"
+                      variant="light"
+                    >
+                      <ReloadIcon />
+                    </ActionIcon>
+                  </Tooltip>
+                </Group>
+              ) : null}
             </Group>
 
             {controller.workbookPreview.loadError ? (
@@ -222,12 +435,6 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
               </Alert>
             ) : null}
 
-            {controller.activeStep === 3 && !controller.canContinueFromStep3 ? (
-              <Alert color="red" radius="lg" title={copy.app.mapAllFieldsTitle} variant="light">
-                {controller.validation.step3Issues.map((issue) => issue.detail).join(' ')}
-              </Alert>
-            ) : null}
-
             {controller.isGenerating ? (
               <GenerationProgressPanel
                 elapsedSeconds={controller.generationElapsedSeconds}
@@ -244,74 +451,75 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
               <Stack gap="xl">
                 <ProjectSetupPanel
                   activePicker={controller.projectSetup.activePicker}
-                  columnValues={controller.workbookPreview.columnValues}
                   generationOptions={controller.contractSettings.generationOptions}
                   isLoading={controller.workbookPreview.isLoading}
+                  onClearPath={handleClearPath}
+                  onOpenEmailPreview={() => setSetupModal('email')}
+                  onOpenWorkbookSetup={() => setSetupModal('workbook')}
+                  onOpenWordPreview={() => setSetupModal('word')}
                   outlookMsgDraftsAvailable={controller.desktopCapabilities.outlookMsgDrafts}
-                  onPickPath={controller.handlePickPath}
+                  onPickPath={handlePickPath}
                   onSaveStarterTemplate={(kind) => void controller.handleSaveStarterTemplate(kind)}
                   project={controller.projectSetup.project}
                   setGenerationOption={controller.contractSettings.setGenerationOption}
                   setProject={controller.projectSetup.setProject}
-                  worksheetOptions={controller.workbookPreview.worksheetNames}
-                  workbookRows={controller.workbookPreview.rows}
-                />
-                <SetupSourcePreviewPanel
-                  contractVariables={controller.workbookPreview.contractVariables}
-                  hasWordTemplate={Boolean(controller.projectSetup.project.contractTemplatePath)}
-                  isLoading={controller.workbookPreview.isLoading}
-                  loadError={controller.workbookPreview.loadError}
-                  sampleRows={controller.workbookPreview.sampleRows}
-                  showWordPreview={controller.contractSettings.generationOptions.generateDocx || controller.contractSettings.generationOptions.generatePdf}
+                  summaries={fileSummaries}
+                  validationIssues={controller.validation.issues.filter((issue) => issue.targetStep === 1)}
                 />
               </Stack>
             ) : null}
 
             {controller.activeStep === 2 ? (
               <Stack gap="xl">
-                <SimpleGrid cols={{ base: 1, xl: 2 }} spacing="xl" verticalSpacing="xl">
-                  <ContractMappingPanel
-                    availableVariables={controller.workbookPreview.availableVariables}
-                    contractTemplatePath={controller.projectSetup.project.contractTemplatePath}
-                    isOpeningTemplate={controller.isOpeningTemplate}
-                    isReloadingTemplate={
-                      controller.isReloadingTemplate || controller.workbookPreview.isLoading
-                    }
-                    mappedContractFields={controller.contractSettings.mappedContractFields}
-                    onOpenTemplate={() => void controller.handleOpenContractTemplate()}
-                    onReloadTemplate={() => void controller.handleReloadTemplateFields()}
-                    outputFilenamePattern={controller.projectSetup.project.outputFilenamePattern}
-                    setTokenMapping={controller.contractSettings.setTokenMapping}
-                    setOutputFilenamePattern={(value) =>
-                      controller.projectSetup.setProject((current) => ({
-                        ...current,
-                        outputFilenamePattern: value,
-                      }))}
-                    templateStatus={controller.workbookPreview.templateStatus}
-                    tokenContexts={controller.workbookPreview.contractTokenContexts}
-                    tokenMappings={controller.contractSettings.tokenMappings}
-                    tokens={controller.workbookPreview.contractVariables}
-                    variableSources={controller.contractSettings.variableSources}
-                    workbookRows={controller.workbookPreview.rows}
-                  />
-                  <WorkbookPreviewPanel
-                    availableVariables={controller.workbookPreview.availableVariables}
-                    defaultMode="half"
-                    headerMatchedMappings={controller.workbookMapping.headerMatchedMappings}
-                    isLoading={controller.workbookPreview.isLoading}
-                    loadError={controller.workbookPreview.loadError}
-                    missingVariables={controller.workbookMapping.missingVariables}
-                    onAssignmentChange={controller.workbookPreview.setFieldAssignment}
-                    requiredVariables={controller.workbookMapping.requiredVariables}
-                    rows={controller.workbookPreview.rows}
-                    usageByVariable={controller.workbookMapping.usage}
-                  />
-                </SimpleGrid>
+                {controller.validation.issues
+                  .filter((issue) => issue.targetStep === 2 && issue.id !== 'output-filename-pattern')
+                  .map((issue) => (
+                    <Alert
+                      key={issue.id}
+                      color="red"
+                      radius="lg"
+                      variant="light"
+                    >
+                      {issue.detail}
+                    </Alert>
+                  ))}
+                <ContractMappingPanel
+                  availableVariables={controller.workbookPreview.availableVariables}
+                  outputFilenamePattern={controller.projectSetup.project.outputFilenamePattern}
+                  setTokenMapping={controller.contractSettings.setTokenMapping}
+                  setOutputFilenamePattern={(value) =>
+                    controller.projectSetup.setProject((current) => ({
+                      ...current,
+                      outputFilenamePattern: value,
+                    }))}
+                  tokenContexts={controller.workbookPreview.contractTokenContexts}
+                  tokenMappings={controller.contractSettings.tokenMappings}
+                  tokens={controller.workbookPreview.contractVariables}
+                  variableSources={controller.contractSettings.variableSources}
+                  workbookRows={controller.workbookPreview.rows}
+                />
+                <WorkbookPreviewPanel
+                  availableVariables={controller.workbookPreview.availableVariables}
+                  defaultMode="compact"
+                  headerMatchedMappings={controller.workbookMapping.headerMatchedMappings}
+                  isLoading={controller.workbookPreview.isLoading}
+                  loadError={controller.workbookPreview.loadError}
+                  missingVariables={controller.workbookMapping.missingVariables}
+                  onAssignmentChange={controller.workbookPreview.setFieldAssignment}
+                  requiredVariables={controller.workbookMapping.requiredVariables}
+                  rows={controller.workbookPreview.rows}
+                  usageByVariable={controller.workbookMapping.usage}
+                />
               </Stack>
             ) : null}
 
             {controller.activeStep === 3 ? (
               <Stack gap="xl">
+                {controller.validation.issues.filter((issue) => issue.targetStep === 3).map((issue) => (
+                  <Alert key={issue.id} color="red" radius="lg" variant="light">
+                    {issue.detail}
+                  </Alert>
+                ))}
                 {controller.projectSetup.project.useOptionalEmailSource ? (
                   <ExternalEmailTemplatePanel
                     content={controller.externalEmailTemplate.content}
@@ -380,80 +588,71 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
               )
             ) : null}
 
-            <Divider />
-
             {navigationWarning ? (
               <Alert color="yellow" radius="lg" variant="light">
                 {navigationWarning}
               </Alert>
             ) : null}
+          </Stack>
+          </Box>
 
-            <Group justify="space-between">
-              <Stack gap={2}>
-                <Text c="dimmed">{copy.steps[controller.activeStep].nextHint}</Text>
-                {controller.projectPersistence.lastProjectPath ? (
-                  <Text c="dimmed" size="sm">
-                    {copy.app.projectFileLabel}: {controller.projectPersistence.lastProjectPath}
-                  </Text>
-                ) : null}
-              </Stack>
-              <Group>
-                {controller.activeStep > 1 ? (
-                  <Button
-                    onClick={() => {
-                      if (controller.previousStep) {
-                        controller.setActiveStep(controller.previousStep);
-                        scrollToTop();
-                      }
-                    }}
-                    size="md"
-                    variant="default"
-                  >
-                    {copy.app.back}
-                  </Button>
-                ) : null}
+          <footer className="workflow-footer">
+            <Stack gap={2} className="workflow-footer__meta">
+              <Text c="dimmed">{copy.steps[controller.activeStep].nextHint}</Text>
+              {controller.projectPersistence.lastProjectPath ? (
+                <Text c="dimmed" size="sm">
+                  {copy.app.projectFileLabel}: {controller.projectPersistence.lastProjectPath}
+                </Text>
+              ) : null}
+            </Stack>
+            <Group className="workflow-footer__actions" gap="sm">
+              {controller.activeStep > 1 ? (
                 <Button
-                  loading={controller.projectPersistence.isSavingProject}
-                  onClick={() => void controller.handleSaveProject()}
+                  onClick={() => {
+                    if (controller.previousStep) {
+                      controller.setActiveStep(controller.previousStep);
+                      scrollToTop();
+                    }
+                  }}
                   size="md"
                   variant="default"
                 >
-                  {copy.app.saveDraftSetup}
+                  {copy.app.back}
                 </Button>
-                {controller.nextStep ? (
-                  <Button
-                    onClick={() => {
-                      if (!controller.nextStep) {
-                        return;
-                      }
+              ) : null}
+              {controller.nextStep ? (
+                <Button
+                  onClick={() => {
+                    if (!controller.nextStep) {
+                      return;
+                    }
 
-                      const nextIssue = controller.validation.firstIssueForStepBefore(controller.nextStep);
-                      if (nextIssue) {
-                        setNavigationWarning(nextIssue.detail);
-                        return;
-                      }
+                    const nextIssue = controller.validation.firstIssueForStepBefore(controller.nextStep);
+                    if (nextIssue) {
+                      setNavigationWarning(nextIssue.id === 'output-filename-pattern' ? null : nextIssue.detail);
+                      return;
+                    }
 
-                      setNavigationWarning(null);
-                      controller.setActiveStep(controller.nextStep);
-                      scrollToTop();
-                    }}
-                    size="md"
-                  >
-                    {copy.app.continueTo} {copy.steps[controller.nextStep].title}
-                  </Button>
-                ) : (
-                  <Button
-                    disabled={!controller.canGenerateNow}
-                    loading={controller.isGenerating}
-                    onClick={() => void controller.handleGenerateProject()}
-                    size="md"
-                  >
-                    {controller.isGenerating ? copy.app.generating : copy.app.generatingNow}
-                  </Button>
-                )}
-              </Group>
+                    setNavigationWarning(null);
+                    controller.setActiveStep(controller.nextStep);
+                    scrollToTop();
+                  }}
+                  size="md"
+                >
+                  {copy.app.continueTo} {copy.steps[controller.nextStep].title}
+                </Button>
+              ) : (
+                <Button
+                  disabled={!controller.canGenerateNow}
+                  loading={controller.isGenerating}
+                  onClick={() => void controller.handleGenerateProject()}
+                  size="md"
+                >
+                  {controller.isGenerating ? copy.app.generating : copy.app.generatingNow}
+                </Button>
+              )}
             </Group>
-          </Stack>
+          </footer>
         </Card>
       </div>
     </main>

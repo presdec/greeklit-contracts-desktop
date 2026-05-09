@@ -124,6 +124,15 @@ def get_column_letter(index):
     return "".join(reversed(letters))
 
 
+def get_column_index(column_letter):
+    index = 0
+    for letter in column_letter.upper():
+        if letter not in string.ascii_uppercase:
+            return None
+        index = index * 26 + string.ascii_uppercase.index(letter) + 1
+    return index or None
+
+
 def extract_contract_tokens(path_value):
     if not path_value:
         return {"contexts": {}, "tokens": []}
@@ -187,8 +196,146 @@ def parse_positive_int(value, fallback):
         return fallback
 
 
+def count_non_empty_cells(row):
+    return sum(1 for cell in row if normalize_cell_value(cell.value))
+
+
+def analyze_header_rows(worksheet, selected_header_row, scan_limit=10):
+    max_scan_row = min(worksheet.max_row or selected_header_row, scan_limit)
+    selected_header_count = 0
+    best_row = selected_header_row
+    best_count = 0
+
+    for row_number in range(1, max_scan_row + 1):
+        row = worksheet[row_number]
+        non_empty_count = count_non_empty_cells(row)
+        if row_number == selected_header_row:
+            selected_header_count = non_empty_count
+        if non_empty_count > best_count:
+            best_count = non_empty_count
+            best_row = row_number
+
+    suggested_header_row = None
+    suggested_header_count = 0
+    if best_row != selected_header_row and best_count >= max(2, selected_header_count + 2):
+        suggested_header_row = best_row
+        suggested_header_count = best_count
+
+    return {
+        "scannedRows": max_scan_row,
+        "selectedHeaderCount": selected_header_count,
+        "suggestedHeaderCount": suggested_header_count,
+        "suggestedHeaderRow": suggested_header_row,
+    }
+
+
+def preview_row_cells(worksheet, row_number, required_letters=None, max_columns=8):
+    required_letters = required_letters or []
+    required_indexes = {
+        index
+        for index in (get_column_index(letter) for letter in required_letters)
+        if index is not None
+    }
+    visible_indexes = set(range(1, min(worksheet.max_column or 1, max_columns) + 1))
+    visible_indexes.update(required_indexes)
+    cells = []
+    for index in sorted(visible_indexes):
+        cell = worksheet.cell(row=row_number, column=index)
+        cells.append({
+            "columnLetter": get_column_letter(cell.column),
+            "value": normalize_cell_value(cell.value),
+        })
+    return cells
+
+
+def find_rejected_preview_row(worksheet, data_start_row, rejection_column, rejection_value):
+    if not rejection_column or not rejection_value:
+        return None
+
+    rejection_index = get_column_index(rejection_column)
+    if rejection_index is None:
+        return None
+
+    for row_number in range(data_start_row, (worksheet.max_row or data_start_row) + 1):
+        cell_value = normalize_cell_value(worksheet.cell(row=row_number, column=rejection_index).value)
+        if cell_value == rejection_value:
+            return row_number
+
+    return None
+
+
+def build_preview_rows(
+    worksheet,
+    header_row,
+    data_start_row,
+    header_analysis,
+    required_letters=None,
+    rejection_column=None,
+    rejection_value=None,
+):
+    preview_row_numbers = [header_row]
+    suggested_header_row = header_analysis.get("suggestedHeaderRow")
+    if suggested_header_row and suggested_header_row not in preview_row_numbers:
+        preview_row_numbers.append(suggested_header_row)
+    for row_number in range(data_start_row, min(worksheet.max_row or data_start_row, data_start_row + 2) + 1):
+        if row_number not in preview_row_numbers:
+            preview_row_numbers.append(row_number)
+    rejected_preview_row = find_rejected_preview_row(
+        worksheet,
+        data_start_row,
+        rejection_column,
+        rejection_value,
+    )
+    if rejected_preview_row and rejected_preview_row not in preview_row_numbers:
+        preview_row_numbers.append(rejected_preview_row)
+
+    preview_rows = []
+    sorted_row_numbers = sorted(preview_row_numbers)
+    previous_row_number = None
+    for row_number in sorted_row_numbers:
+        if row_number == header_row:
+            role = "selected-header"
+        elif row_number == suggested_header_row:
+            role = "suggested-header"
+        elif row_number == rejected_preview_row:
+            role = "rejected-data"
+        else:
+            role = "data"
+
+        row = worksheet[row_number]
+        preview_rows.append({
+            "cells": preview_row_cells(worksheet, row_number, required_letters),
+            "hasLeadingGap": previous_row_number is not None and row_number > previous_row_number + 1,
+            "populatedCells": count_non_empty_cells(row),
+            "role": role,
+            "rowNumber": row_number,
+        })
+        previous_row_number = row_number
+
+    return preview_rows
+
+
 def inspect_workbook(request_payload):
-    workbook = load_workbook(request_payload["workbook_path"], data_only=True, read_only=True)
+    workbook_path = (request_payload.get("workbook_path") or "").strip()
+    if not workbook_path:
+        contract_info = extract_contract_tokens(request_payload.get("contractTemplatePath"))
+        return {
+            "columnValues": {},
+            "columns": [],
+            "contractTokenContexts": contract_info["contexts"],
+            "contractTokens": contract_info["tokens"],
+            "dataStartRow": 2,
+            "headerAnalysis": None,
+            "headerRow": 1,
+            "maxColumn": 0,
+            "previewRows": [],
+            "sampleRows": [],
+            "totalRows": 0,
+            "skippedRows": 0,
+            "worksheetName": "",
+            "worksheetNames": [],
+        }
+    workbook = load_workbook(workbook_path, data_only=True, read_only=True)
     worksheet_names = list(workbook.sheetnames)
     worksheet_name = (request_payload.get("worksheet_name") or "").strip()
     if worksheet_name and worksheet_name in worksheet_names:
@@ -197,10 +344,20 @@ def inspect_workbook(request_payload):
         worksheet = workbook[worksheet_names[0]]
     header_row = parse_positive_int(request_payload.get("header_row"), 1)
     data_start_row = parse_positive_int(request_payload.get("data_start_row"), max(2, header_row + 1))
+    header_analysis = analyze_header_rows(worksheet, header_row)
 
     columns = []
     rejection_column = (request_payload.get("rejectionColumn") or "").strip().upper()
     rejection_value = (request_payload.get("rejectionValue") or "").strip()
+    preview_rows = build_preview_rows(
+        worksheet,
+        header_row,
+        data_start_row,
+        header_analysis,
+        [rejection_column] if rejection_column else [],
+        rejection_column,
+        rejection_value,
+    )
 
     columns = []
     for cell in worksheet[header_row]:
@@ -269,7 +426,10 @@ def inspect_workbook(request_payload):
         "contractTokenContexts": contract_info["contexts"],
         "contractTokens": contract_info["tokens"],
         "dataStartRow": data_start_row,
+        "headerAnalysis": header_analysis,
         "headerRow": header_row,
+        "maxColumn": worksheet.max_column or 0,
+        "previewRows": preview_rows,
         "sampleRows": sample_rows,
         "totalRows": max(0, worksheet.max_row - data_start_row + 1),
         "skippedRows": skipped_rows,
@@ -282,9 +442,9 @@ if __name__ == "__main__":
     raw_payload = json.loads(sys.argv[1])
     payload = {
         "contractTemplatePath": raw_payload.get("contractTemplatePath"),
-        "data_start_row": raw_payload["dataStartRow"],
-        "header_row": raw_payload["headerRow"],
-        "workbook_path": raw_payload["workbookPath"],
+        "data_start_row": raw_payload.get("dataStartRow", 2),
+        "header_row": raw_payload.get("headerRow", 1),
+        "workbook_path": raw_payload.get("workbookPath", ""),
         "worksheet_name": raw_payload.get("worksheetName"),
         "rejectionColumn": raw_payload.get("rejectionColumn"),
         "rejectionValue": raw_payload.get("rejectionValue"),

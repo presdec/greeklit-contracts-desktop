@@ -7,6 +7,7 @@ export type WorkflowValidationIssueId =
   | 'email-template-load'
   | 'outputs'
   | 'output-directory'
+  | 'output-filename-pattern'
   | 'required-placeholders'
   | 'workbook';
 
@@ -21,6 +22,7 @@ export type WorkflowValidationCopy = {
   emailTemplateRequired: string;
   mapRequiredFields: (wordFields: string[], emailFields: string[]) => string;
   outputRequired: string;
+  outputFilenamePatternRequired: string;
   outputsRequired: string;
   wordTemplateRequired: string;
   workbookRequired: string;
@@ -122,6 +124,14 @@ export function buildWorkflowValidation({
       detail: copy.emailTemplateLoadError(externalEmailTemplateLoadError),
       id: 'email-template-load',
       targetStep: 1,
+    });
+  }
+
+  if (wantsDocumentOutput && !project.outputFilenamePattern.trim()) {
+    issues.push({
+      detail: copy.outputFilenamePatternRequired,
+      id: 'output-filename-pattern',
+      targetStep: 2,
     });
   }
 

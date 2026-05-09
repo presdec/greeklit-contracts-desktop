@@ -168,6 +168,27 @@ function normalizeRelativePath(value: string) {
   return value.replaceAll('\\', '/');
 }
 
+function normalizeRuntimeInspectionError(error: unknown) {
+  const candidate = error as { message?: string; stderr?: string } | null;
+  const text = [candidate?.stderr, candidate?.message]
+    .filter((value): value is string => Boolean(value))
+    .join('\n');
+  const permissionMatch = text.match(/PermissionError: \[Errno 13\] Permission denied: '([^']+)'/);
+  if (permissionMatch) {
+    return `The workbook could not be opened: ${permissionMatch[1]}. Close it in Excel, wait for OneDrive sync to finish, then reload the preview.`;
+  }
+
+  if (/Permission denied|EPERM|EACCES/i.test(text)) {
+    return 'The workbook could not be opened. Close it in Excel, wait for OneDrive sync to finish, then reload the preview.';
+  }
+
+  if (candidate?.message) {
+    return candidate.message;
+  }
+
+  return 'Workbook preview inspection failed.';
+}
+
 function countFilesInSubdir(
   entries: Array<{ kind: 'directory' | 'file'; relativePath: string }>,
   subdir: string,
@@ -412,12 +433,12 @@ export async function inspectProjectInternal(
   const workbookPath = resolveProjectPath(request.workbookPath, environment);
   const contractTemplatePath = resolveProjectPath(request.contractTemplatePath, environment);
 
-  if (!workbookPath) {
-    throw new Error('Choose an Excel workbook before loading the preview.');
+  if (workbookPath && !existsSync(workbookPath)) {
+    throw new Error(`Workbook not found: ${workbookPath}`);
   }
 
-  if (!existsSync(workbookPath)) {
-    throw new Error(`Workbook not found: ${workbookPath}`);
+  if (!workbookPath && !contractTemplatePath) {
+    throw new Error('Choose an Excel workbook or Word template before loading the preview.');
   }
 
   const payload = JSON.stringify({
@@ -427,10 +448,16 @@ export async function inspectProjectInternal(
   });
   const command = buildRuntimeCommand(runtime, 'inspectProject', [payload], environment);
   await mkdir(command.cwd, { recursive: true });
-  const { stdout } = await execFileAsync(command.command, command.args, {
-    cwd: command.cwd,
-    windowsHide: true,
-  });
+  let stdout: string;
+  try {
+    const result = await execFileAsync(command.command, command.args, {
+      cwd: command.cwd,
+      windowsHide: true,
+    });
+    stdout = result.stdout;
+  } catch (error) {
+    throw new Error(normalizeRuntimeInspectionError(error));
+  }
 
   return JSON.parse(stdout) as InspectProjectResult;
 }

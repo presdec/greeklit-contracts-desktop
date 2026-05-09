@@ -1,13 +1,14 @@
-import { Badge, Group, Paper, Stack, Text, ThemeIcon } from '@mantine/core';
+import { Badge, Group, Stack, Text, ThemeIcon, UnstyledButton } from '@mantine/core';
 import type { WizardStepId } from '../types/template';
 import { useI18n } from '../i18n';
 
 type Props = {
   activeStep: WizardStepId;
+  onStepChange: (step: WizardStepId) => void;
   visibleSteps: WizardStepId[];
 };
 
-export function StepList({ activeStep, visibleSteps }: Props) {
+export function StepList({ activeStep, onStepChange, visibleSteps }: Props) {
   const { copy } = useI18n();
   const displayedSteps = visibleSteps.map((id) => ({
     ...copy.steps[id],
@@ -21,14 +22,14 @@ export function StepList({ activeStep, visibleSteps }: Props) {
         const isComplete = step.id < activeStep;
 
         return (
-          <Paper
+          <UnstyledButton
             key={step.id}
             className={isCurrent ? 'step-card step-card--active' : 'step-card'}
-            p="xs"
-            radius="md"
+            onClick={() => onStepChange(step.id)}
           >
             <Group
               align="center"
+              className="step-card__content"
               wrap="nowrap"
             >
               <ThemeIcon
@@ -51,7 +52,7 @@ export function StepList({ activeStep, visibleSteps }: Props) {
                 </Badge>
               ) : null}
             </Group>
-          </Paper>
+          </UnstyledButton>
         );
       })}
     </Stack>

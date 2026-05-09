@@ -28,6 +28,7 @@ type Translation = {
     mapAllFieldsTitle: string;
     missingEmailMappings: (fields: string) => string;
     missingWordMappings: (fields: string) => string;
+    loadProject: string;
     openRecentProject: string;
     outputsRequiredBody: string;
     saveDraftSetup: string;
@@ -42,6 +43,7 @@ type Translation = {
     workbookRequiredBody: string;
     outputFolderRequiredTitle: string;
     outputFolderRequiredBody: string;
+    outputFilenamePatternRequiredBody: string;
   };
   generationProgress: {
     docxFiles: string;
@@ -86,20 +88,30 @@ type Translation = {
     emailFileDesc: string;
     emailFileLabel: string;
     emailFilePlaceholder: string;
+    emailSummary: (fields: number) => string;
     excelDesc: string;
     excelLabel: string;
     excelPlaceholder: string;
     headerRow: string;
     headerRowDesc: string;
+    headerRowWarningBody: (
+      selectedRow: number,
+      selectedCount: number,
+      suggestedRow: number,
+      suggestedCount: number,
+    ) => string;
+    headerRowWarningTitle: string;
     optionalEmailSource: string;
     optionalEmailSourceDesc: string;
     outputFolderDesc: string;
     outputFolderLabel: string;
     outputFolderPlaceholder: string;
+    outputSummary: string;
     outputFilenamePatternDesc: string;
     outputFilenamePatternLabel: string;
     outputFilenamePatternPlaceholder: string;
     pdfFiles: string;
+    previewFields: string;
     rejectionColumn: string;
     rejectionColumnDesc: string;
     rejectionColumnPlaceholder: string;
@@ -108,15 +120,24 @@ type Translation = {
     rejectionValuePlaceholder: string;
     title: string;
     subtitle: string;
+    setupWorkbook: string;
     whatGenerate: string;
     whatGenerateDesc: string;
     wordDesc: string;
     wordFiles: string;
     wordLabel: string;
     wordPlaceholder: string;
+    wordSummary: (fields: number) => string;
+    workbookSummary: (
+      headerRow: number,
+      dataStartRow: number,
+      rowsFound: number,
+      columnsFound: number,
+    ) => string;
     worksheet: string;
     worksheetDesc: string;
     worksheetPlaceholder: string;
+    useSuggestedHeaderRow: (row: number) => string;
     downloadExcelExample: string;
     downloadWordExample: string;
     downloadEmailExample: string;
@@ -124,7 +145,6 @@ type Translation = {
   contractMapping: {
     badgeMapped: (mapped: number, total: number) => string;
     context: string;
-    mappedSample: string;
     noContextBody: string;
     noContextTitle: string;
     noPlaceholdersBody: string;
@@ -137,28 +157,19 @@ type Translation = {
     showParagraph: string;
     sourceColumn: string;
     sampleValue: string;
-    subtitle: string;
-    templateFlowTitle: string;
-    title: string;
     tokenWithSample: (sample: string) => string;
     tokenWithoutSample: string;
     workbookVariable: string;
     wordField: string;
     chooseVariable: string;
-    needMorePlaceholdersTitle: string;
-    needMorePlaceholdersBody: string;
-    statusNoTemplate: string;
-    statusTemplateMissing: string;
-    statusTemplateLocked: string;
-    statusTemplateEditedAt: (time: string) => string;
-    statusTemplateHint: string;
+    mappingPreviewDesc: string;
+    mappingPreviewTitle: string;
     outputFilenamePatternDesc: string;
     outputFilenamePatternLabel: string;
     outputFilenamePatternPlaceholder: string;
-    outputFilenamePatternPreviewLabel: string;
-    outputFilenamePatternMissingTitle: string;
     outputFilenamePatternMissingBody: string;
-    filenameTokensHint: string;
+    outputFilenamePatternPreviewLabel: string;
+    outputFilenamePatternRequiredBody: string;
   };
   emailBuilder: {
     activeTarget: (target: string) => string;
@@ -200,6 +211,9 @@ type Translation = {
     filterMissing: string;
     filterRequired: string;
     firstRowValue: string;
+    guidanceLines: string[];
+    guidanceTitle: string;
+    hideGuidance: string;
     headerMatched: (count: number) => string;
     header: string;
     modeCompact: string;
@@ -211,6 +225,7 @@ type Translation = {
     selectedVariable: string;
     subtitle: string;
     suggestedVariable: string;
+    showGuidance: string;
     title: string;
     usedBy: string;
     usedByBoth: string;
@@ -263,13 +278,43 @@ type Translation = {
     fieldsFoundInWord: string;
     loadCheck: string;
     noTemplateFields: string;
+    mergedTitleHint: string;
+    populatedCells: string;
     previewUnavailable: string;
     quickCheck: string;
     quickCheckDesc: (rows: number) => string;
     refreshing: string;
+    roleData: string;
+    roleSelectedHeader: string;
+    roleSuggestedHeader: string;
     row: string;
+    rowType: string;
     subtitle: string;
     wordTemplateNotSelected: string;
+  };
+  workbookSetupModal: {
+    dataLegend: string;
+    description: string;
+    heading: string;
+    mergedTitleHint: string;
+    noRejectedPreviewMatch: string;
+    rejectedLegend: string;
+    selectedHeaderLegend: string;
+    saveSettings: string;
+    suggestedHeaderLegend: string;
+    title: string;
+  };
+  templateInspection: {
+    context: string;
+    emailDescription: string;
+    emailTitle: string;
+    field: string;
+    noContext: string;
+    noFieldsBody: string;
+    noFieldsTitle: string;
+    wordDescription: string;
+    saveSettings: string;
+    wordTitle: string;
   };
   success: {
     createdFiles: string;
@@ -296,6 +341,7 @@ type Translation = {
   };
   fileField: {
     browse: string;
+    clear: string;
     downloadExample: string;
   };
 };
@@ -351,22 +397,22 @@ const translations: Record<Language, Translation> = {
       mapAllFieldsTitle: 'Map all fields before review',
       missingEmailMappings: (fields) => `Email fields missing workbook assignment: ${fields}.`,
       missingWordMappings: (fields) => `Word fields missing mapping: ${fields}. `,
+      loadProject: 'Load Project',
       openRecentProject: 'Open Project Setup',
       outputsRequiredBody: 'Choose at least one output type before continuing.',
-      saveDraftSetup: 'Save Draft Setup',
+      saveDraftSetup: 'Save Draft Project',
       couldNotSaveExampleTemplate: 'Could not save example template',
       couldNotLoadWorkbookPreview: 'Could not load workbook preview',
       projectFileLabel: 'Project file',
       back: 'Back',
       continueTo: 'Continue To',
       wordTemplateRequiredTitle: 'Word template required',
-      wordTemplateRequiredBody:
-        'Select a Word template before continuing to Field & Filename Mapping when DOCX or PDF output is enabled.',
-      emailTemplateRequiredBody:
-        'Select an email template file before continuing when external email template source is enabled.',
+      wordTemplateRequiredBody: 'Word template required for DOCX/PDF output.',
+      emailTemplateRequiredBody: 'Email template file required.',
       outputFolderRequiredTitle: 'Output folder required',
-      outputFolderRequiredBody: 'Select an output folder before continuing.',
-      workbookRequiredBody: 'Select an Excel workbook before continuing.',
+      outputFolderRequiredBody: 'Output folder required.',
+      outputFilenamePatternRequiredBody: 'Please fill in the DOCX/PDF filename pattern.',
+      workbookRequiredBody: 'Excel workbook required.',
     },
     generationProgress: {
       docxFiles: 'DOCX files',
@@ -411,11 +457,15 @@ const translations: Record<Language, Translation> = {
       emailFileDesc: 'Choose a text or Word file used as the email template source.',
       emailFileLabel: 'Email Template File',
       emailFilePlaceholder: 'Select template file (.txt, .docx)',
+      emailSummary: (fields) => `${fields} email field${fields === 1 ? '' : 's'} found`,
       excelDesc: 'Choose the Excel file with the values you want to use.',
       excelLabel: 'Excel File',
       excelPlaceholder: 'Select Excel file (.xlsx)',
       headerRow: 'Header Row',
       headerRowDesc: 'Row containing the column headers.',
+      headerRowWarningBody: (selectedRow, selectedCount, suggestedRow, suggestedCount) =>
+        `Row ${selectedRow} has ${selectedCount} header cells, but row ${suggestedRow} has ${suggestedCount}. Check the load preview below; row ${suggestedRow} is probably the real header row.`,
+      headerRowWarningTitle: 'Header row may be wrong',
       optionalEmailSource: 'Use an existing email template file',
       optionalEmailSourceDesc:
         'Turn this on only if you want to load email text from a .txt file. Leave it off to build emails directly in the app.',
@@ -423,11 +473,13 @@ const translations: Record<Language, Translation> = {
         'Choose where generated DOCX, PDF, drafts, and reports should be written.',
       outputFolderLabel: 'Output Folder',
       outputFolderPlaceholder: 'Select output folder',
+      outputSummary: 'Output folder selected',
       outputFilenamePatternDesc:
         'Controls DOCX/PDF file names. Use placeholders like {{APPLICATION_ID}} or plain text to avoid extra required mappings.',
       outputFilenamePatternLabel: 'Output Filename Pattern',
       outputFilenamePatternPlaceholder: '{{APPLICATION_CODE}} - {{TITLE}}',
       pdfFiles: 'PDF files',
+      previewFields: 'Preview fields',
       rejectionColumn: 'Reject Rows By',
       rejectionColumnDesc: 'Optional column used to skip rows before generation.',
       rejectionColumnPlaceholder: 'No rejection rule',
@@ -437,15 +489,20 @@ const translations: Record<Language, Translation> = {
       title: 'Project Setup',
       subtitle:
         'Connect the files you already use in daily work - Excel, Word, and output folder - in one guided setup.',
+      setupWorkbook: 'Setup workbook',
       whatGenerate: 'What do you want to generate?',
       whatGenerateDesc: 'Pick one or more output types. The workflow will adapt automatically.',
       wordDesc: 'Choose the Word template with placeholders like {{TITLE}} and {{AUTHOR}}.',
       wordFiles: 'Word files (.docx)',
       wordLabel: 'Word Template',
       wordPlaceholder: 'Select Word template (.docx)',
+      wordSummary: (fields) => `${fields} Word field${fields === 1 ? '' : 's'} found`,
+      workbookSummary: (headerRow, dataStartRow, rowsFound, columnsFound) =>
+        `Header row ${headerRow}; data starts row ${dataStartRow}; ${rowsFound} rows found; ${columnsFound} columns`,
       worksheet: 'Worksheet Name',
       worksheetDesc: 'Sheet name to read from your workbook.',
       worksheetPlaceholder: 'Select worksheet',
+      useSuggestedHeaderRow: (row) => `Use row ${row}`,
       downloadExcelExample: 'Download example Excel file',
       downloadWordExample: 'Download example Word template',
       downloadEmailExample: 'Download example email template',
@@ -453,7 +510,6 @@ const translations: Record<Language, Translation> = {
     contractMapping: {
       badgeMapped: (mapped, total) => `${mapped} / ${total} mapped`,
       context: 'Context',
-      mappedSample: 'Rendered with sample value',
       noContextBody:
         'This token was found in the Word file, but the app could not extract a paragraph around it.',
       noContextTitle: 'No paragraph context found',
@@ -468,31 +524,21 @@ const translations: Record<Language, Translation> = {
       showParagraph: 'Show paragraph',
       sourceColumn: 'Source column',
       sampleValue: 'Sample value',
-      subtitle: 'Connect each Word placeholder to an Excel column, and configure DOCX/PDF output naming.',
-      templateFlowTitle: 'Template editing flow',
-      title: 'Field & Filename Mapping',
       tokenWithSample: (sample) => ` with sample value "${sample}"`,
       tokenWithoutSample: ' (no mapped sample value yet)',
       workbookVariable: 'Workbook variable',
       wordField: 'Word field',
       chooseVariable: 'Choose variable',
-      needMorePlaceholdersTitle: 'Need more placeholders?',
-      needMorePlaceholdersBody:
-        'Add markers like {{AUTHOR}}, {{TITLE}}, or {{APPLICATION_CODE}} directly in the Word file wherever values should be injected. Save the template, close Word if needed, then use Reload fields.',
-      statusNoTemplate: 'Choose a Word template in Project Setup before mapping fields.',
-      statusTemplateMissing: 'The selected Word template could not be found on disk.',
-      statusTemplateLocked:
-        'The template still looks open in Word. Save your changes, close Word, then reload fields.',
-      statusTemplateEditedAt: (time) => `Last saved change detected at ${time}. Reload fields after saving if you added or renamed placeholders.`,
-      statusTemplateHint: 'Open the Word template, save your edits, then reload fields to pull in new placeholders.',
+      mappingPreviewDesc:
+        'Map placeholders found in the Word template. To add more, edit the template, save it, then reload fields.',
+      mappingPreviewTitle: 'Template Mapping Preview',
       outputFilenamePatternDesc:
-        'Controls DOCX/PDF file names. Use placeholders like {{APPLICATION_CODE}} and plain text (for example: Contract - {{TITLE}}).',
+        'Use plain text, existing variables, or type {{ANY_CAPS_WORD}} for a filename-only field and map it below.',
       outputFilenamePatternLabel: 'DOCX/PDF Filename Pattern',
       outputFilenamePatternPlaceholder: '{{APPLICATION_CODE}} - {{TITLE}} - {{LANGUAGE}}',
-      outputFilenamePatternPreviewLabel: 'Preview with first data row',
-      outputFilenamePatternMissingTitle: 'Pattern token not mapped to a selected variable',
       outputFilenamePatternMissingBody: 'Assign workbook variables for:',
-      filenameTokensHint: 'Click a variable to insert it into the pattern:',
+      outputFilenamePatternPreviewLabel: 'Preview:',
+      outputFilenamePatternRequiredBody: 'Please fill in the filename.',
     },
     emailBuilder: {
       activeTarget: (target) => `Active target: ${target}`,
@@ -535,6 +581,14 @@ const translations: Record<Language, Translation> = {
       filterMissing: 'Missing',
       filterRequired: 'Required',
       firstRowValue: 'First row value',
+      guidanceLines: [
+        'Each row represents one workbook column. Compare the header and first-row value to confirm what data is in that column.',
+        'Use Suggested when the detected variable is correct, or choose a different variable from Selected variable.',
+        'Focus on Required and Missing first. Used by shows whether the variable feeds Word fields, email fields, or generated file names.',
+        'For a filename-only field, type {{ANY_CAPS_WORD}} in the filename pattern, then type that variable here and click Create to add it.',
+      ],
+      guidanceTitle: 'How to use this preview',
+      hideGuidance: 'Hide help',
       headerMatched: (count) => `${count} header matches assigned`,
       header: 'Header',
       modeCompact: 'Compact',
@@ -547,6 +601,7 @@ const translations: Record<Language, Translation> = {
       subtitle:
         'Review workbook columns, sample values, and field assignments used by Word and email templates.',
       suggestedVariable: 'Suggested',
+      showGuidance: 'Show help',
       title: 'Workbook Mapping Preview',
       usedBy: 'Used by',
       usedByBoth: '[WORD Field] + Email',
@@ -602,14 +657,48 @@ const translations: Record<Language, Translation> = {
       loadCheck: 'Load Check',
       noTemplateFields:
         'No template placeholders were found. Add markers like {{AUTHOR}} or {{TITLE}} inside the DOCX anywhere you want Excel values to be injected. Then save the file and either browse for the contract template again in Project Setup or re-open the same file to refresh this list.',
+      mergedTitleHint:
+        'Merged Excel titles appear as one populated cell. A real header row usually has many populated cells.',
+      populatedCells: 'Populated cells',
       previewUnavailable: 'Preview unavailable',
       quickCheck: 'Workbook quick check',
       quickCheckDesc: (rows) =>
         `Showing the first ${rows} data rows so you can verify sheet and row settings before generating at scale.`,
       refreshing: 'Refreshing source preview...',
+      roleData: 'Data cell row',
+      roleSelectedHeader: 'Selected header',
+      roleSuggestedHeader: 'Likely header',
       row: 'Row',
+      rowType: 'Row type',
       subtitle: 'Confirm detected Word fields and sample Excel values before moving to mapping.',
       wordTemplateNotSelected: 'Select a Word template to preview placeholders. Excel load checks are already active.',
+    },
+    workbookSetupModal: {
+      dataLegend: 'Data rows',
+      description:
+        'Choose the worksheet, then select the row that contains the actual column names. The first data row should be the first record below those headers.',
+      heading: 'Worksheet and row setup',
+      mergedTitleHint:
+        'Merged title rows usually show one populated cell. Header rows should show several populated cells across the columns you expect to map.',
+      noRejectedPreviewMatch:
+        'No row matching the rejection rule was found in the workbook preview sample.',
+      rejectedLegend: 'Rejected row',
+      selectedHeaderLegend: 'Selected header row',
+      saveSettings: 'Save settings',
+      suggestedHeaderLegend: 'Likely header row',
+      title: 'Workbook Setup',
+    },
+    templateInspection: {
+      context: 'Found in',
+      emailDescription: 'Review placeholders found in the email template file and the nearby text where each one appears.',
+      emailTitle: 'Email Template Fields',
+      field: 'Field',
+      noContext: 'No surrounding text was found for this field.',
+      noFieldsBody: 'No placeholders were found in this template yet.',
+      noFieldsTitle: 'No fields found',
+      wordDescription: 'Review placeholders found in the Word template and the paragraph where each one appears.',
+      saveSettings: 'Save settings',
+      wordTitle: 'Word Template Fields',
     },
     success: {
       createdFiles: 'Created files',
@@ -635,10 +724,11 @@ const translations: Record<Language, Translation> = {
       summary: (generated, skipped) => `${generated} generated / ${skipped} skipped`,
       warningsTitle: 'Warnings',
     },
-    fileField: {
-      browse: 'Browse',
-      downloadExample: 'Download example template',
-    },
+  fileField: {
+    browse: 'Browse',
+    clear: 'Clear',
+    downloadExample: 'Download example template',
+  },
   },
   el: {
     language: {
@@ -690,22 +780,22 @@ const translations: Record<Language, Translation> = {
       mapAllFieldsTitle: 'Αντιστοιχίστε όλα τα πεδία πριν τον έλεγχο',
       missingEmailMappings: (fields) => `Πεδία email χωρίς αντιστοίχιση workbook: ${fields}.`,
       missingWordMappings: (fields) => `Πεδία Word χωρίς αντιστοίχιση: ${fields}. `,
+      loadProject: 'Φόρτωση έργου',
       openRecentProject: 'Άνοιγμα ρύθμισης έργου',
       outputsRequiredBody: 'Επιλέξτε τουλάχιστον έναν τύπο εξόδου πριν συνεχίσετε.',
-      saveDraftSetup: 'Αποθήκευση πρόχειρης ρύθμισης',
+      saveDraftSetup: 'Αποθήκευση πρόχειρου έργου',
       couldNotSaveExampleTemplate: 'Αδυναμία αποθήκευσης πρότυπου παραδείγματος',
       couldNotLoadWorkbookPreview: 'Αδυναμία φόρτωσης προεπισκόπησης workbook',
       projectFileLabel: 'Αρχείο έργου',
       back: 'Πίσω',
       continueTo: 'Συνέχεια σε',
       wordTemplateRequiredTitle: 'Απαιτείται πρότυπο Word',
-      wordTemplateRequiredBody:
-        'Επιλέξτε πρότυπο Word πριν συνεχίσετε στη Χαρτογράφηση Πεδίων & Ονόματος Αρχείου όταν είναι ενεργό DOCX ή PDF.',
-      emailTemplateRequiredBody:
-        'Επιλέξτε αρχείο προτύπου email πριν συνεχίσετε όταν είναι ενεργή η εξωτερική πηγή email.',
+      wordTemplateRequiredBody: 'Απαιτείται πρότυπο Word για έξοδο DOCX/PDF.',
+      emailTemplateRequiredBody: 'Απαιτείται αρχείο προτύπου email.',
       outputFolderRequiredTitle: 'Απαιτείται φάκελος εξόδου',
-      outputFolderRequiredBody: 'Επιλέξτε φάκελο εξόδου πριν συνεχίσετε.',
-      workbookRequiredBody: 'Επιλέξτε αρχείο Excel πριν συνεχίσετε.',
+      outputFolderRequiredBody: 'Απαιτείται φάκελος εξόδου.',
+      outputFilenamePatternRequiredBody: 'Συμπληρώστε το μοτίβο ονόματος αρχείου DOCX/PDF.',
+      workbookRequiredBody: 'Απαιτείται workbook Excel.',
     },
     generationProgress: {
       docxFiles: 'Αρχεία DOCX',
@@ -750,11 +840,15 @@ const translations: Record<Language, Translation> = {
       emailFileDesc: 'Επιλέξτε αρχείο κειμένου ή Word ως πηγή προτύπου email.',
       emailFileLabel: 'Αρχείο Προτύπου Email',
       emailFilePlaceholder: 'Επιλέξτε αρχείο προτύπου (.txt, .docx)',
+      emailSummary: (fields) => `Βρέθηκαν ${fields} πεδία email`,
       excelDesc: 'Επιλέξτε το αρχείο Excel με τις τιμές που θέλετε να χρησιμοποιήσετε.',
       excelLabel: 'Αρχείο Excel',
       excelPlaceholder: 'Επιλέξτε αρχείο Excel (.xlsx)',
       headerRow: 'Γραμμή Επικεφαλίδων',
       headerRowDesc: 'Γραμμή που περιέχει τις επικεφαλίδες στηλών.',
+      headerRowWarningBody: (selectedRow, selectedCount, suggestedRow, suggestedCount) =>
+        `Η γραμμή ${selectedRow} έχει ${selectedCount} κελιά επικεφαλίδων, αλλά η γραμμή ${suggestedRow} έχει ${suggestedCount}. Ελέγξτε την προεπισκόπηση φόρτωσης παρακάτω. Πιθανότατα η γραμμή ${suggestedRow} είναι η σωστή γραμμή επικεφαλίδων.`,
+      headerRowWarningTitle: 'Η γραμμή επικεφαλίδων ίσως είναι λάθος',
       optionalEmailSource: 'Χρήση υπάρχοντος αρχείου προτύπου email',
       optionalEmailSourceDesc:
         'Ενεργοποιήστε το μόνο αν θέλετε φόρτωση κειμένου email από .txt. Αφήστε το κλειστό για σύνταξη email μέσα στην εφαρμογή.',
@@ -762,11 +856,13 @@ const translations: Record<Language, Translation> = {
         'Επιλέξτε πού θα γράφονται τα παραγόμενα DOCX, PDF, προσχέδια και αναφορές.',
       outputFolderLabel: 'Φάκελος Εξόδου',
       outputFolderPlaceholder: 'Επιλέξτε φάκελο εξόδου',
+      outputSummary: 'Έχει επιλεγεί φάκελος εξόδου',
       outputFilenamePatternDesc:
         'Ορίζει το όνομα αρχείου για DOCX/PDF. Χρησιμοποιήστε placeholders όπως {{APPLICATION_ID}} ή απλό κείμενο για λιγότερες υποχρεωτικές αντιστοιχίσεις.',
       outputFilenamePatternLabel: 'Μοτίβο Ονόματος Αρχείου Εξόδου',
       outputFilenamePatternPlaceholder: '{{APPLICATION_CODE}} - {{TITLE}}',
       pdfFiles: 'Αρχεία PDF',
+      previewFields: 'Προεπισκόπηση πεδίων',
       rejectionColumn: 'Απόρριψη γραμμών με βάση',
       rejectionColumnDesc: 'Προαιρετική στήλη για παράλειψη γραμμών πριν τη δημιουργία.',
       rejectionColumnPlaceholder: 'Χωρίς κανόνα απόρριψης',
@@ -776,15 +872,20 @@ const translations: Record<Language, Translation> = {
       title: 'Ρύθμιση Έργου',
       subtitle:
         'Συνδέστε τα αρχεία που χρησιμοποιείτε καθημερινά - Excel, Word και φάκελο εξόδου - σε μία καθοδηγούμενη ρύθμιση.',
+      setupWorkbook: 'Ρύθμιση workbook',
       whatGenerate: 'Τι θέλετε να δημιουργήσετε;',
       whatGenerateDesc: 'Επιλέξτε έναν ή περισσότερους τύπους εξόδου. Η ροή προσαρμόζεται αυτόματα.',
       wordDesc: 'Επιλέξτε το πρότυπο Word με placeholders όπως {{TITLE}} και {{AUTHOR}}.',
       wordFiles: 'Αρχεία Word (.docx)',
       wordLabel: 'Πρότυπο Word',
       wordPlaceholder: 'Επιλέξτε πρότυπο Word (.docx)',
+      wordSummary: (fields) => `Βρέθηκαν ${fields} πεδία Word`,
+      workbookSummary: (headerRow, dataStartRow, rowsFound, columnsFound) =>
+        `Επικεφαλίδες στη γραμμή ${headerRow}; δεδομένα από γραμμή ${dataStartRow}; ${rowsFound} γραμμές; ${columnsFound} στήλες`,
       worksheet: 'Όνομα Φύλλου',
       worksheetDesc: 'Όνομα φύλλου για ανάγνωση από το workbook.',
       worksheetPlaceholder: 'Επιλέξτε φύλλο',
+      useSuggestedHeaderRow: (row) => `Χρήση γραμμής ${row}`,
       downloadExcelExample: 'Λήψη παραδείγματος Excel',
       downloadWordExample: 'Λήψη παραδείγματος Word',
       downloadEmailExample: 'Λήψη παραδείγματος email',
@@ -792,7 +893,6 @@ const translations: Record<Language, Translation> = {
     contractMapping: {
       badgeMapped: (mapped, total) => `${mapped} / ${total} αντιστοιχισμένα`,
       context: 'Πλαίσιο',
-      mappedSample: 'Απόδοση με τιμή δείγματος',
       noContextBody:
         'Αυτό το token βρέθηκε στο Word, αλλά η εφαρμογή δεν μπόρεσε να εξαγάγει γύρω παράγραφο.',
       noContextTitle: 'Δεν βρέθηκε πλαίσιο παραγράφου',
@@ -807,31 +907,21 @@ const translations: Record<Language, Translation> = {
       showParagraph: 'Προβολή παραγράφου',
       sourceColumn: 'Στήλη προέλευσης',
       sampleValue: 'Τιμή δείγματος',
-      subtitle: 'Συνδέστε κάθε placeholder Word με στήλη Excel και ρυθμίστε την ονοματοδοσία εξόδου DOCX/PDF.',
-      templateFlowTitle: 'Ροή επεξεργασίας προτύπου',
-      title: 'Αντιστοίχιση Πεδίων & Ονόματος Αρχείου',
       tokenWithSample: (sample) => ` με τιμή δείγματος "${sample}"`,
       tokenWithoutSample: ' (δεν υπάρχει ακόμη τιμή δείγματος)',
       workbookVariable: 'Μεταβλητή workbook',
       wordField: 'Πεδίο Word',
       chooseVariable: 'Επιλέξτε μεταβλητή',
-      needMorePlaceholdersTitle: 'Χρειάζεστε περισσότερα placeholders;',
-      needMorePlaceholdersBody:
-        'Προσθέστε δείκτες όπως {{AUTHOR}}, {{TITLE}} ή {{APPLICATION_CODE}} απευθείας στο Word όπου πρέπει να εισαχθούν τιμές. Αποθηκεύστε, κλείστε το Word αν χρειάζεται και πατήστε Επαναφόρτωση πεδίων.',
-      statusNoTemplate: 'Επιλέξτε πρότυπο Word στη Ρύθμιση Έργου πριν την αντιστοίχιση.',
-      statusTemplateMissing: 'Το επιλεγμένο πρότυπο Word δεν βρέθηκε στον δίσκο.',
-      statusTemplateLocked:
-        'Το πρότυπο φαίνεται ακόμη ανοιχτό στο Word. Αποθηκεύστε, κλείστε το Word και επαναφορτώστε πεδία.',
-      statusTemplateEditedAt: (time) => `Εντοπίστηκε τελευταία αποθήκευση στις ${time}. Κάντε επαναφόρτωση πεδίων αν προσθέσατε ή μετονομάσατε placeholders.`,
-      statusTemplateHint: 'Ανοίξτε το πρότυπο Word, αποθηκεύστε τις αλλαγές και κάντε επαναφόρτωση πεδίων.',
+      mappingPreviewDesc:
+        'Αντιστοιχίστε placeholders που βρέθηκαν στο Word. Για περισσότερα, επεξεργαστείτε το πρότυπο, αποθηκεύστε και επαναφορτώστε πεδία.',
+      mappingPreviewTitle: 'Προεπισκόπηση Αντιστοίχισης Προτύπου',
       outputFilenamePatternDesc:
-        'Ελέγχει το όνομα αρχείου DOCX/PDF. Χρησιμοποίησε placeholders όπως {{APPLICATION_CODE}} και απλό κείμενο (π.χ. Σύμβαση - {{TITLE}}).',
+        'Χρησιμοποιήστε απλό κείμενο, υπάρχουσες μεταβλητές ή γράψτε {{ANY_CAPS_WORD}} για πεδίο μόνο στο όνομα και αντιστοιχίστε το παρακάτω.',
       outputFilenamePatternLabel: 'Μοτίβο Ονόματος Αρχείου DOCX/PDF',
       outputFilenamePatternPlaceholder: '{{APPLICATION_CODE}} - {{TITLE}} - {{LANGUAGE}}',
-      outputFilenamePatternPreviewLabel: 'Προεπισκόπηση με την πρώτη γραμμή δεδομένων',
-      outputFilenamePatternMissingTitle: 'Token ονόματος χωρίς αντιστοίχιση σε επιλεγμένη μεταβλητή',
       outputFilenamePatternMissingBody: 'Ορίστε μεταβλητές workbook για:',
-      filenameTokensHint: 'Κάντε κλικ σε μεταβλητή για εισαγωγή στο μοτίβο:',
+      outputFilenamePatternPreviewLabel: 'Προεπισκόπηση:',
+      outputFilenamePatternRequiredBody: 'Συμπληρώστε το όνομα αρχείου.',
     },
     emailBuilder: {
       activeTarget: (target) => `Ενεργό πεδίο: ${target}`,
@@ -874,6 +964,14 @@ const translations: Record<Language, Translation> = {
       filterMissing: 'Λείπουν',
       filterRequired: 'Απαιτούμενα',
       firstRowValue: 'Τιμή πρώτης γραμμής',
+      guidanceLines: [
+        'Κάθε γραμμή αντιστοιχεί σε μία στήλη του workbook. Συγκρίνετε την επικεφαλίδα και την τιμή πρώτης γραμμής για να επιβεβαιώσετε τι δεδομένα περιέχει.',
+        'Πατήστε Πρόταση όταν η ανιχνευμένη μεταβλητή είναι σωστή ή επιλέξτε άλλη μεταβλητή από την Επιλεγμένη μεταβλητή.',
+        'Ελέγξτε πρώτα τα Απαιτούμενα και όσα Λείπουν. Το Χρησιμοποιείται από δείχνει αν η μεταβλητή τροφοδοτεί πεδία Word, email ή ονόματα αρχείων.',
+        'Για πεδίο μόνο στο όνομα αρχείου, γράψτε {{ANY_CAPS_WORD}} στο μοτίβο ονόματος, μετά πληκτρολογήστε αυτή τη μεταβλητή εδώ και πατήστε Create για να την προσθέσετε.',
+      ],
+      guidanceTitle: 'Πώς να χρησιμοποιήσετε την προεπισκόπηση',
+      hideGuidance: 'Απόκρυψη βοήθειας',
       headerMatched: (count) => `${count} αντιστοιχίσεις από επικεφαλίδες`,
       header: 'Επικεφαλίδα',
       modeCompact: 'Συμπαγές',
@@ -886,6 +984,7 @@ const translations: Record<Language, Translation> = {
       subtitle:
         'Ελέγξτε στήλες workbook, τιμές δείγματος και αντιστοιχίσεις πεδίων για Word και email.',
       suggestedVariable: 'Πρόταση',
+      showGuidance: 'Εμφάνιση βοήθειας',
       title: 'Προεπισκόπηση Αντιστοίχισης Workbook',
       usedBy: 'Χρησιμοποιείται από',
       usedByBoth: '[WORD Field] + Email',
@@ -941,14 +1040,48 @@ const translations: Record<Language, Translation> = {
       loadCheck: 'Έλεγχος Φόρτωσης',
       noTemplateFields:
         'Δεν βρέθηκαν placeholders προτύπου. Προσθέστε δείκτες όπως {{AUTHOR}} ή {{TITLE}} μέσα στο DOCX όπου θέλετε να μπαίνουν τιμές Excel. Έπειτα αποθηκεύστε και είτε επιλέξτε ξανά το πρότυπο στη Ρύθμιση Έργου είτε ανοίξτε ξανά το ίδιο αρχείο για ανανέωση της λίστας.',
+      mergedTitleHint:
+        'Οι συγχωνευμένοι τίτλοι Excel εμφανίζονται ως ένα συμπληρωμένο κελί. Μια πραγματική γραμμή επικεφαλίδων συνήθως έχει πολλά συμπληρωμένα κελιά.',
+      populatedCells: 'Συμπληρωμένα κελιά',
       previewUnavailable: 'Η προεπισκόπηση δεν είναι διαθέσιμη',
       quickCheck: 'Γρήγορος έλεγχος workbook',
       quickCheckDesc: (rows) =>
         `Εμφανίζονται οι πρώτες ${rows} γραμμές δεδομένων ώστε να επαληθεύσετε ρυθμίσεις φύλλου και γραμμών πριν τη μαζική δημιουργία.`,
       refreshing: 'Ανανέωση προεπισκόπησης πηγών...',
+      roleData: 'Γραμμή δεδομένων',
+      roleSelectedHeader: 'Επιλεγμένη επικεφαλίδα',
+      roleSuggestedHeader: 'Πιθανή επικεφαλίδα',
       row: 'Γραμμή',
+      rowType: 'Τύπος γραμμής',
       subtitle: 'Επιβεβαιώστε τα πεδία Word και δείγματα τιμών Excel πριν την αντιστοίχιση.',
       wordTemplateNotSelected: 'Επιλέξτε πρότυπο Word για προεπισκόπηση placeholders. Ο έλεγχος φόρτωσης Excel εκτελείται ήδη.',
+    },
+    workbookSetupModal: {
+      dataLegend: 'Γραμμές δεδομένων',
+      description:
+        'Επιλέξτε φύλλο και μετά τη γραμμή που περιέχει τα πραγματικά ονόματα στηλών. Η πρώτη γραμμή δεδομένων πρέπει να είναι η πρώτη εγγραφή κάτω από τις επικεφαλίδες.',
+      heading: 'Ρύθμιση φύλλου και γραμμών',
+      mergedTitleHint:
+        'Οι συγχωνευμένες γραμμές τίτλου συνήθως εμφανίζουν ένα συμπληρωμένο κελί. Οι γραμμές επικεφαλίδων πρέπει να έχουν πολλά συμπληρωμένα κελιά στις στήλες που θέλετε να αντιστοιχίσετε.',
+      noRejectedPreviewMatch:
+        'Δεν βρέθηκε γραμμή που να ταιριάζει με τον κανόνα απόρριψης στο δείγμα προεπισκόπησης workbook.',
+      rejectedLegend: 'Απορριπτέα γραμμή',
+      selectedHeaderLegend: 'Επιλεγμένη γραμμή επικεφαλίδων',
+      saveSettings: 'Αποθήκευση ρυθμίσεων',
+      suggestedHeaderLegend: 'Πιθανή γραμμή επικεφαλίδων',
+      title: 'Ρύθμιση Workbook',
+    },
+    templateInspection: {
+      context: 'Βρέθηκε σε',
+      emailDescription: 'Ελέγξτε τα placeholders που βρέθηκαν στο αρχείο email και το κοντινό κείμενο όπου εμφανίζεται το καθένα.',
+      emailTitle: 'Πεδία Προτύπου Email',
+      field: 'Πεδίο',
+      noContext: 'Δεν βρέθηκε κοντινό κείμενο για αυτό το πεδίο.',
+      noFieldsBody: 'Δεν βρέθηκαν placeholders σε αυτό το πρότυπο ακόμη.',
+      noFieldsTitle: 'Δεν βρέθηκαν πεδία',
+      wordDescription: 'Ελέγξτε τα placeholders που βρέθηκαν στο πρότυπο Word και την παράγραφο όπου εμφανίζεται το καθένα.',
+      saveSettings: 'Αποθήκευση ρυθμίσεων',
+      wordTitle: 'Πεδία Προτύπου Word',
     },
     success: {
       createdFiles: 'Δημιουργημένα αρχεία',
@@ -974,10 +1107,11 @@ const translations: Record<Language, Translation> = {
       summary: (generated, skipped) => `${generated} δημιουργήθηκαν / ${skipped} παραλείφθηκαν`,
       warningsTitle: 'Προειδοποιήσεις',
     },
-    fileField: {
-      browse: 'Περιήγηση',
-      downloadExample: 'Λήψη πρότυπου παραδείγματος',
-    },
+  fileField: {
+    browse: 'Περιήγηση',
+    clear: 'Καθαρισμός',
+    downloadExample: 'Λήψη πρότυπου παραδείγματος',
+  },
   },
 };
 

@@ -1,6 +1,5 @@
 import { memo, useMemo, useRef, useState } from 'react';
-import { Alert, Badge, Button, Divider, Group, Modal, Paper, Stack, Table, Text, TextInput, Title } from '@mantine/core';
-import type { TemplateStatusResult } from '../../shared/desktop';
+import { Alert, Button, Group, Modal, Paper, Stack, Table, Text, TextInput } from '@mantine/core';
 import { extractTokens, renderTemplate, tokenName } from '../lib/template';
 import type { WorkbookPreviewRow } from '../types/template';
 import { useI18n } from '../i18n';
@@ -8,16 +7,9 @@ import { CreatableSelect } from './CreatableSelect';
 
 type Props = {
   availableVariables: string[];
-  contractTemplatePath: string;
-  isOpeningTemplate?: boolean;
-  isReloadingTemplate?: boolean;
-  mappedContractFields: number;
-  onOpenTemplate: () => void;
-  onReloadTemplate: () => void;
   outputFilenamePattern: string;
   setTokenMapping: (token: string, variable: string | null) => void;
   setOutputFilenamePattern: (value: string) => void;
-  templateStatus: TemplateStatusResult | null;
   tokenContexts: Record<string, string>;
   tokenMappings: Record<string, string>;
   tokens: string[];
@@ -25,18 +17,168 @@ type Props = {
   workbookRows: WorkbookPreviewRow[];
 };
 
+type FilenamePatternSectionProps = {
+  filenameTokens: string[];
+  isFilenamePatternMissing: boolean;
+  missingFilenameVariables: string[];
+  onInsertToken: (variable: string) => void;
+  onPatternChange: (value: string, selectionStart: number | null) => void;
+  onSelectionChange: (selectionStart: number | null) => void;
+  outputFilenamePattern: string;
+  variableSources: Record<string, WorkbookPreviewRow>;
+};
+
+function FilenamePatternSection({
+  filenameTokens,
+  isFilenamePatternMissing,
+  missingFilenameVariables,
+  onInsertToken,
+  onPatternChange,
+  onSelectionChange,
+  outputFilenamePattern,
+  variableSources,
+}: FilenamePatternSectionProps) {
+  const { copy } = useI18n();
+
+  const sampleValues: Record<string, string> = {};
+  for (const [key, row] of Object.entries(variableSources)) {
+    if (row.sampleValue) sampleValues[key] = row.sampleValue;
+  }
+  const filenamePreview = outputFilenamePattern.trim()
+    ? renderTemplate(outputFilenamePattern, sampleValues)
+    : null;
+
+  return (
+    <Paper className="panel-card" p="lg" radius="lg">
+      <Stack gap="xs">
+        <Text fw={700} size="sm">{copy.contractMapping.outputFilenamePatternLabel}</Text>
+        <Text c="dimmed" size="sm">{copy.contractMapping.outputFilenamePatternDesc}</Text>
+        {filenameTokens.length > 0 ? (
+          <Group gap="xs">
+            {filenameTokens.map((variable) => (
+              <Button
+                key={variable}
+                className="field-chip"
+                onClick={() => onInsertToken(variable)}
+                radius="xl"
+                size="xs"
+                variant="light"
+              >
+                {variable}
+              </Button>
+            ))}
+          </Group>
+        ) : null}
+        <TextInput
+          onChange={(event) =>
+            onPatternChange(event.currentTarget.value, event.currentTarget.selectionStart)}
+          onClick={(event) => onSelectionChange(event.currentTarget.selectionStart)}
+          onKeyUp={(event) => onSelectionChange((event.currentTarget as HTMLInputElement).selectionStart)}
+          placeholder={copy.contractMapping.outputFilenamePatternPlaceholder}
+          value={outputFilenamePattern}
+        />
+        {filenamePreview ? (
+          <Text c="dimmed" size="xs">
+            {copy.contractMapping.outputFilenamePatternPreviewLabel}{' '}
+            <Text component="span" fw={600} inherit>{filenamePreview}</Text>
+          </Text>
+        ) : null}
+        {isFilenamePatternMissing ? (
+          <Text c="yellow.7" fw={600} size="xs">
+            {copy.contractMapping.outputFilenamePatternRequiredBody}
+          </Text>
+        ) : null}
+        {missingFilenameVariables.length > 0 ? (
+          <Text c="yellow.7" fw={600} size="xs">
+            {copy.contractMapping.outputFilenamePatternMissingBody} {missingFilenameVariables.join(', ')}
+          </Text>
+        ) : null}
+      </Stack>
+    </Paper>
+  );
+}
+
+type TemplateMappingPreviewSectionProps = {
+  availableVariables: string[];
+  onPreviewToken: (token: string) => void;
+  setTokenMapping: (token: string, variable: string | null) => void;
+  tokenContexts: Record<string, string>;
+  tokenMappings: Record<string, string>;
+  tokens: string[];
+  variableSources: Record<string, WorkbookPreviewRow>;
+};
+
+function TemplateMappingPreviewSection({
+  availableVariables,
+  onPreviewToken,
+  setTokenMapping,
+  tokenContexts,
+  tokenMappings,
+  tokens,
+  variableSources,
+}: TemplateMappingPreviewSectionProps) {
+  const { copy } = useI18n();
+
+  return (
+    <Paper className="panel-card" p="lg" radius="lg">
+      <Stack gap="xs">
+        <div>
+          <Text fw={700} size="sm">{copy.contractMapping.mappingPreviewTitle}</Text>
+          <Text c="dimmed" size="sm">{copy.contractMapping.mappingPreviewDesc}</Text>
+        </div>
+        <Table highlightOnHover striped withColumnBorders>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>{copy.contractMapping.wordField}</Table.Th>
+              <Table.Th>{copy.contractMapping.workbookVariable}</Table.Th>
+              <Table.Th>{copy.contractMapping.sourceColumn}</Table.Th>
+              <Table.Th>{copy.contractMapping.sampleValue}</Table.Th>
+              <Table.Th>{copy.contractMapping.context}</Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {tokens.map((token) => {
+              const variable = tokenMappings[token] ?? '';
+              const source = variableSources[variable];
+
+              return (
+                <Table.Tr key={token}>
+                  <Table.Td>{token}</Table.Td>
+                  <Table.Td>
+                    <CreatableSelect
+                      data={availableVariables}
+                      onChange={(value) => setTokenMapping(token, value)}
+                      placeholder={copy.contractMapping.chooseVariable}
+                      value={variable || null}
+                    />
+                  </Table.Td>
+                  <Table.Td>{source?.columnLetter ?? '-'}</Table.Td>
+                  <Table.Td>{source?.sampleValue || '-'}</Table.Td>
+                  <Table.Td>
+                    <Button
+                      disabled={!tokenContexts[token]}
+                      onClick={() => onPreviewToken(token)}
+                      size="xs"
+                      variant="light"
+                    >
+                      {copy.contractMapping.showParagraph}
+                    </Button>
+                  </Table.Td>
+                </Table.Tr>
+              );
+            })}
+          </Table.Tbody>
+        </Table>
+      </Stack>
+    </Paper>
+  );
+}
+
 function ContractMappingPanelComponent({
   availableVariables,
-  contractTemplatePath,
-  isOpeningTemplate = false,
-  isReloadingTemplate = false,
-  mappedContractFields,
-  onOpenTemplate,
-  onReloadTemplate,
   outputFilenamePattern,
   setTokenMapping,
   setOutputFilenamePattern,
-  templateStatus,
   tokenContexts,
   tokenMappings,
   tokens,
@@ -52,17 +194,6 @@ function ContractMappingPanelComponent({
     [availableVariables],
   );
 
-  const filenameSampleValues = useMemo(
-    () =>
-      workbookRows.reduce<Record<string, string>>((accumulator, row) => {
-        if (row.selectedVariable) {
-          accumulator[row.selectedVariable] = row.sampleValue;
-        }
-        return accumulator;
-      }, {}),
-    [workbookRows],
-  );
-
   const selectedVariables = useMemo(
     () => new Set(workbookRows.filter((row) => row.selectedVariable).map((row) => row.selectedVariable)),
     [workbookRows],
@@ -75,15 +206,11 @@ function ContractMappingPanelComponent({
         .filter((name) => name.trim().length > 0))),
     [outputFilenamePattern],
   );
+  const isFilenamePatternMissing = outputFilenamePattern.trim().length === 0;
 
   const missingFilenameVariables = useMemo(
     () => filenamePatternVariables.filter((name) => !selectedVariables.has(name)),
     [filenamePatternVariables, selectedVariables],
-  );
-
-  const filenamePatternPreview = useMemo(
-    () => renderTemplate(outputFilenamePattern, filenameSampleValues),
-    [filenameSampleValues, outputFilenamePattern],
   );
 
   function insertFilenameToken(variable: string) {
@@ -116,28 +243,6 @@ function ContractMappingPanelComponent({
       token: previewToken,
     };
   }, [previewToken, tokenContexts, tokenMappings, variableSources]);
-
-  const templateStatusText = useMemo(() => {
-    if (!contractTemplatePath) {
-      return copy.contractMapping.statusNoTemplate;
-    }
-
-    if (!templateStatus?.exists) {
-      return copy.contractMapping.statusTemplateMissing;
-    }
-
-    if (templateStatus.isLocked) {
-      return copy.contractMapping.statusTemplateLocked;
-    }
-
-    if (templateStatus.lastModifiedMs) {
-      return copy.contractMapping.statusTemplateEditedAt(
-        new Date(templateStatus.lastModifiedMs).toLocaleTimeString(),
-      );
-    }
-
-    return copy.contractMapping.statusTemplateHint;
-  }, [contractTemplatePath, copy.contractMapping, templateStatus]);
 
   return (
     <Stack gap="xl">
@@ -178,149 +283,37 @@ function ContractMappingPanelComponent({
         </Stack>
       </Modal>
 
-      <Paper className="panel-card" p="lg" radius="lg">
-        <Stack gap="lg">
-          <Group justify="space-between">
-            <div>
-              <Title order={3}>{copy.contractMapping.title}</Title>
-              <Text c="dimmed" size="sm">
-                {copy.contractMapping.subtitle}
-              </Text>
-            </div>
-            <Group gap="sm">
-              <Badge color="grape" variant="light">
-                {copy.contractMapping.badgeMapped(mappedContractFields, tokens.length)}
-              </Badge>
-              <Button
-                disabled={!contractTemplatePath}
-                loading={isOpeningTemplate}
-                onClick={onOpenTemplate}
-                size="xs"
-                variant="default"
-              >
-                {copy.contractMapping.openTemplate}
-              </Button>
-              <Button
-                disabled={!contractTemplatePath}
-                loading={isReloadingTemplate}
-                onClick={onReloadTemplate}
-                size="xs"
-                variant="light"
-              >
-                {copy.contractMapping.reloadFields}
-              </Button>
-            </Group>
-          </Group>
+      <FilenamePatternSection
+        filenameTokens={filenameTokens}
+        isFilenamePatternMissing={isFilenamePatternMissing}
+        missingFilenameVariables={missingFilenameVariables}
+        onInsertToken={insertFilenameToken}
+        onPatternChange={(value, selectionStart) => {
+          filenameSelectionStart.current = selectionStart ?? value.length;
+          setOutputFilenamePattern(value);
+        }}
+        onSelectionChange={(selectionStart) => {
+          filenameSelectionStart.current = selectionStart ?? outputFilenamePattern.length;
+        }}
+        outputFilenamePattern={outputFilenamePattern}
+        variableSources={variableSources}
+      />
 
-          <Alert color={templateStatus?.isLocked ? 'yellow' : 'blue'} radius="lg" title={copy.contractMapping.templateFlowTitle} variant="light">
-            {templateStatusText}
-          </Alert>
+      {!tokens.length ? (
+        <Alert color="yellow" radius="lg" title={copy.contractMapping.noPlaceholdersTitle} variant="light">
+          {copy.contractMapping.noPlaceholdersBody}
+        </Alert>
+      ) : null}
 
-          <Stack gap="xs">
-            <Text fw={500} size="sm">{copy.contractMapping.outputFilenamePatternLabel}</Text>
-            <Text c="dimmed" size="sm">{copy.contractMapping.outputFilenamePatternDesc}</Text>
-            {filenameTokens.length > 0 ? (
-              <>
-                <Text c="dimmed" size="xs">{copy.contractMapping.filenameTokensHint}</Text>
-                <Group gap="xs">
-                  {filenameTokens.map((variable) => (
-                    <Button
-                      key={variable}
-                      className="field-chip"
-                      onClick={() => insertFilenameToken(variable)}
-                      radius="xl"
-                      size="xs"
-                      variant="light"
-                    >
-                      {variable}
-                    </Button>
-                  ))}
-                </Group>
-                <Divider />
-              </>
-            ) : null}
-            <TextInput
-              onChange={(event) => {
-                filenameSelectionStart.current = event.currentTarget.selectionStart ?? event.currentTarget.value.length;
-                setOutputFilenamePattern(event.currentTarget.value);
-              }}
-              onClick={(event) => {
-                filenameSelectionStart.current = event.currentTarget.selectionStart ?? event.currentTarget.value.length;
-              }}
-              onKeyUp={(event) => {
-                filenameSelectionStart.current = (event.currentTarget as HTMLInputElement).selectionStart ?? event.currentTarget.value.length;
-              }}
-              placeholder={copy.contractMapping.outputFilenamePatternPlaceholder}
-              value={outputFilenamePattern}
-            />
-
-            <Stack gap={4}>
-              <Text c="dimmed" fw={500} size="xs">{copy.contractMapping.outputFilenamePatternPreviewLabel}</Text>
-              <Text ff="monospace" size="sm">{filenamePatternPreview || '-'}</Text>
-            </Stack>
-
-            {missingFilenameVariables.length > 0 ? (
-              <Alert color="yellow" radius="md" title={copy.contractMapping.outputFilenamePatternMissingTitle} variant="light">
-                {copy.contractMapping.outputFilenamePatternMissingBody} {missingFilenameVariables.join(', ')}
-              </Alert>
-            ) : null}
-          </Stack>
-
-          {!tokens.length ? (
-            <Alert color="yellow" radius="lg" title={copy.contractMapping.noPlaceholdersTitle} variant="light">
-              {copy.contractMapping.noPlaceholdersBody}
-            </Alert>
-          ) : null}
-
-          <Alert color="teal" radius="lg" title={copy.contractMapping.needMorePlaceholdersTitle} variant="light">
-            {copy.contractMapping.needMorePlaceholdersBody}
-          </Alert>
-
-          <Table highlightOnHover striped withColumnBorders>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>{copy.contractMapping.wordField}</Table.Th>
-                <Table.Th>{copy.contractMapping.workbookVariable}</Table.Th>
-                <Table.Th>{copy.contractMapping.sourceColumn}</Table.Th>
-                <Table.Th>{copy.contractMapping.sampleValue}</Table.Th>
-                <Table.Th>{copy.contractMapping.context}</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {tokens.map((token) => {
-                const variable = tokenMappings[token] ?? '';
-                const source = variableSources[variable];
-
-                return (
-                  <Table.Tr key={token}>
-                    <Table.Td>{token}</Table.Td>
-                    <Table.Td>
-                    <CreatableSelect
-                        data={availableVariables}
-                        onChange={(value) => setTokenMapping(token, value)}
-                        placeholder={copy.contractMapping.chooseVariable}
-                        value={variable || null}
-                      />
-                    </Table.Td>
-                    <Table.Td>{source?.columnLetter ?? '-'}</Table.Td>
-                    <Table.Td>{source?.sampleValue || '-'}</Table.Td>
-                    <Table.Td>
-                      <Button
-                        disabled={!tokenContexts[token]}
-                        onClick={() => setPreviewToken(token)}
-                        size="xs"
-                        variant="light"
-                      >
-                        {copy.contractMapping.showParagraph}
-                      </Button>
-                    </Table.Td>
-                  </Table.Tr>
-                );
-              })}
-            </Table.Tbody>
-          </Table>
-        </Stack>
-      </Paper>
+      <TemplateMappingPreviewSection
+        availableVariables={availableVariables}
+        onPreviewToken={setPreviewToken}
+        setTokenMapping={setTokenMapping}
+        tokenContexts={tokenContexts}
+        tokenMappings={tokenMappings}
+        tokens={tokens}
+        variableSources={variableSources}
+      />
     </Stack>
   );
 }

@@ -43,6 +43,11 @@ def test_inspect_workbook_returns_expected_structure():
     assert result["headerRow"] == 2
     assert result["dataStartRow"] == 3
     assert result["totalRows"] == 3  # rows 3–5 in a 5-row sheet
+    assert result["headerAnalysis"]["selectedHeaderCount"] == 10
+    assert result["headerAnalysis"]["suggestedHeaderRow"] is None
+    assert result["maxColumn"] == 10
+    assert result["previewRows"][0]["role"] == "selected-header"
+    assert result["previewRows"][0]["rowNumber"] == 2
 
     # Columns: A–J, first col is '#' mapped to APPLICATION_CODE
     cols = {c["columnLetter"]: c for c in result["columns"]}
@@ -111,6 +116,95 @@ def test_inspect_workbook_nonexistent_sheet_also_falls_back():
         "contractTemplatePath": None,
     })
     assert result["worksheetName"] == "8TH PERIOD"
+
+
+def test_analyze_header_rows_suggests_denser_header_row():
+    """A title row above the real headers should produce a correction hint."""
+    from openpyxl import Workbook
+
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.append(["Report title"])
+    worksheet.append(["ID", "Title", "Author", "Language"])
+    worksheet.append(["GLP-1", "Book", "Name", "English"])
+
+    result = ip.analyze_header_rows(worksheet, 1)
+
+    assert result["selectedHeaderCount"] == 1
+    assert result["suggestedHeaderRow"] == 2
+    assert result["suggestedHeaderCount"] == 4
+
+
+def test_build_preview_rows_labels_selected_header_suggestion_and_data():
+    from openpyxl import Workbook
+
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.append(["Merged title stand-in"])
+    worksheet.append(["ID", "Title", "Author", "Language"])
+    worksheet.append(["GLP-1", "Book", "Name", "English"])
+
+    analysis = ip.analyze_header_rows(worksheet, 1)
+    preview_rows = ip.build_preview_rows(worksheet, 1, 2, analysis)
+
+    assert [row["role"] for row in preview_rows] == ["selected-header", "suggested-header", "data"]
+    assert preview_rows[0]["cells"][0] == {"columnLetter": "A", "value": "Merged title stand-in"}
+    assert preview_rows[0]["hasLeadingGap"] is False
+    assert preview_rows[0]["populatedCells"] == 1
+    assert preview_rows[1]["populatedCells"] == 4
+
+
+def test_preview_rows_include_required_column_outside_first_columns():
+    from openpyxl import Workbook
+
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.append([f"H{i}" for i in range(1, 13)])
+    worksheet.append([f"V{i}" for i in range(1, 13)])
+
+    analysis = ip.analyze_header_rows(worksheet, 1)
+    preview_rows = ip.build_preview_rows(worksheet, 1, 2, analysis, ["L"])
+
+    assert [cell["columnLetter"] for cell in preview_rows[0]["cells"]] == [
+        "A", "B", "C", "D", "E", "F", "G", "H", "L",
+    ]
+    assert preview_rows[0]["cells"][-1]["value"] == "H12"
+
+
+def test_preview_rows_append_rejected_example_with_gap_marker():
+    from openpyxl import Workbook
+
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.append(["ID", "Decision"])
+    worksheet.append(["A", "Approved"])
+    worksheet.append(["B", "Approved"])
+    worksheet.append(["C", "Rejected"])
+
+    analysis = ip.analyze_header_rows(worksheet, 1)
+    preview_rows = ip.build_preview_rows(worksheet, 1, 2, analysis, ["B"], "B", "Rejected")
+
+    assert [row["rowNumber"] for row in preview_rows] == [1, 2, 3, 4]
+    assert preview_rows[-1]["role"] == "rejected-data"
+    assert preview_rows[-1]["hasLeadingGap"] is False
+
+
+def test_preview_rows_mark_gap_before_appended_rejected_example():
+    from openpyxl import Workbook
+
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.append(["ID", "Decision"])
+    for index in range(1, 8):
+        worksheet.append([f"A{index}", "Approved"])
+    worksheet.append(["R1", "Rejected"])
+
+    analysis = ip.analyze_header_rows(worksheet, 1)
+    preview_rows = ip.build_preview_rows(worksheet, 1, 2, analysis, ["B"], "B", "Rejected")
+
+    assert [row["rowNumber"] for row in preview_rows] == [1, 2, 3, 4, 9]
+    assert preview_rows[-1]["role"] == "rejected-data"
+    assert preview_rows[-1]["hasLeadingGap"] is True
 
 
 # ---------------------------------------------------------------------------

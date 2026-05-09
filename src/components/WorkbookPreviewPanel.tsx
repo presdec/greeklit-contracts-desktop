@@ -1,5 +1,5 @@
 import { memo, useMemo, useState } from 'react';
-import { Alert, Badge, Button, Group, Paper, ScrollArea, SegmentedControl, Stack, Table, Text, Title } from '@mantine/core';
+import { Alert, Badge, Button, Collapse, Group, Paper, ScrollArea, SegmentedControl, Skeleton, Stack, Table, Text, Title } from '@mantine/core';
 import type { WorkbookPreviewRow } from '../types/template';
 import { useI18n } from '../i18n';
 import { CreatableSelect } from './CreatableSelect';
@@ -42,6 +42,7 @@ function WorkbookPreviewPanelComponent({
   const { copy } = useI18n();
   const [mode, setMode] = useState<MappingPanelMode>(defaultMode);
   const [filter, setFilter] = useState<MappingFilter>('all');
+  const [showGuidance, setShowGuidance] = useState(false);
   const requiredVariableSet = useMemo(() => new Set(requiredVariables), [requiredVariables]);
   const missingVariableSet = useMemo(() => new Set(missingVariables), [missingVariables]);
   const mappedRequiredCount = Math.max(0, requiredVariables.length - missingVariables.length);
@@ -117,8 +118,25 @@ function WorkbookPreviewPanelComponent({
               {copy.workbookPreview.requiredSummary(mappedRequiredCount, requiredVariables.length)}
             </Badge>
             <Badge color="cyan" variant="light">{copy.workbookPreview.badgeColumns(rows.length)}</Badge>
+            <Button
+              onClick={() => setShowGuidance((current) => !current)}
+              size="compact-sm"
+              variant="subtle"
+            >
+              {showGuidance ? copy.workbookPreview.hideGuidance : copy.workbookPreview.showGuidance}
+            </Button>
           </Group>
         </Group>
+
+        <Collapse in={showGuidance}>
+          <Alert color="blue" radius="md" variant="light">
+            <Stack gap={4}>
+              {copy.workbookPreview.guidanceLines.map((line) => (
+                <Text key={line} size="sm">{line}</Text>
+              ))}
+            </Stack>
+          </Alert>
+        </Collapse>
 
         <Group justify="space-between">
           <SegmentedControl
@@ -168,7 +186,17 @@ function WorkbookPreviewPanelComponent({
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {sortedRows.map((row) => {
+              {isLoading ? (
+                Array.from({ length: Math.max(sortedRows.length, 4) }).map((_, i) => (
+                  <Table.Tr key={i}>
+                    <Table.Td><Skeleton height={14} radius="sm" /></Table.Td>
+                    <Table.Td><Skeleton height={14} radius="sm" /></Table.Td>
+                    <Table.Td><Skeleton height={14} radius="sm" /></Table.Td>
+                    <Table.Td><Skeleton height={28} radius="sm" /></Table.Td>
+                    <Table.Td><Skeleton height={20} radius="sm" width={60} /></Table.Td>
+                  </Table.Tr>
+                ))
+              ) : sortedRows.map((row) => {
                 const displayedVariable = row.selectedVariable || row.suggestedVariable || '';
                 const isMissingRequired = Boolean(row.suggestedVariable && missingVariableSet.has(row.suggestedVariable));
 
@@ -184,6 +212,7 @@ function WorkbookPreviewPanelComponent({
                             color={isMissingRequired ? 'red' : 'teal'}
                             onClick={() => onAssignmentChange(row.columnLetter, row.suggestedVariable)}
                             size="compact-xs"
+                            style={{ alignSelf: 'flex-start' }}
                             variant="subtle"
                           >
                             {copy.workbookPreview.suggestedVariable}: {row.suggestedVariable}
@@ -211,12 +240,6 @@ function WorkbookPreviewPanelComponent({
             </Table.Tbody>
           </Table>
         </ScrollArea>
-
-        {isLoading ? (
-          <Text c="dimmed" size="sm">
-            {copy.workbookPreview.refreshing}
-          </Text>
-        ) : null}
       </Stack>
     </Paper>
   );

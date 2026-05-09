@@ -62,11 +62,13 @@ body {
 }
 
 .app-shell {
-  min-height: 100vh;
+  height: 100vh;
   padding: 28px;
+  overflow: hidden;
 }
 
 .workspace {
+  height: 100%;
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);
   gap: 24px;
@@ -80,14 +82,79 @@ body {
   box-shadow: 0 24px 60px var(--app-shadow-color);
 }
 
+.content-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.content-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--mantine-spacing-xl);
+  padding-bottom: calc(var(--mantine-spacing-xl) * 1.25);
+}
+
+.workflow-footer {
+  flex: 0 0 auto;
+  display: flex;
+  gap: var(--mantine-spacing-md);
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--app-border-color);
+  background: var(--app-card-bg);
+  padding: var(--mantine-spacing-md) var(--mantine-spacing-xl);
+}
+
+.workflow-footer__meta {
+  min-width: 0;
+}
+
+.workflow-footer__meta .mantine-Text-root {
+  overflow-wrap: anywhere;
+}
+
+.workflow-footer__actions {
+  flex: 0 0 auto;
+  justify-content: flex-end;
+}
+
 .sidebar-card {
   position: sticky;
   top: 28px;
+  max-height: 100%;
+  overflow: auto;
+}
+
+.file-field-action {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+}
+
+.file-field-browse {
+  height: 32px;
 }
 
 .step-card {
+  display: block;
+  width: 100%;
   border: 1px solid var(--app-border-color);
+  border-radius: var(--mantine-radius-md);
   background: var(--app-step-bg);
+  color: inherit;
+  text-align: left;
+}
+
+.step-card:focus-visible {
+  outline: 2px solid var(--mantine-color-teal-5);
+  outline-offset: 2px;
+}
+
+.step-card__content {
+  padding: var(--mantine-spacing-xs);
 }
 
 .step-card--active {
@@ -109,6 +176,74 @@ body {
 
 .mapping-row--missing td {
   background: rgba(250, 82, 82, 0.08);
+}
+
+.source-preview-row--selected-header td {
+  background: rgba(18, 184, 134, 0.22);
+  border-top: 2px solid rgba(18, 184, 134, 0.62);
+  border-bottom: 2px solid rgba(18, 184, 134, 0.62);
+}
+
+.source-preview-row--suggested-header td {
+  background: rgba(250, 176, 5, 0.22);
+}
+
+.source-preview-row--data td {
+  background: rgba(34, 139, 230, 0.1);
+}
+
+.source-preview-row--rejected-data td {
+  background: rgba(224, 49, 49, 0.24);
+  color: var(--mantine-color-text);
+}
+
+.source-preview-rejection-value-cell {
+  background: rgba(255, 135, 135, 0.34) !important;
+  border: 2px solid rgba(255, 168, 168, 0.9) !important;
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.source-preview-row--has-leading-gap td {
+  border-top: 2px dashed rgba(24, 48, 45, 0.32) !important;
+}
+
+.source-preview-separator {
+  width: 34px;
+  min-width: 34px;
+  max-width: 34px;
+  border-left: 2px dashed rgba(24, 48, 45, 0.24) !important;
+  border-right: 2px dashed rgba(24, 48, 45, 0.24) !important;
+  color: var(--mantine-color-dimmed);
+  font-weight: 700;
+  text-align: center;
+}
+
+.preview-legend {
+  width: 18px;
+  height: 12px;
+  border: 1px solid var(--app-border-color);
+  border-radius: 3px;
+}
+
+.preview-legend--selected {
+  background: rgba(18, 184, 134, 0.36);
+  border-color: rgba(18, 184, 134, 0.7);
+}
+
+.preview-legend--suggested {
+  background: rgba(250, 176, 5, 0.36);
+  border-color: rgba(250, 176, 5, 0.7);
+}
+
+.preview-legend--data {
+  background: rgba(34, 139, 230, 0.24);
+  border-color: rgba(34, 139, 230, 0.58);
+}
+
+.preview-legend--rejected {
+  background: rgba(224, 49, 49, 0.34);
+  border-color: rgba(255, 168, 168, 0.9);
 }
 
 .preview-card {
@@ -202,5 +337,25 @@ body {
 
   .sidebar-card {
     position: static;
+  }
+
+  .content-card {
+    height: 100%;
+  }
+
+  .workflow-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .workflow-footer__actions {
+    width: 100%;
+  }
+
+  .workflow-footer__actions .mantine-Button-root {
+    flex: 1 1 auto;
   }
 }

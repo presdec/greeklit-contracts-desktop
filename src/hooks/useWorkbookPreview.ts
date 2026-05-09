@@ -1,12 +1,26 @@
 import { useAtom } from 'jotai/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { WorkbookPreviewColumn, WorkbookPreviewSampleRow } from '../../shared/desktop';
+import type { WorkbookHeaderAnalysis, WorkbookPreviewColumn, WorkbookPreviewRawRow, WorkbookPreviewSampleRow } from '../../shared/desktop';
 import type { TemplateStatusResult } from '../../shared/desktop';
 import { variableColumnsAtom } from '../state/workspace';
 import type { WorkbookPreviewRow } from '../types/template';
 import type { ProjectConfig } from '../../shared/desktop';
 
 const NUMERIC_INPUT_DEBOUNCE_MS = 400;
+
+function normalizePreviewError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  const permissionMatch = message.match(/PermissionError: \[Errno 13\] Permission denied: '([^']+)'/);
+  if (permissionMatch) {
+    return `The workbook could not be opened: ${permissionMatch[1]}. Close it in Excel, wait for OneDrive sync to finish, then reload the preview.`;
+  }
+
+  if (/Permission denied|EPERM|EACCES/i.test(message)) {
+    return 'The workbook could not be opened. Close it in Excel, wait for OneDrive sync to finish, then reload the preview.';
+  }
+
+  return error instanceof Error ? error.message : 'Could not inspect workbook.';
+}
 
 function useDebounced<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState<T>(value);
@@ -32,6 +46,9 @@ export function useWorkbookPreview(
   const [fieldAssignments, setFieldAssignments] = useAtom(variableColumnsAtom);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [headerAnalysis, setHeaderAnalysis] = useState<WorkbookHeaderAnalysis | null>(null);
+  const [maxColumn, setMaxColumn] = useState(0);
+  const [previewRows, setPreviewRows] = useState<WorkbookPreviewRawRow[]>([]);
   const [rawColumns, setRawColumns] = useState<WorkbookPreviewColumn[]>([]);
   const [sampleRows, setSampleRows] = useState<WorkbookPreviewSampleRow[]>([]);
   const [templateStatus, setTemplateStatus] = useState<TemplateStatusResult | null>(null);
@@ -57,7 +74,10 @@ export function useWorkbookPreview(
     setContractTokenContexts({});
     setContractVariables([]);
     setColumnValues({});
+    setHeaderAnalysis(null);
     setLoadError(null);
+    setMaxColumn(0);
+    setPreviewRows([]);
     setRawColumns([]);
     setSampleRows([]);
     setTemplateStatus(null);
@@ -82,9 +102,41 @@ export function useWorkbookPreview(
     const requestId = previewRequestId.current + 1;
     previewRequestId.current = requestId;
 
+    const contractPathChanged =
+      project.contractTemplatePath !== lastContractTemplatePathRef.current;
+
     if (!project.workbookPath) {
-      clearPreview();
-      setIsLoading(false);
+      if (!contractPathChanged) {
+        clearPreview();
+        setIsLoading(false);
+        return;
+      }
+      // No workbook yet, but template path changed — do a template-only scan
+      setIsLoading(true);
+      setLoadError(null);
+      try {
+        const result = await desktopApp.inspectProject({
+          contractTemplatePath: project.contractTemplatePath,
+          dataStartRow: 2,
+          headerRow: 1,
+          rejectionColumn: project.rejectionColumn,
+          rejectionValue: project.rejectionValue,
+          workbookPath: '',
+          worksheetName: '',
+        });
+        if (previewRequestId.current !== requestId) {
+          return;
+        }
+        setContractTokenContexts(result.contractTokenContexts ?? {});
+        setContractVariables(result.contractTokens);
+        lastContractTemplatePathRef.current = project.contractTemplatePath;
+      } catch {
+        // ignore errors on template-only scan
+      } finally {
+        if (previewRequestId.current === requestId) {
+          setIsLoading(false);
+        }
+      }
       return;
     }
 
@@ -99,8 +151,6 @@ export function useWorkbookPreview(
     setIsLoading(true);
     setLoadError(null);
 
-    const contractPathChanged =
-      project.contractTemplatePath !== lastContractTemplatePathRef.current;
     const contractTemplatePathForRequest = contractPathChanged
       ? project.contractTemplatePath
       : undefined;
@@ -122,6 +172,9 @@ export function useWorkbookPreview(
 
       setRawColumns(result.columns);
       setColumnValues(result.columnValues ?? {});
+      setHeaderAnalysis(result.headerAnalysis ?? null);
+      setMaxColumn(result.maxColumn ?? 0);
+      setPreviewRows(result.previewRows ?? []);
       if (contractPathChanged) {
         setContractTokenContexts(result.contractTokenContexts ?? {});
         setContractVariables(result.contractTokens);
@@ -136,7 +189,7 @@ export function useWorkbookPreview(
       }
     } catch (error) {
       if (previewRequestId.current === requestId) {
-        setLoadError(error instanceof Error ? error.message : 'Could not inspect workbook.');
+        setLoadError(normalizePreviewError(error));
       }
     } finally {
       if (previewRequestId.current === requestId) {
@@ -283,7 +336,10 @@ export function useWorkbookPreview(
     contractTokenContexts,
     contractVariables,
     isLoading,
+    headerAnalysis,
     loadError,
+    maxColumn,
+    previewRows,
     refreshPreview,
     rows,
     sampleRows,

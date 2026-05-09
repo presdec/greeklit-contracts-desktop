@@ -356,7 +356,7 @@ export function useWorkspaceController(desktopApp: Window['desktopApp']) {
   const handlePickPath = useCallback((
     field: 'workbookPath' | 'contractTemplatePath' | 'emailTemplatePath' | 'outputFolderPath',
   ) => {
-    void projectSetup.pickProjectPath(field, pickerRequests[field]);
+    return projectSetup.pickProjectPath(field, pickerRequests[field]);
   }, [pickerRequests, projectSetup]);
 
   const handleOpenPath = useCallback(async (targetPath: string) => {
@@ -506,6 +506,7 @@ export function useWorkspaceController(desktopApp: Window['desktopApp']) {
           emailFields.length > 0 ? copy.app.missingEmailMappings(emailFields.join(', ')) : '',
         ].filter(Boolean).join(' '),
         outputRequired: copy.app.outputFolderRequiredBody,
+        outputFilenamePatternRequired: copy.app.outputFilenamePatternRequiredBody,
         outputsRequired: copy.app.outputsRequiredBody,
         wordTemplateRequired: copy.app.wordTemplateRequiredBody,
         workbookRequired: copy.app.workbookRequiredBody,

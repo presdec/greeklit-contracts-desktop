@@ -1,22 +1,31 @@
-import { Badge, Checkbox, Group, Loader, NumberInput, Paper, Select, SimpleGrid, Stack, Text, Title } from '@mantine/core';
+import { Alert, Checkbox, Group, Paper, Select, SimpleGrid, Stack, Text, Title } from '@mantine/core';
 import type { StarterTemplateKind } from '../../shared/desktop';
 import type { ProjectConfig } from '../../shared/desktop';
-import type { GenerationOptions, WorkbookPreviewRow } from '../types/template';
+import type { WorkflowValidationIssue } from '../features/workspace/workflowValidation';
+import type { GenerationOptions } from '../types/template';
 import { useI18n } from '../i18n';
 import { FileField } from './FileField';
 
 type Props = {
   activePicker: keyof ProjectConfig | null;
   generationOptions: GenerationOptions;
-  columnValues: Record<string, string[]>;
   isLoading: boolean;
+  onClearPath: (
+    field: keyof Pick<
+      ProjectConfig,
+      'workbookPath' | 'contractTemplatePath' | 'emailTemplatePath' | 'outputFolderPath'
+    >,
+  ) => void;
+  onOpenEmailPreview: () => void;
+  onOpenWorkbookSetup: () => void;
+  onOpenWordPreview: () => void;
   outlookMsgDraftsAvailable: boolean;
   onPickPath: (
     field: keyof Pick<
       ProjectConfig,
       'workbookPath' | 'contractTemplatePath' | 'emailTemplatePath' | 'outputFolderPath'
     >,
-  ) => void;
+  ) => void | Promise<string | null>;
   onSaveStarterTemplate: (kind: StarterTemplateKind) => void;
   project: ProjectConfig;
   setGenerationOption: <K extends keyof GenerationOptions>(
@@ -24,23 +33,31 @@ type Props = {
     value: GenerationOptions[K],
   ) => void;
   setProject: React.Dispatch<React.SetStateAction<ProjectConfig>>;
-  worksheetOptions: string[];
-  workbookRows: WorkbookPreviewRow[];
+  summaries: {
+    emailTemplate?: string;
+    outputFolder?: string;
+    workbook?: string;
+    wordTemplate?: string;
+  };
+  validationIssues: WorkflowValidationIssue[];
 };
 
 export function ProjectSetupPanel({
   activePicker,
-  columnValues,
   generationOptions,
   isLoading,
+  onClearPath,
+  onOpenEmailPreview,
+  onOpenWorkbookSetup,
+  onOpenWordPreview,
   outlookMsgDraftsAvailable,
   onPickPath,
   onSaveStarterTemplate,
   project,
   setGenerationOption,
   setProject,
-  worksheetOptions,
-  workbookRows,
+  summaries,
+  validationIssues,
 }: Props) {
   const { copy } = useI18n();
   const wantsDocumentOutput = generationOptions.generateDocx || generationOptions.generatePdf;
@@ -57,35 +74,29 @@ export function ProjectSetupPanel({
         ]
       : []),
   ];
-  const rejectionColumnOptions = workbookRows.map((row) => ({
-    label: `${row.columnLetter} - ${row.header}`,
-    value: row.columnLetter,
-  }));
-  const rejectionValueOptions = project.rejectionColumn
-    ? (columnValues[project.rejectionColumn] ?? []).filter((value) => value.length > 0).map((value) => ({
-        label: value || '(blank)',
-        value,
-      }))
-    : [];
+  const issueFor = (id: WorkflowValidationIssue['id']) =>
+    validationIssues.find((issue) => issue.id === id)?.detail;
 
   return (
     <Paper className="panel-card" p="lg" radius="lg">
       <Stack gap="lg">
-        <Group justify="space-between">
-          <div>
-            <Title order={3}>{copy.projectSetup.title}</Title>
-            <Text c="dimmed" size="sm">
-              {copy.projectSetup.subtitle}
-            </Text>
-          </div>
-          <Badge color="teal" variant="light">{copy.projectSetup.badge}</Badge>
-        </Group>
+        <div>
+          <Title order={3}>{copy.projectSetup.title}</Title>
+          <Text c="dimmed" size="sm">
+            {copy.projectSetup.subtitle}
+          </Text>
+        </div>
         <Paper p="md" radius="md" withBorder>
           <Stack gap="sm">
             <Text fw={600}>{copy.projectSetup.whatGenerate}</Text>
             <Text c="dimmed" size="sm">
               {copy.projectSetup.whatGenerateDesc}
             </Text>
+            {issueFor('outputs') ? (
+              <Alert color="red" radius="md" variant="light">
+                {issueFor('outputs')}
+              </Alert>
+            ) : null}
             <Group gap="xl">
               <Checkbox
                 checked={generationOptions.generateDocx}
@@ -130,11 +141,11 @@ export function ProjectSetupPanel({
         </Paper>
 
         <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg" verticalSpacing="lg">
-          <FileField description={copy.projectSetup.excelDesc} isBusy={activePicker === 'workbookPath'} label={copy.projectSetup.excelLabel} onBrowse={() => onPickPath('workbookPath')} onDownloadExample={() => onSaveStarterTemplate('excel')} placeholder={copy.projectSetup.excelPlaceholder} exampleTooltip={copy.projectSetup.downloadExcelExample} value={project.workbookPath} />
+          <FileField actionLabel={copy.projectSetup.setupWorkbook} description={copy.projectSetup.excelDesc} error={issueFor('workbook')} isBusy={activePicker === 'workbookPath' || isLoading} label={copy.projectSetup.excelLabel} onBrowse={() => onPickPath('workbookPath')} onClear={() => onClearPath('workbookPath')} onDownloadExample={() => onSaveStarterTemplate('excel')} onSecondaryAction={onOpenWorkbookSetup} placeholder={copy.projectSetup.excelPlaceholder} exampleTooltip={copy.projectSetup.downloadExcelExample} summary={summaries.workbook} value={project.workbookPath} />
           {wantsDocumentOutput ? (
-            <FileField description={copy.projectSetup.wordDesc} isBusy={activePicker === 'contractTemplatePath'} label={copy.projectSetup.wordLabel} onBrowse={() => onPickPath('contractTemplatePath')} onDownloadExample={() => onSaveStarterTemplate('word')} placeholder={copy.projectSetup.wordPlaceholder} exampleTooltip={copy.projectSetup.downloadWordExample} value={project.contractTemplatePath} />
+            <FileField actionLabel={copy.projectSetup.previewFields} description={copy.projectSetup.wordDesc} error={issueFor('contract-template')} isBusy={activePicker === 'contractTemplatePath'} label={copy.projectSetup.wordLabel} onBrowse={() => onPickPath('contractTemplatePath')} onClear={() => onClearPath('contractTemplatePath')} onDownloadExample={() => onSaveStarterTemplate('word')} onSecondaryAction={onOpenWordPreview} placeholder={copy.projectSetup.wordPlaceholder} exampleTooltip={copy.projectSetup.downloadWordExample} summary={summaries.wordTemplate} value={project.contractTemplatePath} />
           ) : null}
-          <FileField description={copy.projectSetup.outputFolderDesc} isBusy={activePicker === 'outputFolderPath'} label={copy.projectSetup.outputFolderLabel} onBrowse={() => onPickPath('outputFolderPath')} placeholder={copy.projectSetup.outputFolderPlaceholder} value={project.outputFolderPath} />
+          <FileField description={copy.projectSetup.outputFolderDesc} error={issueFor('output-directory')} isBusy={activePicker === 'outputFolderPath'} label={copy.projectSetup.outputFolderLabel} onBrowse={() => onPickPath('outputFolderPath')} onClear={() => onClearPath('outputFolderPath')} placeholder={copy.projectSetup.outputFolderPlaceholder} summary={summaries.outputFolder} value={project.outputFolderPath} />
           {wantsEmailOutput ? (
             <Stack gap="sm">
               <Checkbox
@@ -153,84 +164,22 @@ export function ProjectSetupPanel({
               {project.useOptionalEmailSource ? (
                 <FileField
                   description={copy.projectSetup.emailFileDesc}
+                  error={issueFor('email-template-file') ?? issueFor('email-template-load')}
                   isBusy={activePicker === 'emailTemplatePath'}
                   label={copy.projectSetup.emailFileLabel}
                   onBrowse={() => onPickPath('emailTemplatePath')}
+                  onClear={() => onClearPath('emailTemplatePath')}
                   onDownloadExample={() => onSaveStarterTemplate('email')}
+                  onSecondaryAction={onOpenEmailPreview}
                   placeholder={copy.projectSetup.emailFilePlaceholder}
+                  actionLabel={copy.projectSetup.previewFields}
                   exampleTooltip={copy.projectSetup.downloadEmailExample}
+                  summary={summaries.emailTemplate}
                   value={project.emailTemplatePath}
                 />
               ) : null}
             </Stack>
           ) : null}
-        </SimpleGrid>
-
-        <SimpleGrid cols={{ base: 1, md: 3 }} spacing="lg">
-          <Select
-            data={worksheetOptions}
-            description={copy.projectSetup.worksheetDesc}
-            label={copy.projectSetup.worksheet}
-            onChange={(value) => setProject((current) => ({
-              ...current,
-              worksheetName: value ?? '',
-            }))}
-            placeholder={copy.projectSetup.worksheetPlaceholder}
-            searchable
-            value={project.worksheetName || worksheetOptions[0] || null}
-          />
-          <NumberInput
-            description={copy.projectSetup.headerRowDesc}
-            label={
-              <Group gap={6}>
-                {copy.projectSetup.headerRow}
-                {isLoading ? <Loader size={12} /> : null}
-              </Group>
-            }
-            min={1}
-            onChange={(value) => setProject((current) => {
-              const headerRow = Number(value) || 1;
-
-              return {
-                ...current,
-                dataStartRow: headerRow + 1,
-                headerRow,
-              };
-            })}
-            value={project.headerRow}
-          />
-          <NumberInput description={copy.projectSetup.dataStartRowDesc} label={copy.projectSetup.dataStartRow} min={1} onChange={(value) => setProject((current) => ({ ...current, dataStartRow: Number(value) || 1 }))} value={project.dataStartRow} />
-        </SimpleGrid>
-
-        <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
-          <Select
-            clearable
-            data={rejectionColumnOptions}
-            description={copy.projectSetup.rejectionColumnDesc}
-            label={copy.projectSetup.rejectionColumn}
-            onChange={(value) => setProject((current) => ({
-              ...current,
-              rejectionColumn: value ?? '',
-              rejectionValue: current.rejectionColumn === value ? current.rejectionValue : '',
-            }))}
-            placeholder={copy.projectSetup.rejectionColumnPlaceholder}
-            searchable
-            value={project.rejectionColumn || null}
-          />
-          <Select
-            clearable
-            data={rejectionValueOptions}
-            description={copy.projectSetup.rejectionValueDesc}
-            disabled={!project.rejectionColumn}
-            label={copy.projectSetup.rejectionValue}
-            onChange={(value) => setProject((current) => ({
-              ...current,
-              rejectionValue: value ?? '',
-            }))}
-            placeholder={copy.projectSetup.rejectionValuePlaceholder}
-            searchable
-            value={project.rejectionValue || null}
-          />
         </SimpleGrid>
       </Stack>
     </Paper>

@@ -1,5 +1,36 @@
 # Release Notes
 
+## v0.3.0 (2026-05-09)
+
+### Added
+- **Workbook setup modal**: workbook configuration (worksheet, header row, data start row, rejection filter) now opens in a dedicated modal triggered automatically after picking an Excel file, or manually via a settings button on the file field.
+- **Template inspection modal**: after picking a Word or email template, a preview modal shows detected tokens/variables so you can verify the template before proceeding.
+- **FileField clear button**: every file field now has an ✕ clear button to remove a selected file without needing to re-browse.
+- **FileField secondary action**: file fields support a configurable secondary action button (e.g. open settings, inspect) rendered alongside the browse button.
+- **Rich workbook preview rows from Python**: the inspector now returns structured `previewRows` (header row, suggested header, first data rows, and a rejected row example) with role metadata, gap indicators, and populated-cell counts — used to drive the setup modal table.
+- **Header analysis in inspection**: `analyze_header_rows` scans the first 10 rows to suggest the likely header row when the selected row looks wrong.
+- **`maxColumn` in inspection result**: the inspector now returns `max_column` so the UI can cap preview columns correctly.
+- **Word template inspection without a workbook**: `inspect_project.py` now accepts a contract template path alone (no workbook required) and returns token/context data with empty workbook fields.
+- **Validation alerts per step**: step 2 and step 3 now render their own targeted validation alerts inline instead of a single generic block.
+- **Sidebar step navigation**: clicking a step in the sidebar now navigates directly to it (with the same validation guard as Continue).
+- **Filename pattern live preview** (restored): the DOCX/PDF filename pattern field on step 2 shows a rendered preview using the first data row's sample values, so you can verify the pattern before generating.
+
+### Improved
+- **Step 1 layout**: project setup panel is now leaner — workbook row/worksheet settings, template inspection, and output folder are exposed via modals and action buttons rather than inline expanded panels. `SetupSourcePreviewPanel` removed.
+- **Step 2 layout**: `ContractMappingPanel` and `WorkbookPreviewPanel` are now stacked vertically (full width) instead of a side-by-side grid, giving each panel more room.
+- **Workbook mapping default mode** changed from `half` to `compact` on step 2.
+- **Step 2 header bar**: mapping badge count and Open Template / Reload Fields actions moved into the step header, removing the need for those controls inside the mapping panel itself.
+- **Save/load project moved to sidebar**: the Open Project and Save Project icon buttons now live in the sidebar header alongside the language switcher, freeing the main content header.
+- **Content area scrolling**: the main content pane now scrolls independently of the sidebar via a dedicated `.content-scroll` container; `scrollToTop` targets it correctly.
+- **Footer navigation**: the Back / Continue / Generate bar is now a sticky `<footer>` element outside the scrollable content, always visible at the bottom of the card.
+- **Permission-denied error messaging**: when the Python inspector fails with a file-lock or permission error (Excel still open, OneDrive syncing), the error message is normalised into a clear, human-readable instruction.
+- **`inspect_project.py` argument handling**: `workbookPath`, `headerRow`, and `dataStartRow` are now optional in the CLI entry point, matching the relaxed requirement to support template-only inspection.
+
+### Fixed
+- `output-filename-pattern` validation issue no longer triggers a navigation warning when clicking Continue from step 2 (it is shown inline instead).
+- `inspectProjectInternal` no longer throws "Choose an Excel workbook" when only a contract template is present; it proceeds with template-only inspection.
+- Raw Python `PermissionError` stack traces are no longer surfaced to the user; they are replaced with a friendly workbook-locked message.
+
 ## v0.2.15 (2026-05-08)
 
 ### Added

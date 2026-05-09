@@ -134,6 +134,11 @@ export type OutputTreeEntry = {
   relativePath: string;
 };
 
+export type SkippedRowDetail = {
+  reason: string;
+  row: number;
+};
+
 export type GenerateProjectResult = {
   emailDraftsPath: string | null;
   contractsDir: string;
@@ -147,6 +152,7 @@ export type GenerateProjectResult = {
   reportPath: string;
   rowsFound: number;
   skippedCount: number;
+  skippedRowDetails: SkippedRowDetail[];
   stderr: string;
   stdout: string;
   warnings: string[];

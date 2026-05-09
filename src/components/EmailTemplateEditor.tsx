@@ -10,6 +10,13 @@ import { normalizeEmailBody } from '../lib/template';
 
 const editorExtensions = [StarterKit];
 
+function emailAddressError(value: string): boolean {
+  if (!value.trim() || /\{\{[^}]+\}\}/.test(value)) {
+    return false;
+  }
+  return !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
 type Props = {
   activeEditor: EditorField;
   availableVariables: string[];
@@ -98,8 +105,8 @@ export function EmailTemplateEditor({
         <Stack gap="md">
           <TextInput description={copy.emailBuilder.subjectDesc} label={copy.emailBuilder.subject} onChange={(event) => updateEmailField('subject', event.currentTarget.value)} onFocus={() => setActiveEditor('subject')} ref={editorRefs.subject} value={emailTemplate.subject} />
           <SimpleGrid cols={{ base: 1, md: 2 }}>
-            <TextInput description={copy.emailBuilder.toDesc} label={copy.emailBuilder.to} onChange={(event) => updateEmailField('to', event.currentTarget.value)} onFocus={() => setActiveEditor('to')} ref={editorRefs.to} value={emailTemplate.to} />
-            <TextInput description={copy.emailBuilder.ccDesc} label={copy.emailBuilder.cc} onChange={(event) => updateEmailField('cc', event.currentTarget.value)} onFocus={() => setActiveEditor('cc')} ref={editorRefs.cc} value={emailTemplate.cc} />
+            <TextInput description={copy.emailBuilder.toDesc} error={emailAddressError(emailTemplate.to) ? copy.emailBuilder.invalidEmailAddress : undefined} label={copy.emailBuilder.to} onChange={(event) => updateEmailField('to', event.currentTarget.value)} onFocus={() => setActiveEditor('to')} ref={editorRefs.to} value={emailTemplate.to} />
+            <TextInput description={copy.emailBuilder.ccDesc} error={emailAddressError(emailTemplate.cc) ? copy.emailBuilder.invalidEmailAddress : undefined} label={copy.emailBuilder.cc} onChange={(event) => updateEmailField('cc', event.currentTarget.value)} onFocus={() => setActiveEditor('cc')} ref={editorRefs.cc} value={emailTemplate.cc} />
           </SimpleGrid>
           <Stack gap="xs">
             <Text fw={500} size="sm">{copy.emailBuilder.body}</Text>

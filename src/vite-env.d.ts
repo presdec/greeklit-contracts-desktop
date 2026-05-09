@@ -24,6 +24,7 @@ import type {
 declare global {
   interface Window {
     desktopApp: {
+      cancelGeneration: () => Promise<void>;
       generateProject: (request: GenerateProjectRequest) => Promise<GenerateProjectResult>;
       getCapabilities: () => Promise<DesktopCapabilities>;
       getRecentProjects: () => Promise<RecentProjectEntry[]>;
@@ -34,7 +35,10 @@ declare global {
       validateProject: (request: GenerateProjectRequest) => Promise<ProjectPreflightResult>;
       getTemplateStatus: (request: TemplateStatusRequest) => Promise<TemplateStatusResult>;
       inspectProject: (request: InspectProjectRequest) => Promise<InspectProjectResult>;
+      notifySaved: () => void;
       onMenuAction: (listener: (action: MenuAction) => void) => () => void;
+      onSaveRequested: (listener: () => void) => () => void;
+      syncDirty: (isDirty: boolean) => void;
       openPath: (request: OpenPathRequest) => Promise<null | string>;
       openProject: (filePath?: string | null) => Promise<ProjectOpenResult | null>;
       pickPath: (request: FileDialogRequest) => Promise<string | null>;

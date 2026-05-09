@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActionIcon, Alert, Badge, Box, Button, Card, Group, Progress, SegmentedControl, SimpleGrid, Stack, Text, Title, Tooltip } from '@mantine/core';
+import { ActionIcon, Alert, Badge, Box, Button, Card, Group, Kbd, Modal, Progress, SegmentedControl, SimpleGrid, Stack, Table, Text, Title, Tooltip } from '@mantine/core';
 import { ContractMappingPanel } from './components/ContractMappingPanel';
 import { EmailTemplateEditor } from './components/EmailTemplateEditor';
 import { ExternalEmailTemplatePanel } from './components/ExternalEmailTemplatePanel';
@@ -100,6 +100,7 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
   const controller = useWorkspaceController(desktopApp);
   const [navigationWarning, setNavigationWarning] = useState<string | null>(null);
   const [setupModal, setSetupModal] = useState<'email' | 'word' | 'workbook' | null>(null);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
   const scrollToTop = () => {
     document.querySelector('.content-scroll')?.scrollTo({ top: 0, behavior: 'instant' });
@@ -270,6 +271,20 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
                     size="sm"
                     value={language}
                   />
+                  <Tooltip label={copy.app.keyboardShortcuts} withArrow>
+                    <ActionIcon
+                      aria-label={copy.app.keyboardShortcuts}
+                      onClick={() => setShortcutsOpen(true)}
+                      size="lg"
+                      variant="subtle"
+                    >
+                      <svg fill="none" height="15" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="15" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                        <line x1="12" x2="12.01" y1="17" y2="17" />
+                      </svg>
+                    </ActionIcon>
+                  </Tooltip>
                   <ActionIcon
                     aria-label="Toggle color scheme"
                     onClick={() => setColorScheme(colorScheme === 'dark' ? 'light' : 'dark')}
@@ -360,6 +375,42 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
               wordTokens={controller.workbookPreview.contractVariables}
             />
 
+            <Modal
+              onClose={() => setShortcutsOpen(false)}
+              opened={shortcutsOpen}
+              size="sm"
+              title={copy.app.shortcutsTitle}
+            >
+              {(() => {
+                const mod = desktopApp.platform === 'darwin' ? '⌘' : 'Ctrl';
+                const rows: [React.ReactNode, string][] = [
+                  [[<Kbd key="k1">{mod}</Kbd>, '+', <Kbd key="k2">O</Kbd>], copy.shortcuts.openProject],
+                  [[<Kbd key="k3">F9</Kbd>], copy.shortcuts.openLastProject],
+                  [[<Kbd key="k4">F5</Kbd>], copy.shortcuts.saveProject],
+                  [[<Kbd key="k5">{mod}</Kbd>, '+', <Kbd key="k6">Shift</Kbd>, '+', <Kbd key="k7">S</Kbd>], copy.shortcuts.saveProjectAs],
+                  [[<Kbd key="k8">{mod}</Kbd>, '+', <Kbd key="k9">Shift</Kbd>, '+', <Kbd key="k10">O</Kbd>], copy.shortcuts.openWordTemplate],
+                  [[<Kbd key="k11">{mod}</Kbd>, '+', <Kbd key="k12">R</Kbd>], copy.shortcuts.reloadFields],
+                  [[<Kbd key="k13">{mod}</Kbd>, '+', <Kbd key="k14">Enter</Kbd>], copy.shortcuts.generateNow],
+                ];
+                return (
+                  <Table>
+                    <Table.Tbody>
+                      {rows.map(([keys, label]) => (
+                        <Table.Tr key={label}>
+                          <Table.Td>
+                            <Group gap={4} wrap="nowrap">{keys}</Group>
+                          </Table.Td>
+                          <Table.Td>
+                            <Text size="sm">{label}</Text>
+                          </Table.Td>
+                        </Table.Tr>
+                      ))}
+                    </Table.Tbody>
+                  </Table>
+                );
+              })()}
+            </Modal>
+
             <Group align="flex-start" justify="space-between" wrap="nowrap">
               <Stack gap={4}>
                 <Text c="teal.8" fw={700} size="sm" tt="uppercase">
@@ -441,6 +492,7 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
                 elapsedSeconds={controller.generationElapsedSeconds}
                 fallbackRowsFound={controller.workbookPreview.totalRows}
                 generationOptions={controller.contractSettings.generationOptions}
+                onCancel={() => void controller.handleCancelGeneration()}
                 progress={controller.generationProgress}
                 progressValue={controller.generationProgressValue}
                 selectedOutputLabel={selectedOutputLabel}

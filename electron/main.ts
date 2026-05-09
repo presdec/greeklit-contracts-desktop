@@ -43,6 +43,9 @@ const { app, BrowserWindow, Menu, dialog, ipcMain, shell } = electron;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 let mainWindow: InstanceType<typeof BrowserWindow> | null = null;
+let generationController: AbortController | null = null;
+let isDirty = false;
+let isClosingAfterSave = false;
 const maxRecentProjects = 8;
 
 if (process.platform === 'linux') {
@@ -322,6 +325,31 @@ function createWindow() {
     console.log('Renderer finished load');
   });
 
+  mainWindow.on('close', async (event) => {
+    if (!isDirty || isClosingAfterSave) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const { response } = await dialog.showMessageBox(mainWindow!, {
+      buttons: ['Save', "Don't Save", 'Cancel'],
+      cancelId: 2,
+      defaultId: 0,
+      detail: 'Your changes will be lost if you close without saving.',
+      message: 'Save project before closing?',
+      type: 'question',
+    });
+
+    if (response === 0) {
+      isClosingAfterSave = true;
+      mainWindow?.webContents.send('desktop-app:save-requested');
+    } else if (response === 1) {
+      isDirty = false;
+      mainWindow?.close();
+    }
+  });
+
   if (!app.isPackaged) {
     mainWindow.webContents.openDevTools({ mode: 'detach' });
   }
@@ -421,14 +449,26 @@ function registerIpcHandlers() {
 
   ipcMain.handle(
     'desktop-app:generate-project',
-    async (event, request: GenerateProjectRequest) => generateProject(
-      getRuntimeEnvironment(),
-      request,
-      (progress: GenerateProjectProgress) => {
-        event.sender.send('desktop-app:generation-progress', progress);
-      },
-    ),
+    async (event, request: GenerateProjectRequest) => {
+      generationController = new AbortController();
+      try {
+        return await generateProject(
+          getRuntimeEnvironment(),
+          request,
+          (progress: GenerateProjectProgress) => {
+            event.sender.send('desktop-app:generation-progress', progress);
+          },
+          generationController.signal,
+        );
+      } finally {
+        generationController = null;
+      }
+    },
   );
+
+  ipcMain.handle('desktop-app:cancel-generation', async () => {
+    generationController?.abort();
+  });
 
   ipcMain.handle('desktop-app:open-path', async (_event, request: OpenPathRequest) => {
     if (!request.targetPath) {
@@ -437,6 +477,18 @@ function registerIpcHandlers() {
 
     const openError = await shell.openPath(request.targetPath);
     return openError || null;
+  });
+
+  ipcMain.on('desktop-app:sync-dirty', (_event, dirty: boolean) => {
+    isDirty = dirty;
+  });
+
+  ipcMain.on('desktop-app:save-complete', () => {
+    if (isClosingAfterSave) {
+      isClosingAfterSave = false;
+      isDirty = false;
+      mainWindow?.close();
+    }
   });
 }
 

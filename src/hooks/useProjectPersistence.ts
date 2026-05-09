@@ -1,6 +1,6 @@
 import { useAtomValue, useSetAtom } from 'jotai/react';
 import { useCallback, useEffect, useState } from 'react';
-import { hydrateWorkspaceAtom, workspaceDocumentAtom } from '../state/workspace';
+import { hydrateWorkspaceAtom, markSavedAtom, workspaceDocumentAtom } from '../state/workspace';
 import type { RecentProjectEntry } from '../../shared/desktop';
 
 const lastProjectPathStorageKey = 'greeklit.lastProjectPath';
@@ -22,6 +22,7 @@ function rememberLastProjectPath(filePath: string) {
 export function useProjectPersistence(desktopApp: Window['desktopApp']) {
   const workspaceDocument = useAtomValue(workspaceDocumentAtom);
   const hydrateWorkspace = useSetAtom(hydrateWorkspaceAtom);
+  const markSaved = useSetAtom(markSavedAtom);
   const [isOpeningProject, setIsOpeningProject] = useState(false);
   const [isSavingProject, setIsSavingProject] = useState(false);
   const [lastProjectPath, setLastProjectPath] = useState<string | null>(() => readLastProjectPath());
@@ -44,6 +45,7 @@ export function useProjectPersistence(desktopApp: Window['desktopApp']) {
       }
 
       hydrateWorkspace(result.projectDocument);
+      markSaved();
       setLastProjectPath(result.filePath);
       rememberLastProjectPath(result.filePath);
       await refreshRecentProjects();
@@ -75,6 +77,7 @@ export function useProjectPersistence(desktopApp: Window['desktopApp']) {
         return null;
       }
 
+      markSaved();
       setLastProjectPath(savedPath);
       rememberLastProjectPath(savedPath);
       await refreshRecentProjects();

@@ -26,6 +26,8 @@ const electron = require('electron') as typeof ElectronModule;
 const { contextBridge, ipcRenderer } = electron;
 
 contextBridge.exposeInMainWorld('desktopApp', {
+  cancelGeneration: () =>
+    ipcRenderer.invoke('desktop-app:cancel-generation') as Promise<void>,
   generateProject: (request: GenerateProjectRequest) =>
     ipcRenderer.invoke('desktop-app:generate-project', request) as Promise<GenerateProjectResult>,
   getCapabilities: () =>
@@ -49,6 +51,7 @@ contextBridge.exposeInMainWorld('desktopApp', {
     ipcRenderer.invoke('desktop-app:get-template-status', request) as Promise<TemplateStatusResult>,
   inspectProject: (request: InspectProjectRequest) =>
     ipcRenderer.invoke('desktop-app:inspect-project', request) as Promise<InspectProjectResult>,
+  notifySaved: () => ipcRenderer.send('desktop-app:save-complete'),
   onMenuAction: (listener: (action: MenuAction) => void) => {
     const handler = (_event: ElectronModule.IpcRendererEvent, action: MenuAction) => {
       listener(action);
@@ -58,6 +61,14 @@ contextBridge.exposeInMainWorld('desktopApp', {
       ipcRenderer.removeListener('desktop-app:menu-action', handler);
     };
   },
+  onSaveRequested: (listener: () => void) => {
+    const handler = () => listener();
+    ipcRenderer.on('desktop-app:save-requested', handler);
+    return () => {
+      ipcRenderer.removeListener('desktop-app:save-requested', handler);
+    };
+  },
+  syncDirty: (dirty: boolean) => ipcRenderer.send('desktop-app:sync-dirty', dirty),
   openPath: (request: OpenPathRequest) =>
     ipcRenderer.invoke('desktop-app:open-path', request) as Promise<null | string>,
   openProject: (filePath?: string | null) =>

@@ -1,5 +1,9 @@
 import { atom } from 'jotai/vanilla';
 import type { SavedProjectDocument } from '../../shared/desktop';
+
+function documentSignature(doc: SavedProjectDocument) {
+  return JSON.stringify({ ...doc, activeStep: undefined });
+}
 import { defaultGenerationOptions, initialEmailTemplate, initialProject } from '../data/defaults';
 import { normalizeEmailBody } from '../lib/template';
 import type { EmailTemplateState, GenerationOptions, WizardStepId } from '../types/template';
@@ -30,6 +34,20 @@ export const workspaceDocumentAtom = atom<SavedProjectDocument>((get) => ({
   variableColumns: sanitizeRecord(get(variableColumnsAtom)),
   version: 1,
 }));
+
+export const savedDocumentSignatureAtom = atom<string | null>(null);
+
+export const isDirtyAtom = atom<boolean>((get) => {
+  const savedSig = get(savedDocumentSignatureAtom);
+  if (savedSig === null) {
+    return false;
+  }
+  return documentSignature(get(workspaceDocumentAtom)) !== savedSig;
+});
+
+export const markSavedAtom = atom(null, (get, set) => {
+  set(savedDocumentSignatureAtom, documentSignature(get(workspaceDocumentAtom)));
+});
 
 export const hydrateWorkspaceAtom = atom(
   null,

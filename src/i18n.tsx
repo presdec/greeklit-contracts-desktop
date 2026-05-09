@@ -17,35 +17,47 @@ type Translation = {
   };
   steps: Record<1 | 2 | 3 | 4, { description: string; nextHint: string; title: string }>;
   app: {
+    back: string;
+    continueTo: string;
+    couldNotLoadWorkbookPreview: string;
+    couldNotSaveExampleTemplate: string;
     desktopBridgeUnavailableBody: string;
     desktopBridgeUnavailableTitle: string;
+    emailTemplateRequiredBody: string;
     generationCompleteSummary: (generated: number, skipped: number) => string;
     generationCompleteTitle: string;
     generationFailedTitle: string;
     generationStatusTitle: string;
     generating: string;
     generatingNow: string;
+    keyboardShortcuts: string;
+    loadProject: string;
     mapAllFieldsTitle: string;
     missingEmailMappings: (fields: string) => string;
     missingWordMappings: (fields: string) => string;
-    loadProject: string;
     openRecentProject: string;
-    outputsRequiredBody: string;
-    saveDraftSetup: string;
-    couldNotSaveExampleTemplate: string;
-    couldNotLoadWorkbookPreview: string;
-    projectFileLabel: string;
-    back: string;
-    continueTo: string;
-    wordTemplateRequiredTitle: string;
-    wordTemplateRequiredBody: string;
-    emailTemplateRequiredBody: string;
-    workbookRequiredBody: string;
-    outputFolderRequiredTitle: string;
-    outputFolderRequiredBody: string;
     outputFilenamePatternRequiredBody: string;
+    outputFolderRequiredBody: string;
+    outputFolderRequiredTitle: string;
+    outputsRequiredBody: string;
+    projectFileLabel: string;
+    saveDraftSetup: string;
+    shortcutsTitle: string;
+    wordTemplateRequiredBody: string;
+    wordTemplateRequiredTitle: string;
+    workbookRequiredBody: string;
+  };
+  shortcuts: {
+    generateNow: string;
+    openLastProject: string;
+    openProject: string;
+    openWordTemplate: string;
+    reloadFields: string;
+    saveProject: string;
+    saveProjectAs: string;
   };
   generationProgress: {
+    cancel: string;
     docxFiles: string;
     emailDrafts: string;
     elapsed: (seconds: number) => string;
@@ -177,6 +189,7 @@ type Translation = {
     bodyDesc: string;
     cc: string;
     ccDesc: string;
+    invalidEmailAddress: string;
     subtitle: string;
     subject: string;
     subjectDesc: string;
@@ -324,6 +337,7 @@ type Translation = {
     finishingTitle: string;
     generatedRecords: string;
     generationComplete: string;
+    hideSkippedDetails: string;
     noFilesYet: string;
     open: string;
     openDrafts: string;
@@ -333,6 +347,9 @@ type Translation = {
     pdfFiles: string;
     resultTree: string;
     rowsFound: string;
+    showSkippedDetails: string;
+    skippedRowEntry: (row: number, reason: string) => string;
+    skippedRowsDetail: string;
     startAgain: string;
     subtitle: string;
     skippedRows: string;
@@ -394,6 +411,7 @@ const translations: Record<Language, Translation> = {
       generationStatusTitle: 'Generation status',
       generating: 'Generating...',
       generatingNow: 'Generate Now',
+      keyboardShortcuts: 'Keyboard Shortcuts',
       mapAllFieldsTitle: 'Map all fields before review',
       missingEmailMappings: (fields) => `Email fields missing workbook assignment: ${fields}.`,
       missingWordMappings: (fields) => `Word fields missing mapping: ${fields}. `,
@@ -412,9 +430,20 @@ const translations: Record<Language, Translation> = {
       outputFolderRequiredTitle: 'Output folder required',
       outputFolderRequiredBody: 'Output folder required.',
       outputFilenamePatternRequiredBody: 'Please fill in the DOCX/PDF filename pattern.',
+      shortcutsTitle: 'Keyboard Shortcuts',
       workbookRequiredBody: 'Excel workbook required.',
     },
+    shortcuts: {
+      generateNow: 'Generate Now',
+      openLastProject: 'Open Last Project',
+      openProject: 'Open Project',
+      openWordTemplate: 'Open Word Template',
+      reloadFields: 'Reload Fields',
+      saveProject: 'Save Project',
+      saveProjectAs: 'Save Project As',
+    },
     generationProgress: {
+      cancel: 'Cancel',
       docxFiles: 'DOCX files',
       emailDrafts: 'Email drafts',
       elapsed: (seconds) => `${seconds}s elapsed`,
@@ -546,6 +575,7 @@ const translations: Record<Language, Translation> = {
       bodyDesc: 'Write the email body. Click anywhere in this editor, then insert fields from above. Each row in your workbook generates one email.',
       cc: 'Cc',
       ccDesc: 'Optional CC addresses — leave blank if not needed.',
+      invalidEmailAddress: 'This doesn\'t look like a valid email address.',
       subtitle: 'Compose your email template. Click a workbook field chip above to insert it at your cursor — works in To, Subject, Cc, and Body.',
       subject: 'Subject',
       subjectDesc: 'Your email subject. Click here first, then insert fields from above.',
@@ -709,6 +739,7 @@ const translations: Record<Language, Translation> = {
       finishingTitle: 'Finishing up output files',
       generatedRecords: 'Generated records',
       generationComplete: 'Generation Complete',
+      hideSkippedDetails: 'Hide details',
       noFilesYet: 'No output files were found yet.',
       open: 'Open',
       openDrafts: 'Open Email Drafts',
@@ -718,6 +749,9 @@ const translations: Record<Language, Translation> = {
       pdfFiles: 'PDF files',
       resultTree: 'Result tree',
       rowsFound: 'Rows found',
+      showSkippedDetails: 'Show details',
+      skippedRowEntry: (row, reason) => `Row ${row}: ${reason}`,
+      skippedRowsDetail: 'Skipped rows detail',
       startAgain: 'Start Again',
       subtitle: 'Review created outputs and open files directly from this list.',
       skippedRows: 'Skipped rows',
@@ -777,6 +811,7 @@ const translations: Record<Language, Translation> = {
       generationStatusTitle: 'Κατάσταση δημιουργίας',
       generating: 'Δημιουργία...',
       generatingNow: 'Δημιουργία τώρα',
+      keyboardShortcuts: 'Πλήκτρα συντόμευσης',
       mapAllFieldsTitle: 'Αντιστοιχίστε όλα τα πεδία πριν τον έλεγχο',
       missingEmailMappings: (fields) => `Πεδία email χωρίς αντιστοίχιση workbook: ${fields}.`,
       missingWordMappings: (fields) => `Πεδία Word χωρίς αντιστοίχιση: ${fields}. `,
@@ -795,9 +830,20 @@ const translations: Record<Language, Translation> = {
       outputFolderRequiredTitle: 'Απαιτείται φάκελος εξόδου',
       outputFolderRequiredBody: 'Απαιτείται φάκελος εξόδου.',
       outputFilenamePatternRequiredBody: 'Συμπληρώστε το μοτίβο ονόματος αρχείου DOCX/PDF.',
+      shortcutsTitle: 'Πλήκτρα συντόμευσης',
       workbookRequiredBody: 'Απαιτείται workbook Excel.',
     },
+    shortcuts: {
+      generateNow: 'Δημιουργία τώρα',
+      openLastProject: 'Άνοιγμα τελευταίου έργου',
+      openProject: 'Άνοιγμα έργου',
+      openWordTemplate: 'Άνοιγμα προτύπου Word',
+      reloadFields: 'Ανανέωση πεδίων',
+      saveProject: 'Αποθήκευση έργου',
+      saveProjectAs: 'Αποθήκευση έργου ως',
+    },
     generationProgress: {
+      cancel: 'Ακύρωση',
       docxFiles: 'Αρχεία DOCX',
       emailDrafts: 'Προσχέδια email',
       elapsed: (seconds) => `${seconds}δ πέρασαν`,
@@ -929,6 +975,7 @@ const translations: Record<Language, Translation> = {
       bodyDesc: 'Συντάξτε εδώ το σώμα του email και εισάγετε μεταβλητές workbook όπου χρειάζονται.',
       cc: 'Κοινοποίηση',
       ccDesc: 'Προαιρετικοί παραλήπτες κοινοποίησης.',
+      invalidEmailAddress: 'Αυτό δεν φαίνεται να είναι έγκυρη διεύθυνση email.',
       subtitle: 'Κάντε κλικ σε token πεδίου για εισαγωγή στο ενεργό σημείο του κέρσορα.',
       subject: 'Θέμα',
       subjectDesc: 'Κάντε κλικ εδώ και εισάγετε πεδία workbook από πάνω.',
@@ -1092,6 +1139,7 @@ const translations: Record<Language, Translation> = {
       finishingTitle: 'Ολοκλήρωση αρχείων εξόδου',
       generatedRecords: 'Εγγραφές που δημιουργήθηκαν',
       generationComplete: 'Η δημιουργία ολοκληρώθηκε',
+      hideSkippedDetails: 'Απόκρυψη λεπτομερειών',
       noFilesYet: 'Δεν βρέθηκαν ακόμη αρχεία εξόδου.',
       open: 'Άνοιγμα',
       openDrafts: 'Άνοιγμα Προσχεδίων Email',
@@ -1101,6 +1149,9 @@ const translations: Record<Language, Translation> = {
       pdfFiles: 'Αρχεία PDF',
       resultTree: 'Δέντρο αποτελεσμάτων',
       rowsFound: 'Γραμμές που βρέθηκαν',
+      showSkippedDetails: 'Εμφάνιση λεπτομερειών',
+      skippedRowEntry: (row, reason) => `Γραμμή ${row}: ${reason}`,
+      skippedRowsDetail: 'Λεπτομέρειες παραλειφθεισών γραμμών',
       startAgain: 'Νέα Εκκίνηση',
       subtitle: 'Ελέγξτε τα παραγόμενα αρχεία και ανοίξτε τα απευθείας από αυτή τη λίστα.',
       skippedRows: 'Γραμμές που παραλείφθηκαν',

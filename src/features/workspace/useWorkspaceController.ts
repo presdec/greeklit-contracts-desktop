@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useAtom } from 'jotai/react';
-import { activeStepAtom, generationOptionsAtom } from '../../state/workspace';
+import { useAtom, useAtomValue } from 'jotai/react';
+import { activeStepAtom, generationOptionsAtom, isDirtyAtom } from '../../state/workspace';
 import { useProjectPersistence } from '../../hooks/useProjectPersistence';
 import { useProjectPreflight } from '../../hooks/useProjectPreflight';
 import { useEmailTemplateBuilder } from '../../hooks/useEmailTemplateBuilder';
@@ -57,6 +57,7 @@ export const nextStepCopy = {
 
 export function useWorkspaceController(desktopApp: Window['desktopApp']) {
   const { copy, language } = useI18n();
+  const isDirty = useAtomValue(isDirtyAtom);
   const projectSetup = useProjectSetup(desktopApp);
   const projectPersistence = useProjectPersistence(desktopApp);
   const templateBuilder = useEmailTemplateBuilder();
@@ -204,6 +205,19 @@ export function useWorkspaceController(desktopApp: Window['desktopApp']) {
     });
   }, [desktopApp]);
 
+  useEffect(() => {
+    desktopApp.syncDirty(isDirty);
+  }, [desktopApp, isDirty]);
+
+  useEffect(() => {
+    return desktopApp.onSaveRequested(async () => {
+      const savedPath = await projectPersistence.saveProject();
+      if (savedPath) {
+        desktopApp.notifySaved();
+      }
+    });
+  }, [desktopApp, projectPersistence]);
+
   const pickerRequests = useMemo(
     () => ({
       workbookPath: {
@@ -320,6 +334,14 @@ export function useWorkspaceController(desktopApp: Window['desktopApp']) {
       );
     }
   }, [desktopApp, language]);
+
+  const handleCancelGeneration = useCallback(async () => {
+    try {
+      await desktopApp.cancelGeneration();
+    } catch {
+      // ignore — cancellation is best-effort
+    }
+  }, [desktopApp]);
 
   const handleGenerateProject = useCallback(async () => {
     setIsGenerating(true);
@@ -557,6 +579,7 @@ export function useWorkspaceController(desktopApp: Window['desktopApp']) {
     generationProgressValue: generationProgress?.percent ?? Math.min(92, 18 + generationElapsedSeconds * 6),
     generationResult,
     generationStage,
+    handleCancelGeneration,
     handleGenerateProject,
     handleOpenLastProject,
     handleOpenRecentProject,

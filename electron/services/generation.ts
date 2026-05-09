@@ -11,6 +11,7 @@ import type {
   InspectProjectResult,
   ProjectPreflightCheck,
   ProjectPreflightResult,
+  SkippedRowDetail,
 } from '../../shared/desktop';
 import { collectOutputTree } from '../lib/outputTree';
 import { readEmailTemplateContent } from '../lib/emailTemplate';
@@ -267,6 +268,7 @@ function parseProgressLine(line: string) {
 function runGenerationCommand(
   command: GenerationContext['command'],
   onProgress?: (progress: GenerateProjectProgress) => void,
+  signal?: AbortSignal,
 ) {
   return new Promise<{ stderr: string; stdout: string }>((resolvePromise, reject) => {
     const child = spawn(command.command, command.args, {
@@ -277,6 +279,7 @@ function runGenerationCommand(
     let stderr = '';
     let pendingStdout = '';
     let settled = false;
+    let cancelled = false;
 
     const settleReject = (error: Error) => {
       if (settled) {
@@ -285,6 +288,21 @@ function runGenerationCommand(
       settled = true;
       reject(error);
     };
+
+    if (signal) {
+      const abort = () => {
+        if (!settled) {
+          cancelled = true;
+          child.kill();
+          settleReject(new Error('Generation was cancelled.'));
+        }
+      };
+      if (signal.aborted) {
+        abort();
+        return;
+      }
+      signal.addEventListener('abort', abort, { once: true });
+    }
 
     const handleStdoutLine = (line: string) => {
       const progress = parseProgressLine(line.trim());
@@ -321,12 +339,37 @@ function runGenerationCommand(
         handleStdoutLine(pendingStdout);
       }
       if (code && code !== 0) {
-        reject(new Error(stderr.trim() || stdout.trim() || `Generation process exited with code ${code}.`));
+        reject(
+          cancelled
+            ? new Error('Generation was cancelled.')
+            : new Error(stderr.trim() || stdout.trim() || `Generation process exited with code ${code}.`),
+        );
         return;
       }
       resolvePromise({ stderr, stdout });
     });
   });
+}
+
+function parseSkippedRows(reportText: string): SkippedRowDetail[] {
+  const lines = reportText.split(/\r?\n/);
+  const startIndex = lines.findIndex((line) => line.trim() === 'Skipped rows:');
+  if (startIndex === -1) {
+    return [];
+  }
+
+  const result: SkippedRowDetail[] = [];
+  for (let i = startIndex + 1; i < lines.length; i++) {
+    const line = lines[i]?.trim() ?? '';
+    if (!line.startsWith('- Row ')) {
+      break;
+    }
+    const match = line.match(/^- Row (\d+): (.+)$/);
+    if (match?.[1] && match[2]) {
+      result.push({ reason: match[2], row: Number(match[1]) });
+    }
+  }
+  return result;
 }
 
 function extractTemplateTokens(value: string) {
@@ -879,6 +922,7 @@ export async function generateProject(
   environment: RuntimeEnvironment,
   request: GenerateProjectRequest,
   onProgress?: (progress: GenerateProjectProgress) => void,
+  signal?: AbortSignal,
 ): Promise<GenerateProjectResult> {
   const preflight = await runProjectPreflight(environment, request);
   if (!preflight.canGenerate) {
@@ -899,7 +943,7 @@ export async function generateProject(
   };
 
   try {
-    const { stderr, stdout } = await runGenerationCommand(context.command, trackProgress);
+    const { stderr, stdout } = await runGenerationCommand(context.command, trackProgress, signal);
 
     trackProgress({
       current: 0,
@@ -941,6 +985,15 @@ export async function generateProject(
     const generatedCount = parseCount(stdout, 'Generated');
     const docxCount = countFilesInSubdir(createdEntries, 'contracts', '.docx');
     const pdfCount = countFilesInSubdir(createdEntries, 'contracts_pdf', '.pdf');
+    const resolvedReportPath =
+      parsePathLine(stdout, 'Report:') || join(context.outputDir ?? '', 'generation_report.txt');
+    let skippedRowDetails: SkippedRowDetail[] = [];
+    try {
+      const reportText = await readFile(resolvedReportPath, 'utf8');
+      skippedRowDetails = parseSkippedRows(reportText);
+    } catch {
+      // report may not exist if generation ended early or was cancelled
+    }
 
     return {
       emailDraftsPath,
@@ -954,9 +1007,10 @@ export async function generateProject(
       pdfCount,
       pdfDir:
         parsePathLine(stdout, 'Contract PDF directory:') || join(context.outputDir ?? '', 'contracts_pdf'),
-      reportPath: parsePathLine(stdout, 'Report:') || join(context.outputDir ?? '', 'generation_report.txt'),
+      reportPath: resolvedReportPath,
       rowsFound: latestRowsFound,
       skippedCount: parseCount(stdout, 'Skipped'),
+      skippedRowDetails,
       stderr,
       stdout,
       warnings: stdout

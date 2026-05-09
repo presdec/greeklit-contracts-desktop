@@ -1,4 +1,4 @@
-import { Badge, Group, Paper, Progress, SimpleGrid, Stack, Text, Title } from '@mantine/core';
+import { Badge, Button, Group, Paper, Progress, SimpleGrid, Stack, Text, Title } from '@mantine/core';
 import type { GenerateProjectProgress } from '../../shared/desktop';
 import type { GenerationOptions } from '../types/template';
 import { useI18n } from '../i18n';
@@ -7,6 +7,7 @@ type Props = {
   elapsedSeconds: number;
   fallbackRowsFound: number;
   generationOptions: GenerationOptions;
+  onCancel: () => void;
   progress: GenerateProjectProgress | null;
   progressValue: number;
   selectedOutputLabel: string;
@@ -40,6 +41,7 @@ export function GenerationProgressPanel({
   elapsedSeconds,
   fallbackRowsFound,
   generationOptions,
+  onCancel,
   progress,
   progressValue,
   selectedOutputLabel,
@@ -75,6 +77,9 @@ export function GenerationProgressPanel({
             <Badge color="orange" size="lg" variant="light">
               {copy.generationProgress.elapsed(elapsedSeconds)}
             </Badge>
+            <Button color="red" onClick={onCancel} size="sm" variant="light">
+              {copy.generationProgress.cancel}
+            </Button>
           </Group>
         </Group>
 

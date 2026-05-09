@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { Alert, Badge, Button, Group, Paper, SimpleGrid, Stack, Text, Title } from '@mantine/core';
+import { useMemo, useState } from 'react';
+import { Alert, Badge, Button, Collapse, Group, Paper, SimpleGrid, Stack, Text, Title } from '@mantine/core';
 import type { GenerateProjectResult, OutputTreeEntry } from '../../shared/desktop';
 import { useI18n } from '../i18n';
 
@@ -136,6 +136,7 @@ export function GenerationSuccessPanel({
   result,
 }: Props) {
   const { copy } = useI18n();
+  const [skippedOpen, setSkippedOpen] = useState(false);
   const emailDraftsPath = result.emailDraftsPath;
   const treeNodes = useMemo(() => buildOutputTree(result.createdEntries), [result.createdEntries]);
 
@@ -189,6 +190,30 @@ export function GenerationSuccessPanel({
               ))}
             </Stack>
           </Alert>
+        ) : null}
+
+        {result.skippedRowDetails.length > 0 ? (
+          <Paper p="sm" radius="md" withBorder>
+            <Group justify="space-between" mb={skippedOpen ? 'sm' : 0}>
+              <Text fw={600} size="sm">{copy.success.skippedRowsDetail}</Text>
+              <Button
+                onClick={() => setSkippedOpen((o) => !o)}
+                size="compact-xs"
+                variant="subtle"
+              >
+                {skippedOpen ? copy.success.hideSkippedDetails : copy.success.showSkippedDetails}
+              </Button>
+            </Group>
+            <Collapse in={skippedOpen}>
+              <Stack gap={2}>
+                {result.skippedRowDetails.map(({ row, reason }) => (
+                  <Text c="dimmed" key={row} size="xs">
+                    {copy.success.skippedRowEntry(row, reason)}
+                  </Text>
+                ))}
+              </Stack>
+            </Collapse>
+          </Paper>
         ) : null}
 
         <Group gap="sm">

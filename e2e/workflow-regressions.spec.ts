@@ -116,9 +116,17 @@ async function launchApp() {
 
 async function closeApp(app: ElectronApp) {
   try {
-    await app.close();
+    await Promise.race([
+      app.close(),
+      new Promise<void>((resolve) => setTimeout(resolve, 5000)),
+    ]);
   } catch {
-    return;
+    // ignore
+  }
+  try {
+    app.process().kill();
+  } catch {
+    // ignore
   }
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActionIcon, Alert, Badge, Box, Button, Card, Group, Kbd, Modal, Progress, SegmentedControl, SimpleGrid, Stack, Table, Text, Title, Tooltip } from '@mantine/core';
 import { ContractMappingPanel } from './components/ContractMappingPanel';
 import { EmailTemplateEditor } from './components/EmailTemplateEditor';
@@ -98,6 +98,10 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
   }
 
   const controller = useWorkspaceController(desktopApp);
+  const controllerRef = useRef(controller);
+  useEffect(() => {
+    controllerRef.current = controller;
+  });
   const [navigationWarning, setNavigationWarning] = useState<string | null>(null);
   const [setupModal, setSetupModal] = useState<'email' | 'word' | 'workbook' | null>(null);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -195,42 +199,43 @@ export function App({ colorScheme, setColorScheme }: AppProps) {
 
   useEffect(() => {
     return desktopApp.onMenuAction((action) => {
+      const c = controllerRef.current;
       if (typeof action !== 'string') {
         if (action.type === 'open-recent-project') {
-          void controller.handleOpenRecentProject(action.filePath);
+          void c.handleOpenRecentProject(action.filePath);
         }
         return;
       }
 
       switch (action) {
         case 'open-project':
-          void controller.handleOpenProject();
+          void c.handleOpenProject();
           break;
         case 'open-last-project':
-          void controller.handleOpenLastProject();
+          void c.handleOpenLastProject();
           break;
         case 'save-project':
-          void controller.handleSaveProject();
+          void c.handleSaveProject();
           break;
         case 'save-project-as':
-          void controller.handleSaveProject({ saveAs: true });
+          void c.handleSaveProject({ saveAs: true });
           break;
         case 'open-contract-template':
-          void controller.handleOpenContractTemplate();
+          void c.handleOpenContractTemplate();
           break;
         case 'reload-template-fields':
-          void controller.handleReloadTemplateFields();
+          void c.handleReloadTemplateFields();
           break;
         case 'generate-project':
-          if (controller.canGenerateNow) {
-            void controller.handleGenerateProject();
+          if (c.canGenerateNow) {
+            void c.handleGenerateProject();
           }
           break;
         default:
           break;
       }
     });
-  }, [controller, desktopApp]);
+  }, [desktopApp]);
 
   return (
     <main className="app-shell">

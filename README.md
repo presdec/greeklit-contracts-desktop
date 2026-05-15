@@ -2,6 +2,8 @@
 
 [![Build](https://github.com/presdec/docgen-studio-desktop/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/presdec/docgen-studio-desktop/actions/workflows/build.yml)
 [![Test](https://github.com/presdec/docgen-studio-desktop/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/presdec/docgen-studio-desktop/actions/workflows/test.yml)
+[![CodeQL](https://img.shields.io/badge/CodeQL-enabled-brightgreen?logo=github)](https://github.com/presdec/docgen-studio-desktop/security/code-scanning)
+[![Dependabot open](https://img.shields.io/github/issues-search/presdec/docgen-studio-desktop?query=is%3Apr%20is%3Aopen%20author%3Aapp%2Fdependabot&label=Dependabot%20Open&logo=dependabot)](https://github.com/presdec/docgen-studio-desktop/pulls?q=is%3Apr+is%3Aopen+author%3Aapp%2Fdependabot)
 [![Release](https://img.shields.io/github/v/release/presdec/docgen-studio-desktop?display_name=tag)](https://github.com/presdec/docgen-studio-desktop/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
